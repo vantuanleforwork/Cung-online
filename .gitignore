@@ -1,0 +1,8 @@
+﻿/config.php
+/.env
+/.env.*
+!/\.env.example
+/artifacts/*.png
+
+__pycache__/
+*.py[cod]

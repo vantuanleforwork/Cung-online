@@ -1,0 +1,117 @@
+# GET /v1/languages
+# Get supported languages
+
+method: GET
+path: /v1/languages
+group: Languages
+title: Get languages
+description: Get supported languages for a provider. Defaults to ElevenLabs. Pass provider=minimax for MiniMax or provider=capcut for CapCut. ElevenLabs and CapCut return ISO codes (e.g. "vi"), MiniMax returns full names (e.g. "Vietnamese"). The backend normalizes both formats automatically in TTS requests.
+order: 1
+
+# Authentication
+auth:
+  type: xi-api-key
+  required: true
+
+# Path Parameters
+path_parameters: []
+
+# Query Parameters
+query_parameters:
+  - name: provider
+    type: string
+    required: false
+    description: Provider to get languages for. Defaults to ElevenLabs. Use "minimax" for MiniMax or "capcut" for CapCut languages.
+
+# Request Body
+request_body: null
+
+# Code Examples
+examples:
+  curl: |
+    # ElevenLabs languages (default)
+    curl -X GET "https://api.vibi.pro/v1/languages" \
+      -H "xi-api-key: YOUR_API_KEY"
+
+    # MiniMax languages
+    curl -X GET "https://api.vibi.pro/v1/languages?provider=minimax" \
+      -H "xi-api-key: YOUR_API_KEY"
+
+    # CapCut languages
+    curl -X GET "https://api.vibi.pro/v1/languages?provider=capcut" \
+      -H "xi-api-key: YOUR_API_KEY"
+
+  javascript: |
+    // ElevenLabs languages (default)
+    const response = await fetch('https://api.vibi.pro/v1/languages', {
+      method: 'GET',
+      headers: { 'xi-api-key': 'YOUR_API_KEY' }
+    });
+    const languages = await response.json();
+
+    // MiniMax languages
+    const mmResponse = await fetch('https://api.vibi.pro/v1/languages?provider=minimax', {
+      method: 'GET',
+      headers: { 'xi-api-key': 'YOUR_API_KEY' }
+    });
+    const mmLanguages = await mmResponse.json();
+
+    // CapCut languages
+    const ccResponse = await fetch('https://api.vibi.pro/v1/languages?provider=capcut', {
+      method: 'GET',
+      headers: { 'xi-api-key': 'YOUR_API_KEY' }
+    });
+    const ccLanguages = await ccResponse.json();
+
+  python: |
+    import requests
+
+    headers = {'xi-api-key': 'YOUR_API_KEY'}
+
+    # ElevenLabs languages (default)
+    response = requests.get('https://api.vibi.pro/v1/languages', headers=headers)
+    languages = response.json()
+
+    # MiniMax languages
+    response = requests.get('https://api.vibi.pro/v1/languages', params={'provider': 'minimax'}, headers=headers)
+    languages = response.json()
+
+    # CapCut languages
+    response = requests.get('https://api.vibi.pro/v1/languages', params={'provider': 'capcut'}, headers=headers)
+    languages = response.json()
+
+# Responses
+responses:
+  - status: 200
+    description: ElevenLabs languages (default) - ISO codes
+    example: |
+      [
+        { "code": "af", "name": "Afrikaans" },
+        { "code": "ar", "name": "Arabic" },
+        { "code": "en", "name": "English" },
+        { "code": "vi", "name": "Vietnamese" },
+        { "code": "zh", "name": "Mandarin Chinese" }
+      ]
+  - status: 200
+    description: MiniMax languages (provider=minimax) - full names
+    example: |
+      [
+        { "code": "Afrikaans", "name": "Afrikaans" },
+        { "code": "Arabic", "name": "Arabic" },
+        { "code": "English", "name": "English" },
+        { "code": "Vietnamese", "name": "Vietnamese" },
+        { "code": "Chinese (Mandarin)", "name": "Chinese (Mandarin)" }
+      ]
+  - status: 200
+    description: CapCut languages (provider=capcut) - ISO codes
+    example: |
+      [
+        { "code": "zh", "name": "Chinese" },
+        { "code": "en", "name": "English" },
+        { "code": "id", "name": "Indonesian" },
+        { "code": "ja", "name": "Japanese" },
+        { "code": "pt", "name": "Portuguese" },
+        { "code": "es", "name": "Spanish" },
+        { "code": "th", "name": "Thai" },
+        { "code": "vi", "name": "Vietnamese" }
+      ]

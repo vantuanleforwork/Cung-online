@@ -1,0 +1,26 @@
+BẢN CẬP NHẬT ELEVENLABS 004
+
+1. Upload ZIP vào đúng thư mục website (cùng nơi đang có config.php), chọn Extract/Giải nén và cho ghi đè các tệp trong gói.
+2. Mở admin.php, đăng nhập. Website tự bổ sung dữ liệu phần giọng đọc. Không cần import SQL hay sửa config.php.
+3. Vào Giọng đọc & hiển thị:
+   - Chọn nguồn ElevenLabs.
+   - Dán API key có quyền Text to Speech.
+   - Dán Voice ID của giọng bạn được quyền sử dụng trong tài khoản ElevenLabs.
+   - Giữ model Flash v2.5 để dùng tiếng Việt, hoặc chọn Eleven v3.
+   - Bấm Nghe thử, sau đó Lưu cấu hình.
+4. Tải lại Browser Source trong OBS. Kiểm tra nguồn không bị tắt tiếng trong Audio Mixer.
+
+API key để trống ở các lần chỉnh sau sẽ giữ khóa đã lưu. Không nhập khóa vào chat hoặc URL overlay.
+
+Gói ZIP không chứa config.php, không thay tài khoản database/ngân hàng/Pay2S/khóa overlay và không xóa giao dịch.
+Nâng cấp tự động hỗ trợ database đã có admin từ bản 002 hoặc 003. User database cần quyền CREATE và ALTER (đã có nếu gán ALL PRIVILEGES).
+Nếu xuất hiện lỗi nâng cấp, kiểm tra quyền database rồi tải lại admin. Không import lại schema.sql vào database có dữ liệu.
+
+MP3 ElevenLabs được giữ ở database và phát qua audio.php. Không cần cài Python, Node.js, extension OBS hoặc cấp quyền ghi thư mục âm thanh.
+Hosting cần PHP cURL, kết nối HTTPS ra api.elevenlabs.io và dung lượng database cho bộ nhớ MP3. Có thể xóa bộ nhớ trong admin khi cần.
+Nghe thử và tạo giọng dùng hạn mức của tài khoản ElevenLabs. Mẫu câu và nội dung tên/lời nhắn đã duyệt được gửi sang dịch vụ để tạo âm thanh.
+
+Nếu ElevenLabs báo lỗi: kiểm tra API key, quyền Text to Speech, Voice ID và hạn mức. Sau khi sửa, xóa bộ nhớ giọng lỗi để thử lại.
+Không dùng model Multilingual v2 cho tiếng Việt. Hướng dẫn API/model chính thức: https://elevenlabs.io/docs/overview/models
+
+Phần tích hợp đã kiểm thử bằng dữ liệu mô phỏng, gồm MP3/HTTP Range, khóa truy cập âm thanh và nâng cấp database. Chưa gọi ElevenLabs bằng API key thật.

@@ -1,0 +1,31 @@
+BẢN CẬP NHẬT CUSTOM API VOICE / VIBI.PRO 005
+
+1. Upload ZIP vào đúng thư mục website hiện có (cùng chỗ config.php), Extract/Giải nén và cho ghi đè.
+2. Mở admin.php, đăng nhập. Website tự bổ sung dữ liệu TTS bản 005; không cần import SQL và không sửa config.php.
+3. Vào Giọng đọc & hiển thị, chọn nguồn Custom API Voice.
+4. Trong khung Custom API Voice:
+   - API URL mặc định: https://api.vibi.pro/v1
+   - API key: khóa vibi.pro của bạn, tách riêng với khóa ElevenLabs trực tiếp.
+   - Engine: ElevenLabs / MiniMax / CapCut.
+   - Model: eleven_flash_v2_5 cho ElevenLabs; speech-2.8-turbo cho MiniMax; capcut cho CapCut. Có thể nhập model khác mà dịch vụ hỗ trợ.
+   - Voice ID: dán ID bạn có hoặc mở Chọn Voice ID · Custom API Voice phía dưới để tải/tìm giọng rồi chọn.
+5. Nghe thử, đợi tác vụ hoàn tất rồi Lưu cấu hình. Tải lại Browser Source trong OBS.
+
+Voice ID ElevenLabs trực tiếp cũng có mục tải/tìm/chọn riêng. Dùng API key ElevenLabs cho nguồn này; không dùng nhầm key vibi.pro.
+Chọn trong danh sách chỉ điền ID vào ô, cần bấm Lưu cấu hình để dùng cho lượt tiếp theo. Giọng clone/giọng riêng vẫn có thể dán ID thủ công.
+Thư viện Custom engine ElevenLabs có chế độ Giọng Việt và Giọng mặc định; MiniMax/CapCut dùng danh sách giọng hệ thống theo tài liệu API.
+Nếu key không có quyền xem danh sách, bạn vẫn có thể dán Voice ID thủ công rồi nghe thử với quyền tạo giọng.
+
+Custom API Voice hỗ trợ giao thức JSON bất đồng bộ của vibi.pro, không phải mọi API TTS tùy ý:
+POST /v1/text-to-speech/{voice_id} trả 202 + task ID.
+GET /v1/history/{id} cho trạng thái pending/processing/completed/failed và result.audio_url.
+Website lưu task ID và kiểm tra tiến độ; không gửi lại POST chỉ vì giọng chưa xong. Nghe thử và overlay chờ tối đa khoảng 3 phút mỗi lượt; lần thử tiếp theo tiếp tục tác vụ cũ nếu vẫn còn cache.
+
+Nếu giọng thất bại hoặc chờ lâu, kiểm tra lịch sử ở dịch vụ trước khi xóa bộ nhớ để tạo lại, tránh tạo hai tác vụ có phí.
+API key để trống khi chỉnh lại sẽ giữ khóa đã lưu. Khi thay API URL cần nhập lại khóa cho URL mới. Các API URL phải là HTTPS công khai; không dùng localhost, IP nội bộ hoặc URL chứa key.
+Hosting cần PHP cURL và truy cập HTTPS/DNS ra dịch vụ. Khóa không gửi cho OBS, không hiện lại trong HTML và không ghi vào nhật ký quản trị.
+
+Gói giữ nguyên config.php, giao dịch, cấu hình Pay2S và khóa ElevenLabs đã có. Tự nâng cấp hỗ trợ bản 002–004, user database cần quyền CREATE/ALTER.
+Không upload api-docs, tests, artifacts hoặc import lại schema.sql lên database đang dùng.
+
+Đã kiểm thử bằng API giả lập theo tài liệu trong api-docs. Chưa gọi vibi.pro/ElevenLabs bằng API key thật.

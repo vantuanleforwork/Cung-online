@@ -1,0 +1,13 @@
+BẢN CẬP NHẬT GIAO DIỆN & CẤU HÌNH API GIỌNG ĐỌC 007
+
+1. Upload file ZIP này lên thư mục gốc website trên hosting (cùng thư mục với config.php).
+2. Giải nén (Extract) và chọn ghi đè (Overwrite) toàn bộ file hiện có.
+   (File config.php, database, các giao dịch và API key đã lưu không bị ảnh hưởng).
+3. Mở trang admin (admin.php), bấm Ctrl+F5 để tải lại giao diện và JS mới.
+4. Vào mục "Giọng đọc & hiển thị":
+   - Đã sửa lỗi không lưu được khi thêm API mới (ElevenLabs hoặc Custom API Voice):
+     + Giờ đây có thể nhập API Key và lưu cấu hình ngay cả khi chưa chọn hoặc chưa có Voice ID.
+     + Tự động loại bỏ khoảng trắng / ký tự xuống dòng thừa nếu lỡ copy dính vào API Key.
+     + Sau khi lưu API Key thành công, có thể mở mục "Tìm và chọn Voice ID" để tải danh sách giọng từ API đã lưu, chọn giọng phù hợp rồi bấm "Lưu cấu hình" lần nữa.
+     + Chỉ yêu cầu Voice ID khi bấm "Nghe thử câu này" hoặc khi livestream phát thông báo.
+

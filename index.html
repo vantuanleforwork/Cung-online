@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dâng hương online</title>
+<style>
+:root{--lac:#793c2d;--ivory:#fcf9f2;--gold:#b88951;--ink:#332b23}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:48px 24px;background:radial-gradient(ellipse at 15% 25%,#eadfc6aa,transparent 55%),#f2eee5;color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;line-height:1.6}
+.site-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);align-items:center;gap:64px;max-width:1000px;width:100%}.intro{padding:24px 0}.brand{display:flex;gap:12px;align-items:center;letter-spacing:2.5px;font-size:11px;font-weight:600;color:#75644a}.brand-icon{display:grid;place-items:center;width:44px;height:44px;border:1px solid #bda378;border-radius:50%;font-size:24px;color:#937144}.intro h2{font:400 48px/1.25 Georgia,"Times New Roman",serif;letter-spacing:-1.7px;margin:40px 0 20px}.intro h2 em{font-weight:400;color:var(--lac)}.intro p{color:#807363;font-size:15px;max-width:330px}.intro-art{width:168px;height:140px;margin:32px 0 20px;opacity:.85}.intro-note{border-top:1px solid #d9cebb;padding-top:20px!important;font-size:12px!important;letter-spacing:.3px}
+main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:24px;padding:32px 34px;box-shadow:0 18px 65px #6652350b,0 2px 8px #66523505}h1{margin:4px 0 8px;font:400 29px/1.3 Georgia,"Times New Roman",serif;letter-spacing:-.5px}.section-kicker{margin:0;color:#a58b65;font-size:10px;font-weight:600;letter-spacing:2px}.sub{margin:0 0 18px;font-size:13px;color:#8b7c69}.field-label{display:flex;align-items:center;justify-content:space-between;gap:12px}label{display:block;margin:22px 0 8px;font-size:12px;font-weight:600;color:#62523f}label .step{color:#b8a487;font-size:10px;margin-right:9px;font-weight:400}input,textarea{width:100%;padding:13px 15px;border:1px solid #e1d8c9;border-radius:10px;background:#fffdf8;color:var(--ink);font:inherit;font-size:14px;transition:border-color .2s,box-shadow .2s}input::placeholder,textarea::placeholder{color:#b3a691}input:focus-visible,textarea:focus-visible{outline:none;border-color:#b29360;box-shadow:0 0 0 3px #b89a6120}button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}textarea{min-height:118px;resize:vertical;line-height:1.7}.amount-field{position:relative}.amount-field input{font:400 32px/1.2 Georgia,"Times New Roman",serif;padding:16px 64px 16px 16px;letter-spacing:-.5px}.amount-field span{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:1.5px;color:#9e8766}input[type=number]{appearance:textfield;-moz-appearance:textfield}input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.row{display:flex;justify-content:space-between;gap:12px;margin-top:8px;font-size:11px;color:#99866a}.q{display:flex;gap:8px;margin-top:10px}.q button{flex:1;padding:9px 0;border:1px solid #e1d5c1;border-radius:8px;background:transparent;color:#806c50;font:600 12px "Segoe UI",Arial,sans-serif;cursor:pointer;transition:background .2s,border-color .2s}.q button:hover{background:#eee6d5}.q button[aria-pressed=true]{background:#eee3cd;border-color:#bfa478;color:#634923}.go{width:100%;margin-top:24px;padding:15px;border:1px solid #713727;border-radius:10px;background:var(--lac);color:#fff9ef;font:600 14px "Segoe UI",Arial,sans-serif;letter-spacing:.3px;cursor:pointer;box-shadow:0 4px 12px #793c2d18}.go:hover{background:#683223}.go:disabled{opacity:.55;cursor:wait}.privacy-note{font-size:10px;color:#a09481;text-align:center;margin:12px 0 0}.privacy-note span{color:#b29465;margin-right:5px}#err{min-height:1.2em;margin-top:8px;color:#a3150b;font-size:12px}#res{display:none;text-align:center}#res img{width:100%;max-width:330px;border-radius:14px;background:#fff;border:1px solid #e8dfd1;margin:20px 0 8px}#res .sub{line-height:1.8}#res p{font-size:13px}#paymentStatus{border:1px solid #d8dec8;background:#eef1e6;color:#586a44;padding:14px;border-radius:10px;font-size:13px!important}code{display:inline-block;margin:8px 0;padding:6px 16px;background:#eee5d3;border-radius:6px;font-size:19px;font-weight:700;letter-spacing:.1em;color:#7b6037}#newOrder{border:1px solid #d3c4aa;border-radius:8px;background:transparent;padding:10px 18px;color:#786448;cursor:pointer;font:12px "Segoe UI",Arial,sans-serif}
+.account{padding:14px 16px;border:1px solid #e4d8c4;border-radius:12px;margin-bottom:22px;background:#fffdf8}.account-button,.account button{display:inline-block;border:1px solid #713727;border-radius:8px;background:#793c2d;color:#fff;padding:9px 14px;text-decoration:none;cursor:pointer}.account-head{display:flex;align-items:center;gap:12px}.account-head img{width:44px;height:44px;border-radius:50%;object-fit:cover}.account-head .sub{margin:0}.level{margin-left:auto;color:#795d36;font-weight:700}.account details{margin-top:10px}.account summary{cursor:pointer;color:#795d36}.account form{margin-top:8px}.account small{display:block;color:#8b7c69}.account .logout{margin-top:10px;background:transparent;color:#793c2d}.account #profileError{display:block;color:#a3150b}
+@media(max-width:760px){body{padding:24px 16px}.site-shell{grid-template-columns:1fr;gap:24px;max-width:480px}.intro{padding:8px 8px 0}.intro h2{font-size:34px;letter-spacing:-.8px;margin:22px 0 12px}.intro h2 br{display:none}.intro p{max-width:none;font-size:13px;margin-bottom:0}.intro-art,.intro-note{display:none}.brand-icon{width:34px;height:34px;font-size:20px}.brand{font-size:9px;letter-spacing:2px}main{padding:26px 24px;border-radius:20px}h1{font-size:26px}.amount-field input{font-size:30px}}
+.intro h2,h1{font-family:"Times New Roman",serif}
+</style>
+<div class="site-shell">
+<aside class="intro"><div class="brand"><span class="brand-icon" aria-hidden="true">✦</span>DÂNG HƯƠNG ONLINE</div>
+<h2>Gửi một lời nguyện,<br> trao chút <em>lòng thành.</em></h2>
+<p>Một nén hương, một lời gửi gắm. Dành những điều bình an cho người bạn thương.</p>
+<svg class="intro-art" viewBox="0 0 168 140" fill="none" aria-hidden="true"><circle cx="84" cy="72" r="57" stroke="#c1ac862e"/><circle cx="84" cy="72" r="45" stroke="#c1ac862e"/><path d="M75 89V45M85 89V30M95 89V45" stroke="#a08050" stroke-width="2" stroke-linecap="round"/><path d="M75 34C62 23 85 20 75 9M95 34C108 21 87 19 96 6" stroke="#b7a78a" stroke-width="1.5" stroke-linecap="round"/><path d="M55 92H113L105 116H63L55 92Z" fill="#bc9b6720" stroke="#a88b5a" stroke-width="1.5"/><ellipse cx="84" cy="92" rx="29" ry="6" fill="#e0d2b8" stroke="#a88b5a"/><path d="M65 105H103M69 119L66 125M99 119L102 125" stroke="#a88b5a" stroke-width="1.5"/></svg>
+<p class="intro-note">Lời nhắn của bạn sẽ xuất hiện cùng lễ dâng trên livestream.</p></aside>
+<main>
+  <section class="account" id="account">
+    <div id="signedOut"><strong>Đăng nhập để tạo lượt donate</strong><p class="sub">Tài khoản Google giúp lưu tên, avatar và cấp donate của bạn.</p><a class="account-button" href="google-auth.php?action=login">Tiếp tục với Google</a></div>
+    <div id="signedIn" hidden>
+      <div class="account-head"><img id="profileAvatar" alt="" referrerpolicy="no-referrer"><div><strong id="profileName"></strong><br><span id="profileEmail" class="sub"></span></div><span id="profileLevel" class="level"></span></div>
+      <details><summary>Chỉnh sửa hồ sơ</summary><form id="profileForm" enctype="multipart/form-data">
+        <label>Tên hiển thị <input name="display_name" id="profileNameInput" maxlength="40" required></label>
+        <label>Ảnh đại diện <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG hoặc WebP · tối đa 2 MB. Để trống để giữ ảnh hiện tại.</small></label>
+        <label><input type="checkbox" name="use_google_avatar" value="1" style="width:auto"> Dùng lại ảnh Google</label>
+        <button type="submit">Lưu hồ sơ</button><span id="profileError" role="alert"></span>
+      </form></details>
+      <form action="google-auth.php?action=logout" method="post"><input type="hidden" name="csrf" id="logoutCsrf"><button class="logout" type="submit">Đăng xuất</button></form>
+    </div>
+  </section>
+  <div id="f">
+    <p class="section-kicker">MỘT CHÚT TÂM THÀNH</p><h1>Viết lời gửi gắm</h1>
+    <p class="sub">Chọn lễ dâng và gửi lời nguyện của bạn.</p>
+    <label for="amt"><span class="step">01</span>Số tiền dâng lễ</label>
+    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="20000" inputmode="numeric"><span>VNĐ</span></div>
+    <div class="q">
+      <button type="button" data-v="20000">20.000đ</button>
+      <button type="button" data-v="50000">50.000đ</button>
+      <button type="button" data-v="200000">200.000đ</button>
+    </div>
+    <label for="msg"><span class="step">02</span>Lời nguyện của bạn</label>
+    <textarea id="msg" maxlength="100" placeholder="Cầu mong gia đình bình an, mọi sự tốt lành…" aria-describedby="hint cnt"></textarea>
+    <div class="row"><span id="hint">Dưới 50k: thắp hương</span><span id="cnt">0/100</span></div>
+    <button class="go" id="go" type="button" disabled>Tiếp tục · Tạo mã QR &nbsp; →</button>
+    <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn có thể xuất hiện trên livestream.</p>
+    <div id="err" role="alert"></div>
+  </div>
+  <div id="res">
+    <h1>Quét mã để chuyển khoản</h1>
+    <img id="qr" alt="Mã QR chuyển khoản">
+    <p>Giữ nguyên số tiền và nội dung chuyển khoản:<br><code id="code"></code></p>
+    <p id="paymentStatus" role="status" aria-live="polite">Đang kiểm tra thanh toán…</p>
+    <p class="sub">Mỗi lần chuyển cần từ 10.000đ. Lễ tính theo tiền thực nhận và hiển thị sau khi được duyệt, đến lượt phát.</p>
+    <p class="sub">Nếu chuyển sai nội dung, hãy giữ biên lai và mã đơn để được hỗ trợ đối soát.</p>
+    <button type="button" id="newOrder">Tạo lượt khác</button>
+  </div>
+</main>
+</div>
+<script>
+const $=i=>document.getElementById(i);
+let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null;
+function remember(value){try{if(value)localStorage.setItem('cung_order',JSON.stringify(value));else localStorage.removeItem('cung_order')}catch(e){}}
+async function refreshStatus(generation){
+  if(!order||generation!==statusGeneration)return;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  let finished=false;
+  try{
+    const r=await fetch('status.php',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status_token:order.status_token}),signal:controller.signal});
+    const d=await r.json();
+    if(generation!==statusGeneration)return;
+    if(!r.ok)throw new Error(d.error||'Chưa kiểm tra được trạng thái.');
+    const money=Number(d.paid_amount||0).toLocaleString('vi-VN')+'đ';
+    const labels={pending:'Đang chờ nhận tiền.',review:'Đã nhận '+money+'. Lời nhắn đang chờ duyệt.',
+      queued:'Đã nhận '+money+'. Đang chờ phát; có '+d.ahead+' lượt phía trước.',
+      playing:'Lễ của bạn đang được phát trên live.',shown:'Lễ của bạn đã hiển thị trên live.',
+      skipped:'Đã nhận '+money+'. Lượt này không hiển thị trên live. Vui lòng liên hệ người tổ chức nếu cần hỗ trợ.'};
+    $('paymentStatus').textContent=labels[d.state]||'Đang cập nhật trạng thái…';
+    if(d.paused&&['review','queued'].includes(d.state))$('paymentStatus').textContent+=' Hàng đợi đang tạm dừng.';
+    finished=['shown','skipped'].includes(d.state);
+  }catch(e){if(generation===statusGeneration)$('paymentStatus').textContent='Chưa kết nối được để kiểm tra thanh toán; sẽ tự thử lại. Bạn không cần chuyển lại.'}
+  finally{clearTimeout(timer);if(!finished&&generation===statusGeneration)statusTimer=setTimeout(()=>refreshStatus(generation),5000)}
+}
+function showOrder(value){
+  order=value;remember(value);clearTimeout(statusTimer);const generation=++statusGeneration;
+  $('f').style.display='none';$('res').style.display='block';
+  $('qr').src=value.qr;$('code').textContent=value.code;refreshStatus(generation);
+}
+$('newOrder').onclick=()=>{order=null;remember(null);statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block'};
+const lim=a=>a>=50000?225:100;
+const hint=a=>a>=200000?'Từ 200k: dâng gà luộc':a>=50000?'50k đến dưới 200k: dâng hoa quả':'Dưới 50k: thắp hương';
+function upd(){
+  const a=+$('amt').value||0,l=lim(a),m=$('msg');
+  m.maxLength=l;
+  if(m.value.length>l)m.value=m.value.slice(0,l);
+  $('cnt').textContent=m.value.length+'/'+l;
+  $('hint').textContent=hint(a);
+  document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
+}
+document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
+$('amt').oninput=$('msg').oninput=upd;
+async function loadProfile(){
+  try{
+    const r=await fetch('profile.php',{cache:'no-store'}),d=await r.json();csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
+    const allowed=!!d.logged_in;$('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
+    $('go').disabled=!allowed;
+    if(!allowed)return;
+    profile=d.user;$('profileName').textContent=profile.name;$('profileNameInput').value=profile.name;
+    $('profileEmail').textContent=profile.email;$('profileLevel').textContent='Lv'+profile.level;
+    if(profile.avatar){$('profileAvatar').src=profile.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
+  }catch(e){$('go').disabled=true;$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.'}
+}
+$('profileForm').onsubmit=async e=>{
+  e.preventDefault();$('profileError').textContent='';const fd=new FormData(e.currentTarget);fd.set('csrf',csrfToken);
+  try{const r=await fetch('profile.php',{method:'POST',body:fd,cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Không lưu được hồ sơ.');e.currentTarget.reset();await loadProfile()}
+  catch(err){$('profileError').textContent=err.message}
+};
+$('go').onclick=async()=>{
+  $('err').textContent='';
+  $('go').disabled=true;
+  try{
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount:+$('amt').value,message:$('msg').value})});
+    const d=await r.json();
+    if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
+    showOrder(d);
+  }catch(e){$('err').textContent='Mất kết nối, hãy thử lại.'}finally{$('go').disabled=false}
+};
+upd();
+loadProfile();
+try{
+  const saved=JSON.parse(localStorage.getItem('cung_order'));
+  if(saved&&typeof saved.status_token==='string'&&/^[a-f0-9]{64}$/.test(saved.status_token)&&
+    typeof saved.code==='string'&&typeof saved.qr==='string'&&saved.qr.startsWith('https://img.vietqr.io/image/'))showOrder(saved);
+}catch(e){}
+</script>

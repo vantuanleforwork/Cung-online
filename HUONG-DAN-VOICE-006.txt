@@ -1,0 +1,18 @@
+BẢN CẬP NHẬT GIAO DIỆN GIỌNG ĐỌC 006
+
+1. Upload và giải nén ZIP vào thư mục website hiện có, cho phép ghi đè.
+2. Mở admin, tải lại bằng Ctrl+F5, vào Giọng đọc & hiển thị.
+3. Chọn nền tảng giọng đọc. Chỉ khung cấu hình của nền tảng đó hiện ra:
+   - ElevenLabs trực tiếp: API key, Voice ID, model, thư viện giọng ElevenLabs.
+   - FPT.AI: chỉ lựa chọn giọng FPT; dùng FPT_TTS_API_KEY đã có trên hosting.
+   - Custom API Voice: API URL/key, engine, model, Voice ID và thư viện tương ứng.
+   - Giọng trên máy: không hiện các ô API.
+4. Eleven v3 có sẵn trong menu model của ElevenLabs trực tiếp. Với Custom API, chọn engine ElevenLabs rồi chọn model Eleven v3.
+5. Nghe thử rồi Lưu cấu hình. Muốn dùng model khác trên Custom API, chọn Nhập Model ID khác.
+
+Chuyển nền tảng không xóa API key, Voice ID hoặc model đã lưu của nền tảng khác. Cấu hình đang ẩn không được gửi lên khi lưu và không gây lỗi kiểm tra ô bắt buộc.
+Mẫu câu đọc, âm lượng, tốc độ và thời gian hiển thị là cài đặt chung.
+
+Gói giữ nguyên config.php, dữ liệu giao dịch và các API key đã lưu. Không cần import SQL. Với website cũ từ bản 002 trở lên, mở admin để tự bổ sung dữ liệu TTS còn thiếu.
+
+Đã kiểm thử chuyển nền tảng, giữ cấu hình, menu Eleven v3, nghe thử giả lập, lưu cấu hình và kiểm tra giao diện desktop/mobile. Chưa gọi API có phí bằng key thật.
