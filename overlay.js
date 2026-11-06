@@ -56,6 +56,7 @@ async function playTierIntro(d,signal){
   try{await sleep(reduced?120:(tier===2?2800:3800),signal)}
   finally{intro.hidden=true;intro.className='tier-intro'}
 }
+globalThis.playTierIntro=playTierIntro;
 function render(d){
   const tier=donationTier(d);
   $('donorName').textContent=d.name||'Ẩn danh';
@@ -104,7 +105,7 @@ async function play(d){
   const lease=preview?{signal:new AbortController().signal,close(){}}:startLease(d);
   render(d);$('stage').classList.remove('is-visible');
   try{
-    await playTierIntro(d,lease.signal);
+    await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
     void $('stage').offsetWidth;$('stage').classList.add('is-visible');
     await sleep(700,lease.signal);
     const reading=speak({...d},lease.signal).catch(error=>{
