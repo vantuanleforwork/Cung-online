@@ -124,3 +124,86 @@ if(form&&button){
     });
   });
 }
+
+// --- Overlay Live Preview & OBS Test Webhook ---
+const previewIframe=document.getElementById('overlayPreviewIframe');
+const previewContainer=document.getElementById('overlayPreviewContainer');
+const previewOpenTab=document.getElementById('previewOpenTab');
+const overlayKey=previewContainer?.dataset?.overlayKey||'';
+
+if(previewIframe&&overlayKey){
+  const previewButtons=document.querySelectorAll('[data-preview-tier-btn]');
+  const reloadBtn=document.getElementById('previewReloadBtn');
+  let currentTier='1';
+
+  function setPreview(tier,autoplay=1){
+    currentTier=String(tier);
+    previewButtons.forEach(btn=>{
+      btn.classList.toggle('active',btn.dataset.previewTierBtn===currentTier);
+    });
+    if(previewOpenTab){
+      previewOpenTab.href=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=1&motion=1`;
+    }
+    previewIframe.src=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=${autoplay}&motion=1&_t=${Date.now()}`;
+  }
+
+  previewButtons.forEach(btn=>{
+    if(typeof btn?.addEventListener!=='function')return;
+    btn.addEventListener('click',()=>{
+      setPreview(btn.dataset.previewTierBtn||'1',1);
+    });
+  });
+
+  reloadBtn?.addEventListener?.('click',()=>{
+    setPreview(currentTier,1);
+  });
+}
+
+const webhookFeedback=document.getElementById('obsWebhookFeedback');
+const testWebhookButtons=document.querySelectorAll('[data-test-webhook-amount]');
+const customWebhookForm=document.getElementById('customWebhookForm');
+
+async function sendTestWebhook(amount,name,message,triggerBtn){
+  if(!webhookFeedback)return;
+  if(triggerBtn)triggerBtn.disabled=true;
+  webhookFeedback.className='test-feedback loading';
+  webhookFeedback.textContent=`Đang đẩy lượt test ${Number(amount).toLocaleString('vi-VN')}đ vào OBS…`;
+
+  try{
+    const csrf=form?.elements?.namedItem('csrf')?.value||document.querySelector?.('input[name="csrf"]')?.value||'';
+    const body=new FormData();
+    body.set('action','test_webhook_obs');
+    body.set('csrf',csrf);
+    body.set('amount',String(amount));
+    if(name)body.set('name',name);
+    if(message)body.set('message',message);
+
+    const res=await voiceAction(body);
+    webhookFeedback.className='test-feedback success';
+    webhookFeedback.innerHTML=`<strong>✅ ${res.text||'Đã đẩy thành công vào OBS!'}</strong> OBS Browser Source sẽ hiển thị trong 1-3 giây. <a href="admin.php?view=queue" style="margin-left:8px;text-decoration:underline;color:inherit;font-weight:600">Xem hàng đợi lượt lễ ↗</a>`;
+  }catch(err){
+    webhookFeedback.className='test-feedback error';
+    webhookFeedback.textContent='❌ Lỗi: '+(err.message||'Không thể đẩy test vào OBS.');
+  }finally{
+    if(triggerBtn)triggerBtn.disabled=false;
+  }
+}
+
+testWebhookButtons.forEach(btn=>{
+  if(typeof btn?.addEventListener!=='function'||!btn.dataset?.testWebhookAmount)return;
+  btn.addEventListener('click',()=>{
+    const amount=Number(btn.dataset.testWebhookAmount)||10000;
+    sendTestWebhook(amount,'','',btn);
+  });
+});
+
+if(customWebhookForm&&typeof customWebhookForm.addEventListener==='function'){
+  customWebhookForm.addEventListener('submit',e=>{
+    e.preventDefault();
+    const submitBtn=customWebhookForm.querySelector?.('button[type="submit"]');
+    const amount=Number(customWebhookForm.elements?.namedItem('custom_amount')?.value)||10000;
+    const name=customWebhookForm.elements?.namedItem('custom_name')?.value||'';
+    const message=customWebhookForm.elements?.namedItem('custom_message')?.value||'';
+    sendTestWebhook(amount,name,message,submitBtn);
+  });
+}

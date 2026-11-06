@@ -184,3 +184,78 @@ function admin_action(PDO $db, array $in, string $ip) {
         throw $e;
     }
 }
+
+function push_test_webhook(PDO $db, int $amount, string $name = '', string $message = '', string $ip = ''): array {
+    if ($amount < MIN_AMOUNT) {
+        throw new InvalidArgumentException('Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ.');
+    }
+    $tier = tier($amount);
+    $name = clean($name, 40);
+    if ($name === '') $name = 'Khách thử nghiệm';
+    $message = clean($message, maxlen($amount));
+    if ($message === '') {
+        $defaultMessages = [
+            1 => 'Thử nghiệm hiệu ứng 10.000đ - Cầu mong gia đình bình an.',
+            2 => 'Thử nghiệm hiệu ứng Hỏa Long 50.000đ - Chúc vạn sự hanh thông!',
+            3 => 'Thử nghiệm hiệu ứng Thiên Nữ 200.000đ - Đại cát đại lợi, vạn sự như ý!'
+        ];
+        $message = $defaultMessages[$tier] ?? ('Thử nghiệm hiệu ứng ' . number_format($amount, 0, ',', '.') . 'đ');
+    }
+    
+    $tx = 'TEST_' . date('YmdHis') . '_' . strtoupper(bin2hex(random_bytes(3)));
+    $code = PREFIX . 'T' . strtoupper(bin2hex(random_bytes(2)));
+    
+    $payloadData = [
+        'gateway' => 'TEST_OBS',
+        'transactionDate' => date('Y-m-d H:i:s'),
+        'accountNumber' => trim(ACCOUNT_NO),
+        'subAccount' => null,
+        'code' => $code,
+        'content' => $code . ' TEST OBS ' . number_format($amount, 0, '', '') . 'D',
+        'transferType' => 'in',
+        'description' => 'Test webhook OBS from admin',
+        'transferAmount' => $amount,
+        'id' => $tx,
+        'referenceCode' => $tx
+    ];
+    $rawPayload = json_encode(['transactions' => [$payloadData]], JSON_UNESCAPED_UNICODE);
+    
+    $db->beginTransaction();
+    try {
+        $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision)
+            VALUES(?,?,?,?,?,'IN','matched')")
+           ->execute([$tx, $amount, $payloadData['content'], trim(ACCOUNT_NO), 'TEST_OBS']);
+        
+        $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip)
+            VALUES(?,?,?,?,?,'paid',?,0,'queued',?)")
+           ->execute([$code, $name, $message, $amount, $amount, $tx, $ip]);
+        $donationId = (int)$db->lastInsertId();
+        
+        $db->prepare("UPDATE payment_transactions SET donation_id=? WHERE tx_id=?")
+           ->execute([$donationId, $tx]);
+        
+        $db->prepare("INSERT INTO webhook_logs(response_code,outcome,transaction_count,duplicate_count,detail,payload)
+            VALUES(200,'processed',1,0,?,?)")
+           ->execute(['Đẩy test webhook OBS từ admin (' . number_format($amount, 0, ',', '.') . 'đ)', $rawPayload]);
+           
+        $audit = ['action' => 'test_webhook_obs', 'donation_id' => $donationId, 'amount' => $amount, 'tx_id' => $tx, 'tier' => $tier];
+        $db->prepare("INSERT INTO admin_audit(action,detail,ip) VALUES('test_webhook_obs',?,?)")
+           ->execute([json_encode($audit, JSON_UNESCAPED_UNICODE), $ip]);
+           
+        $db->commit();
+        
+        return [
+            'success' => true,
+            'donation_id' => $donationId,
+            'amount' => $amount,
+            'tier' => $tier,
+            'name' => $name,
+            'message' => $message,
+            'code' => $code,
+            'text' => 'Đã đẩy thành công lượt test ' . number_format($amount, 0, ',', '.') . 'đ (Đơn #' . $donationId . ') vào hàng đợi OBS!'
+        ];
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        throw $e;
+    }
+}

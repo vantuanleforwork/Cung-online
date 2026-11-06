@@ -5,7 +5,7 @@ require_once __DIR__ . '/voice-catalog.php';
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
-header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
+header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
 ini_set('session.use_strict_mode', '1');
 session_name('cung_admin');
 session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Strict', 'path' => '/']);
@@ -90,21 +90,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                         $settings['speech_provider'] === 'custom_api' ? (posted_custom_key($_POST) ?: null) : null);
                 }
                 respond(200, ['demo' => $demo]);
+            } elseif ($action === 'test_webhook_obs') {
+                $amount = filter_var($_POST['amount'] ?? 10000, FILTER_VALIDATE_INT);
+                if ($amount === false || $amount < MIN_AMOUNT) throw new InvalidArgumentException('Số tiền không hợp lệ (tối thiểu ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ).');
+                $name = (string)($_POST['name'] ?? '');
+                $message = (string)($_POST['message'] ?? '');
+                session_write_close();
+                $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '');
+                respond(200, $res);
             } else {
                 admin_action(db(), $_POST, $_SERVER['REMOTE_ADDR'] ?? '');
                 $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_speech','clear_speech_cache'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
             }
         } catch (InvalidArgumentException $e) {
             if (http_response_code() === 200) http_response_code(409);
-            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices'], true)) respond(400, ['error' => $e->getMessage()]);
+            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices','test_webhook_obs'], true)) respond(400, ['error' => $e->getMessage()]);
             $error = $e->getMessage();
         } catch (SpeechProviderException $e) {
-            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices'], true)) respond(503, ['error' => $e->getMessage()]);
+            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices','test_webhook_obs'], true)) respond(503, ['error' => $e->getMessage()]);
             http_response_code(503); $error = $e->getMessage();
         } catch (Throwable $e) {
             if (isset($db) && $db->inTransaction()) $db->rollBack();
             error_log('Admin: ' . $e->getMessage()); http_response_code(500);
-            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices'], true)) respond(500, ['error' => 'Chưa kết nối được dịch vụ giọng. Kiểm tra cấu hình, API key và hạn mức.']);
+            if (in_array($_POST['action'] ?? '', ['preview_voice','list_voices','test_webhook_obs'], true)) respond(500, ['error' => 'Chưa kết nối được dịch vụ hoặc không thể đẩy test.']);
             $error = 'Không thực hiện được. Hãy kiểm tra database và nhật ký máy chủ.';
         }
     }
@@ -193,7 +201,23 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 *{box-sizing:border-box}body{margin:0;background:#f4ecdc;color:#2a1a14;font:15px/1.5 system-ui,sans-serif}main{max-width:1400px;margin:32px auto;padding:0 20px}h1{font-size:26px}a{color:#7a1f17}nav{display:flex;gap:18px;flex-wrap:wrap;margin:20px 0}button,input,textarea,select{font:inherit;padding:8px;border:1px solid #b9a98f;border-radius:4px}button{background:#7a1f17;color:white;cursor:pointer}button:disabled{opacity:.5}input,textarea{max-width:100%;background:#fffdf6}textarea{width:100%;min-height:80px}.inline{display:inline-block;margin:3px}.notice{padding:12px;background:#e3ecd9;border:1px solid #78915a}.error{background:#ffe1d9;border-color:#ac4030}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;background:#fffaf0}th,td{padding:12px;border-bottom:1px solid #d8cbb5;text-align:left;vertical-align:top}th{white-space:nowrap}td{min-width:90px}.message{min-width:260px;max-width:450px;overflow-wrap:anywhere}.muted{color:#715f4b;font-size:13px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fffaf0;padding:16px}details{margin:8px 0}.login{max-width:420px;background:#fffaf0;padding:24px}label{display:block;margin:10px 0}code{overflow-wrap:anywhere}.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.pagination{margin:20px 0;display:flex;gap:20px}
 .speech-panel{max-width:900px;background:#fffaf0;border:1px solid #d8cbb5;border-radius:18px;padding:28px;margin-top:24px;box-shadow:0 12px 40px #2a1a1409}.speech-panel h2{margin-top:0}.speech-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.speech-grid input,.speech-grid select{width:100%}.speech-panel textarea{padding:16px;min-height:120px;line-height:1.7}.speech-panel code{background:#eee2ca;padding:3px 6px;border-radius:4px}.sample{border-left:3px solid #b8892e;padding:12px 18px;background:#f4ecdc;line-height:1.8}.sample strong,.sample output{display:block}.sample strong{margin-bottom:4px;color:#715f4b;font-size:12px}.sample output{color:#2a1a14}.speech-panel label{font-weight:600}.speech-panel small{display:block;font-weight:400;color:#715f4b;margin-top:5px}@media(max-width:600px){.speech-grid{grid-template-columns:1fr}.speech-panel{padding:18px}}
 .api-panel{min-width:0;border:1px solid #d8cbb5;border-radius:12px;padding:16px;margin:20px 0}.api-panel legend{font-weight:600;color:#795d36;padding:0 8px}.voice-picker{border:1px solid #e1d8c9;border-radius:10px;padding:14px;margin:12px 0}.voice-picker summary{cursor:pointer;font-weight:600}.voice-results{width:100%;margin-top:12px}.voice-picker .voice-search{flex:1;min-width:160px}
-[hidden]{display:none!important}.platform-select select{display:block;width:100%;margin-top:8px;padding:12px}.platform-select small{display:block;font-weight:400;color:#715f4b;margin-top:8px}.api-panel p{margin:4px 0}.api-panel select{width:100%}.common-voice-settings{margin:18px 0}.template-help{font-size:13px;margin-bottom:16px}.preview-effect-links{margin:22px 0;padding:18px;border:1px solid #d8cbb5;border-radius:12px;background:#f4ecdc}.preview-effect-links>strong,.preview-effect-links>span{display:block}.preview-effect-links .bar{margin-top:12px}.preview-effect-links a{display:inline-block;padding:9px 13px;border:1px solid #9a7043;border-radius:999px;background:#fffaf0;color:#6d351d;text-decoration:none;font-weight:600}.preview-effect-links a:hover{background:#7a1f17;color:#fff}
+[hidden]{display:none!important}.platform-select select{display:block;width:100%;margin-top:8px;padding:12px}.platform-select small{display:block;font-weight:400;color:#715f4b;margin-top:8px}.api-panel p{margin:4px 0}.api-panel select{width:100%}.common-voice-settings{margin:18px 0}.template-help{font-size:13px;margin-bottom:16px}
+.overlay-preview-card{margin:24px 0;padding:22px;border:1px solid #d8cbb5;border-radius:14px;background:#fbf6ee;box-shadow:0 4px 16px rgba(42,26,20,0.04)}
+.overlay-preview-card h3{margin:0 0 6px 0;color:#5a1d12;font-size:18px}
+.preview-iframe-wrapper{position:relative;width:100%;aspect-ratio:16/9;background:#0c0806;border-radius:10px;border:2px solid #5a1d12;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);margin:14px 0}
+.preview-iframe-wrapper iframe{width:100%;height:100%;border:0;display:block}
+.preview-tier-btn{display:inline-block;padding:8px 14px;border:1px solid #9a7043;border-radius:999px;background:#fffdf6;color:#6d351d;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s ease}
+.preview-tier-btn:hover,.preview-tier-btn.active{background:#7a1f17;color:#fff;border-color:#7a1f17}
+.obs-test-card{margin:24px 0;padding:22px;border:1px solid #c9bba6;border-radius:14px;background:#f5efe2}
+.obs-test-card h3{margin:0 0 6px 0;color:#1e4325;font-size:18px}
+.btn-push-obs{background:#235832;color:#fff;border:1px solid #184224;border-radius:999px;padding:8px 15px;font-weight:600;cursor:pointer;transition:background .15s ease}
+.btn-push-obs:hover{background:#184224}
+.test-feedback{margin-top:14px;padding:12px 16px;border-radius:8px;font-size:14px;display:none;line-height:1.6}
+.test-feedback.loading{display:block;background:#eef3f8;border:1px solid #b3cde5;color:#1b3d63}
+.test-feedback.success{display:block;background:#e6f4ea;border:1px solid #81c995;color:#135222}
+.test-feedback.error{display:block;background:#fce8e6;border:1px solid #ea868f;color:#801b1b}
+.custom-test-grid{display:grid;grid-template-columns:140px 180px 1fr auto;gap:10px;align-items:end;margin-top:12px}
+@media(max-width:768px){.custom-test-grid{grid-template-columns:1fr}}
 </style><main>
 <h1>Quản trị dâng hương</h1>
 <?php if ($error): ?><p class="notice error" role="alert"><?=h($error)?></p><?php endif ?>
@@ -284,5 +308,5 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php if ($offset+30<$total): ?><a href="?<?=h(http_build_query(['view'=>$view,'filter'=>$filter,'q'=>$search,'page'=>$page+1]))?>">Trang sau →</a><?php endif ?></div>
 <?php endif ?>
 <?php endif ?></main>
-<?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=7"></script><?php endif ?>
+<?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><?php endif ?>
 </html>

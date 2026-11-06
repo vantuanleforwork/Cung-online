@@ -64,11 +64,40 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="8" max="30" value="<?=h(max(8, (int)$settings['display_seconds']))?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng (tối thiểu 8 giây).</small></label></div>
 <div class="bar"><button type="submit">Lưu cấu hình</button><button type="button" id="testVoice">Nghe thử câu này</button></div>
 <p id="voiceFeedback" class="muted" role="status" aria-live="polite"></p></form>
-<div class="preview-effect-links">
-<strong>Thử hiệu ứng OBS</strong><span class="muted">Mỗi nút mở một bản xem thử riêng, không dùng lượt donate thật.</span>
-<div class="bar">
-<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">Thử 10.000đ</a>
-<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=2&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">🐉 Thử rồng 50.000đ</a>
-<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=3&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">✦ Thử đại chiêu 200.000đ</a>
-</div></div>
+<div class="overlay-preview-card" id="overlayPreviewContainer" data-overlay-key="<?=h(rawurlencode(OVERLAY_KEY))?>">
+  <h3>Xem thử hiệu ứng trực tiếp trên web</h3>
+  <span class="muted">Khung bên dưới mô phỏng chính xác những gì sẽ xuất hiện trên màn hình OBS (bao gồm hoạt cảnh Hỏa Long / Thiên Nữ, card hiển thị và giọng đọc).</span>
+  <div class="bar" style="margin-top:12px">
+    <button type="button" class="preview-tier-btn active" data-preview-tier-btn="1">Thử 10.000đ</button>
+    <button type="button" class="preview-tier-btn" data-preview-tier-btn="2">🐉 Thử rồng 50.000đ</button>
+    <button type="button" class="preview-tier-btn" data-preview-tier-btn="3">✦ Thử đại chiêu 200.000đ</button>
+    <button type="button" class="preview-tier-btn" id="previewReloadBtn" title="Phát lại hoạt cảnh đang chọn">⟳ Phát lại</button>
+    <a id="previewOpenTab" href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer" class="preview-tier-btn" style="margin-left:auto;">Mở tab riêng ↗</a>
+  </div>
+  <div class="preview-iframe-wrapper">
+    <iframe id="overlayPreviewIframe" src="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=0&amp;motion=1" allow="autoplay" title="Khung xem thử hiệu ứng OBS"></iframe>
+  </div>
+</div>
+
+<div class="obs-test-card">
+  <h3>Đẩy webhook test vào OBS (Livestream)</h3>
+  <span class="muted">Tạo một lượt donate thử nghiệm đưa trực tiếp vào hàng đợi OBS. Nếu OBS đang mở Browser Source, hiệu ứng và giọng đọc sẽ kích hoạt ngay lập tức!</span>
+  <div class="bar" style="margin-top:12px">
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="10000">📡 Bắn test 10.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="50000">🐉 Bắn test 50.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="200000">✦ Bắn test 200.000đ vào OBS</button>
+  </div>
+  <details style="margin-top:14px">
+    <summary style="cursor:pointer;font-weight:600;color:#533924">Tùy chỉnh số tiền &amp; lời nhắn test</summary>
+    <form id="customWebhookForm" method="post" style="margin-top:10px">
+      <div class="custom-test-grid">
+        <label style="margin:0">Số tiền (đ)<input type="number" name="custom_amount" min="10000" step="1000" value="50000" required></label>
+        <label style="margin:0">Tên người gửi<input type="text" name="custom_name" value="Khách thử nghiệm" maxlength="40"></label>
+        <label style="margin:0">Lời nhắn<input type="text" name="custom_message" value="Chúc kênh livestream ngày càng phát triển thuận lợi!" maxlength="255"></label>
+        <button type="submit" class="btn-push-obs" style="height:38px;white-space:nowrap">Bắn test vào OBS</button>
+      </div>
+    </form>
+  </details>
+  <div id="obsWebhookFeedback" class="test-feedback" role="status" aria-live="polite"></div>
+</div>
 <details><summary>Xử lý khi dịch vụ chưa tạo được giọng</summary><p>Kiểm tra cấu hình và hạn mức của nền tảng đang chọn. Kiểm tra lịch sử tạo giọng trước khi xóa bộ nhớ để tạo lại; việc tạo lại có thể dùng thêm hạn mức.</p><?php action_form('clear_speech_cache', [], 'Xóa bộ nhớ giọng đọc'); ?></details>
