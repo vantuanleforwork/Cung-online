@@ -11,6 +11,11 @@ function sleep(ms,signal){
   });
 }
 function notice(text){$('audioTools').hidden=false;$('notice').textContent=text}
+function noticeError(error,fallback){
+  const message=String(error?.message||'');
+  const text=error?.name==='AbortError'||/signal is aborted|aborted without reason/i.test(message)?fallback:(message||fallback);
+  notice(text);
+}
 async function request(url,body={},signal){
   const started=Date.now();
   const controller=new AbortController(),cancel=()=>controller.abort(),timer=setTimeout(cancel,25000);
@@ -48,14 +53,15 @@ function render(d){
     const img=document.createElement('img');img.src=d.donor_avatar;img.alt='';img.referrerPolicy='no-referrer';avatar.append(img);
   }else avatar.textContent=initial;
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
-  $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('vi-VN');
+  $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('en-US');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
   $('offeringBadge').textContent={1:'Thắp hương',2:'Dâng hoa quả',3:'Dâng lễ'}[tier];
   $('offeringText').textContent={1:'Một nén tâm hương',2:'Hoa thơm, quả ngọt',3:'Lễ thành kính dâng'}[tier];
   $('donorMessage').textContent=d.message||'Một tấm lòng thành, nguyện cầu bình an.';
   for(let i=1;i<=3;i++)$('art'+i).style.display=i===tier?'':'none';
-  $('stage').style.setProperty('--duration',(d.speech?.display_seconds||8)+'s');
+  $('stage').style.setProperty('--duration',displaySeconds(d)+'s');
 }
+function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
 async function speak(d,signal){
   if(!d.speech?.enabled||d.speech.volume===0)return;
   $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
@@ -81,9 +87,9 @@ async function play(d){
     await sleep(700,lease.signal);
     const reading=speak({...d},lease.signal).catch(error=>{
       if(lease.signal.aborted)throw error;
-      notice(error.message);
+      noticeError(error,'Không phát được giọng đọc.');
     });
-    await Promise.all([sleep((d.speech?.display_seconds||8)*1000,lease.signal),reading]);
+    await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
     return true;
@@ -128,7 +134,7 @@ async function test(){
       await CungSpeech.read(demo);
       $('notice').textContent='Đã nghe thử. Có thể ẩn bảng này bằng cách bỏ controls=1 khỏi URL và tải lại overlay.';
     }
-  }catch(error){notice(error.message)}
+  }catch(error){noticeError(error,'Không nghe thử được giọng đọc.')}
   finally{busy=false;$('previewPlay').disabled=$('enableAudio').disabled=false}
 }
 async function loop(){
@@ -140,7 +146,7 @@ async function loop(){
       if(response.status===403){notice('Khóa overlay không đúng. Kiểm tra OVERLAY_KEY trong đường dẫn.');return}
       if(!response.ok)throw new Error('Chưa kết nối được hàng đợi. Kiểm tra cấu hình và migration 003.');
       for(const d of data){d.lease_remaining_ms=Math.max(0,(Number(d.lease_seconds)||60)*1000-elapsed);if(await play(d))await acknowledge(d)}
-    }catch(error){notice(error.message||'Mất kết nối hàng đợi, đang thử lại…')}
+    }catch(error){noticeError(error,'Mất kết nối hàng đợi, đang thử lại…')}
     finally{busy=false}
     await sleep(2000);
   }
@@ -149,6 +155,6 @@ $('previewPlay').addEventListener('click',test);$('enableAudio').addEventListene
 window.addEventListener('pagehide',()=>CungSpeech.stop());
 if(preview){
   document.body.classList.add('preview');$('previewTools').hidden=false;
-  getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>notice(error.message));
+  getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>noticeError(error,'Không đọc được cấu hình overlay.'));
 }else if(!K)notice('Thiếu khóa overlay. Thêm ?k=OVERLAY_KEY vào đường dẫn.');
 else{if(params.get('controls')==='1')notice('Bấm nghe thử trước khi phát live.');loop()}

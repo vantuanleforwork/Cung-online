@@ -14,6 +14,10 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
 .intro h2,h1{font-family:"Times New Roman",serif}
 </style>
 <style>#amountError{min-height:1.2em;margin-top:8px;color:#a3150b;font-size:12px}</style>
+<style>
+.amount-preview{margin-top:4px;color:#8b7c69;font-size:11px}.amount-preview strong{color:#795d36;font-weight:700}
+.history{margin-top:28px;padding-top:22px;border-top:1px solid #e2d8c7}.history-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.history h2{margin:0;font:400 21px/1.3 Georgia,"Times New Roman",serif}.history-sub{margin:4px 0 12px;color:#8b7c69;font-size:11px}.history-list{display:grid;gap:8px}.history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e7ddce;border-radius:10px;background:#fffdf8}.history-main{min-width:0}.history-amount{display:block;color:#795d36;font:600 15px/1.3 "Segoe UI",Arial,sans-serif}.history-date{display:block;color:#9b8c79;font-size:10px}.history-side{display:flex;align-items:center;gap:8px;flex-shrink:0}.history-status{padding:4px 7px;border-radius:999px;background:#eee7da;color:#786448;font-size:10px;white-space:nowrap}.history-code{color:#9b8c79;font-size:10px}.history-more{display:block;margin:12px auto 0;padding:9px 16px;border:1px solid #d3c4aa;border-radius:8px;background:transparent;color:#786448;cursor:pointer;font:12px "Segoe UI",Arial,sans-serif}.history-more:disabled{opacity:.55;cursor:wait}.history-empty{margin:10px 0 0;color:#9b8c79;font-size:12px;text-align:center}
+</style>
 <div class="site-shell">
 <aside class="intro"><div class="brand"><span class="brand-icon" aria-hidden="true">✦</span>DÂNG HƯƠNG ONLINE</div>
 <h2>Gửi một lời nguyện,<br> trao chút <em>lòng thành.</em></h2>
@@ -38,12 +42,13 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
     <p class="section-kicker">MỘT CHÚT TÂM THÀNH</p><h1>Viết lời gửi gắm</h1>
     <p class="sub">Chọn lễ dâng và gửi lời nguyện của bạn.</p>
     <label for="amt"><span class="step">01</span>Số tiền dâng lễ</label>
-    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="20000" inputmode="numeric" aria-describedby="amountError"><span>VNĐ</span></div>
+    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="10000" inputmode="numeric" aria-describedby="amountError amountPreview"><span>VNĐ</span></div>
     <div id="amountError" role="alert" aria-live="polite"></div>
+    <div id="amountPreview" class="amount-preview" aria-live="polite">Hiển thị: <strong id="amountPreviewValue">10,000đ</strong></div>
     <div class="q">
-      <button type="button" data-v="20000">20.000đ</button>
-      <button type="button" data-v="50000">50.000đ</button>
-      <button type="button" data-v="200000">200.000đ</button>
+      <button type="button" data-v="10000">10,000đ</button>
+      <button type="button" data-v="50000">50,000đ</button>
+      <button type="button" data-v="200000">200,000đ</button>
     </div>
     <label for="msg"><span class="step">02</span>Lời nguyện của bạn</label>
     <textarea id="msg" maxlength="100" placeholder="Cầu mong gia đình bình an, mọi sự tốt lành…" aria-describedby="hint cnt"></textarea>
@@ -52,6 +57,12 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
     <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn có thể xuất hiện trên livestream.</p>
     <div id="err" role="alert"></div>
   </div>
+  <section id="history" class="history" hidden>
+    <div class="history-head"><h2>Lịch sử donate</h2><span class="history-sub">5 lượt gần nhất</span></div>
+    <div id="historyList" class="history-list"></div>
+    <p id="historyEmpty" class="history-empty" hidden>Chưa có lượt donate nào.</p>
+    <button type="button" id="historyMore" class="history-more" hidden>Xem thêm</button>
+  </section>
   <div id="res">
     <h1>Quét mã để chuyển khoản</h1>
     <img id="qr" alt="Mã QR chuyển khoản">
@@ -65,7 +76,7 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
 </div>
 <script>
 const $=i=>document.getElementById(i);
-let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
+let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false,historyOffset=0,historyLoading=false;
 function remember(value){try{if(value)localStorage.setItem('cung_order',JSON.stringify(value));else localStorage.removeItem('cung_order')}catch(e){}}
 async function refreshStatus(generation){
   if(!order||generation!==statusGeneration)return;
@@ -96,10 +107,46 @@ function showOrder(value){
 $('newOrder').onclick=()=>{order=null;remember(null);statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block'};
 const lim=a=>a>=50000?225:100;
 const hint=a=>a>=200000?'Từ 200k: dâng gà luộc':a>=50000?'50k đến dưới 200k: dâng hoa quả':'Dưới 50k: thắp hương';
+const money=a=>Number(a).toLocaleString('en-US')+'đ';
+function historyDate(value){
+  const date=new Date(String(value||'').replace(' ','T'));
+  return Number.isNaN(date.getTime())?String(value||''):date.toLocaleString('vi-VN',{dateStyle:'short',timeStyle:'short'});
+}
+function renderHistory(items,reset){
+  const list=$('historyList');
+  if(reset)list.replaceChildren();
+  for(const item of items){
+    const row=document.createElement('div');row.className='history-item';
+    const main=document.createElement('div');main.className='history-main';
+    const amount=document.createElement('strong');amount.className='history-amount';amount.textContent=money(item.amount);
+    const date=document.createElement('span');date.className='history-date';date.textContent=historyDate(item.created_at);
+    main.append(amount,date);
+    const side=document.createElement('div');side.className='history-side';
+    const status=document.createElement('span');status.className='history-status';status.textContent=item.status||'Đang cập nhật';
+    side.append(status);
+    if(item.code){const code=document.createElement('small');code.className='history-code';code.textContent=item.code;side.append(code)}
+    row.append(main,side);list.append(row);
+  }
+  $('historyEmpty').hidden=list.children.length>0;
+}
+async function loadHistory(reset=false){
+  if(historyLoading)return;
+  if(reset)historyOffset=0;
+  historyLoading=true;$('historyMore').disabled=true;
+  try{
+    const r=await fetch('donation-history.php?limit=5&offset='+historyOffset,{cache:'no-store'}),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Chưa tải được lịch sử donate.');
+    if(!d.logged_in){$('history').hidden=true;return}
+    const items=Array.isArray(d.items)?d.items:[];renderHistory(items,reset);historyOffset+=items.length;
+    $('history').hidden=false;$('historyMore').hidden=!d.has_more;
+  }catch(e){if(reset){$('historyList').replaceChildren();$('historyEmpty').hidden=false;$('history').hidden=false}$('historyMore').hidden=true}
+  finally{historyLoading=false;$('historyMore').disabled=false}
+}
 function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=10000&&a<=50000000;
   $('amountError').textContent=raw===''?'Nhập số tiền từ 10.000đ.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<10000?'Số tiền tối thiểu là 10.000đ.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
   $('go').disabled=!loggedIn||!validAmount;
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
@@ -108,13 +155,15 @@ function upd(){
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
+$('historyMore').onclick=()=>loadHistory(false);
 $('amt').oninput=$('msg').oninput=upd;
 async function loadProfile(){
   try{
     const r=await fetch('profile.php',{cache:'no-store'}),d=await r.json();csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
     const allowed=!!d.logged_in;loggedIn=allowed;$('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
     upd();
-    if(!allowed)return;
+    if(!allowed){$('history').hidden=true;return}
+    loadHistory(true);
     profile=d.user;$('profileName').textContent=profile.name;$('profileNameInput').value=profile.name;
     $('profileEmail').textContent=profile.email;$('profileLevel').textContent='Lv'+profile.level;
     if(profile.avatar){$('profileAvatar').src=profile.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
@@ -134,7 +183,7 @@ $('go').onclick=async()=>{
     const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value})});
     const d=await r.json();
     if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
-    showOrder(d);
+    showOrder(d);loadHistory(true);
   }catch(e){$('err').textContent='Mất kết nối, hãy thử lại.'}finally{upd()}
 };
 upd();

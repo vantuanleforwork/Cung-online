@@ -61,7 +61,7 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <div class="speech-grid common-voice-settings">
 <label>Tốc độ đọc<input type="number" name="speech_rate" min="0.75" max="1.25" step="0.05" value="<?=h($settings['speech_rate'])?>"><small id="speechRateHint"><?=($platform==='elevenlabs'||($platform==='custom_api'&&$settings['custom_api_engine']==='elevenlabs'))?'1 = bình thường. ElevenLabs hỗ trợ tối đa 1.20.':'1 = bình thường.'?></small></label>
 <label>Âm lượng<input type="number" name="speech_volume" min="0" max="1" step="0.05" value="<?=h($settings['speech_volume'])?>"><small>0 = im lặng, 1 = lớn nhất.</small></label>
-<label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="5" max="30" value="<?=h($settings['display_seconds'])?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng.</small></label></div>
+<label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="8" max="30" value="<?=h(max(8, (int)$settings['display_seconds']))?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng (tối thiểu 8 giây).</small></label></div>
 <div class="bar"><button type="submit">Lưu cấu hình</button><button type="button" id="testVoice">Nghe thử câu này</button></div>
 <p id="voiceFeedback" class="muted" role="status" aria-live="polite"></p></form>
 <p><a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>" target="_blank" rel="noopener noreferrer">Xem thử giao diện và nghe mẫu đã lưu ↗</a></p>

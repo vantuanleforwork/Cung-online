@@ -49,7 +49,8 @@ function speech_options(array $settings) {
     // Only these public options are ever sent to the overlay. Never expose credentials.
     return ['enabled' => (bool)$settings['speech_enabled'], 'provider' => $settings['speech_provider'],
         'voice' => $settings['speech_voice'], 'rate' => (float)$settings['speech_rate'],
-        'volume' => (float)$settings['speech_volume'], 'display_seconds' => (int)$settings['display_seconds'],
+        'volume' => (float)$settings['speech_volume'],
+        'display_seconds' => max(8, min(30, (int)$settings['display_seconds'])),
         'eleven_voice_id' => $settings['eleven_voice_id'] ?? '', 'eleven_model' => $settings['eleven_model'] ?? 'eleven_flash_v2_5',
         'custom_api_url' => $settings['custom_api_url'] ?? 'https://api.vibi.pro/v1',
         'custom_api_engine' => $settings['custom_api_engine'] ?? 'elevenlabs',

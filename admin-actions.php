@@ -23,7 +23,7 @@ function speech_settings_input(array $in) {
     $volume = filter_var($in['speech_volume'] ?? null, FILTER_VALIDATE_FLOAT);
     $seconds = filter_var($in['display_seconds'] ?? null, FILTER_VALIDATE_INT);
     if ($rate === false || $rate < .75 || $rate > 1.25 || $volume === false || $volume < 0 || $volume > 1 ||
-        $seconds === false || $seconds < 5 || $seconds > 30) throw new InvalidArgumentException('Kiểm tra tốc độ, âm lượng và thời gian hiển thị.');
+        $seconds === false || $seconds < 8 || $seconds > 30) throw new InvalidArgumentException('Kiểm tra tốc độ, âm lượng và thời gian hiển thị (tối thiểu 8 giây).');
     if ($provider === 'fpt' && (!function_exists('curl_init') || fpt_api_key() === '')) {
         throw new InvalidArgumentException('Muốn dùng FPT.AI, điền FPT_TTS_API_KEY trong config.php và bật PHP cURL.');
     }
