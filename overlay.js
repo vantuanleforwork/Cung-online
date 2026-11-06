@@ -1,7 +1,7 @@
 'use strict';
 const params=new URLSearchParams(location.search),K=params.get('k')||'',preview=params.get('preview')==='1';
 const $=id=>document.getElementById(id);
-let busy=false,demo=null;
+let busy=false,demo=null,selectedPreviewTier=[1,2,3].includes(Number(params.get('tier')))?Number(params.get('tier')):1;
 function sleep(ms,signal){
   return new Promise((resolve,reject)=>{
     if(signal?.aborted)return reject(new DOMException('Lease lost','AbortError'));
@@ -135,8 +135,7 @@ async function getDemo(){
   let value;
   if(!K)value={name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Cầu mong gia đình bình an, mọi sự tốt lành.',speech_text:'Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
   else{const {response,data}=await request('overlay-settings.php');if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');value=data.demo}
-  const previewTier=Number(params.get('tier'));
-  if(preview&&[1,2,3].includes(previewTier)){value.tier=previewTier;value.paid_amount={1:10000,2:50000,3:200000}[previewTier]}
+  if(preview){value.tier=selectedPreviewTier;value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier]}
   return value;
 }
 async function test(){
@@ -177,10 +176,14 @@ async function loop(){
   }
 }
 $('previewPlay').addEventListener('click',test);$('enableAudio').addEventListener('click',test);
+document.querySelectorAll('[data-preview-tier]').forEach(button=>{
+  const sync=()=>button.setAttribute('aria-pressed',String(Number(button.dataset.previewTier)===selectedPreviewTier));sync();
+  button.addEventListener('click',()=>{selectedPreviewTier=Number(button.dataset.previewTier);document.querySelectorAll('[data-preview-tier]').forEach(item=>item.setAttribute('aria-pressed',String(Number(item.dataset.previewTier)===selectedPreviewTier)));test()});
+});
 window.addEventListener('pagehide',()=>CungSpeech.stop());
 if(preview){
   document.body.classList.add('preview');if(params.get('motion')==='1')document.body.classList.add('force-motion');$('previewTools').hidden=false;
   if(params.get('autoplay')==='1'){$('previewTools').hidden=true;test()}
   else getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>noticeError(error,'Không đọc được cấu hình overlay.'));
 }else if(!K)notice('Thiếu khóa overlay. Thêm ?k=OVERLAY_KEY vào đường dẫn.');
-else{if(params.get('controls')==='1')notice('Bấm nghe thử trước khi phát live.');loop()}
+else{document.body.classList.add('force-motion');if(params.get('controls')==='1')notice('Bấm nghe thử trước khi phát live.');loop()}

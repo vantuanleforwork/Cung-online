@@ -46,7 +46,7 @@ function overlay(search){
   };
   let finishReading,renewStatus=200,stopped=0;
   const context=vm.createContext({URLSearchParams,AbortController,DOMException,location:{search},Date:{now:()=>clock.now},
-    document:{getElementById:get,body:get('body')},window:{addEventListener(){}},
+    document:{getElementById:get,body:get('body'),querySelectorAll:()=>[]},window:{addEventListener(){}},
     setTimeout:clock.setTimeout.bind(clock),clearTimeout:clock.clearTimeout.bind(clock),
     CungSpeech:{stop:()=>stopped++,read:(data,{signal}={})=>new Promise((resolve,reject)=>{
       finishReading=resolve;signal?.addEventListener('abort',()=>reject(new DOMException('lost','AbortError')),{once:true});

@@ -4,12 +4,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Lời gửi gắm · Dâng hương online</title>
-<link rel="stylesheet" href="overlay.css?v=7">
+<link rel="stylesheet" href="overlay.css?v=8">
 <body>
 <section id="previewTools" class="tools" hidden>
   <span class="eyebrow">BẢN XEM THỬ LIVESTREAM</span>
   <h1>Một tấm lòng. Một lời nguyện.</h1>
-  <p>Xem và nghe thử, không sử dụng giao dịch trong hàng đợi.</p>
+  <p>Chọn mốc để xem đúng hiệu ứng; bản thử không sử dụng giao dịch trong hàng đợi.</p>
+  <div class="preview-tiers" aria-label="Chọn mốc hiệu ứng">
+    <button type="button" data-preview-tier="1">Thử 10.000đ</button>
+    <button type="button" data-preview-tier="2">Thử rồng 50.000đ</button>
+    <button type="button" data-preview-tier="3">Thử đại chiêu 200.000đ</button>
+  </div>
   <button id="previewPlay" type="button">Phát thử hình ảnh & giọng đọc</button>
 </section>
 <div id="tierIntro" class="tier-intro" hidden aria-hidden="true">
@@ -77,5 +82,5 @@
   <div class="progress-track"><div id="progress" class="progress"></div></div>
 </article>
 <aside id="audioTools" class="audio-tools" hidden><p id="notice" role="status"></p><button id="enableAudio" type="button">Bật tiếng / nghe thử</button></aside>
-<script src="speech-runtime.js?v=5"></script><script src="overlay.js?v=9"></script>
+<script src="speech-runtime.js?v=5"></script><script src="overlay.js?v=10"></script>
 </body>
