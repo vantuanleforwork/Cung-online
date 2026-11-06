@@ -18,9 +18,16 @@ if(form&&button){
   const engine=form.elements.namedItem('custom_api_engine'),model=form.elements.namedItem('custom_api_model');
   const preset=form.elements.namedItem('custom_model_preset'),other=form.elements.namedItem('custom_model_other');
   const otherLabel=document.getElementById('customModelOtherLabel');
+  const speechTemplate=form.elements.namedItem('speech_template'),speechFullPreview=document.getElementById('speechFullPreview');
   const defaultModels={elevenlabs:'eleven_flash_v2_5',minimax:'speech-2.8-turbo',capcut:'capcut'};
   const modelsByEngine=new Map([[engine.value,model.value]]);
   let previousEngine=engine.value;
+  function syncSpeechPreview(){
+    if(!speechTemplate||!speechFullPreview)return;
+    const sample={name:'Nguyễn Văn An',offering:'thắp hương',amount:'10.000 đồng',amount_words:'mười nghìn đồng',
+      message:'Cầu mong gia đình bình an, mọi sự tốt lành.',message_clause:'Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.'};
+    speechFullPreview.textContent=speechTemplate.value.replace(/\{(name|offering|amount|amount_words|message|message_clause)\}/g,(_,key)=>sample[key]).replace(/\s+/g,' ').trim()||'Chưa có nội dung để đọc.';
+  }
   function syncModel(){
     if(!preset)return;
     const free=preset.value==='__custom__';
@@ -49,7 +56,8 @@ if(form&&button){
       if(kind){kind.hidden=engine.value!=='elevenlabs';kind.disabled=engine.value!=='elevenlabs'}
     });
   }
-  selectModel(model.value);syncPlatform();
+  selectModel(model.value);syncPlatform();syncSpeechPreview();
+  speechTemplate?.addEventListener('input',syncSpeechPreview);
   platform.addEventListener('change',()=>{
     previewController?.abort();CungSpeech.stop();syncPlatform();feedback.textContent='';
   });

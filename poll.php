@@ -14,9 +14,10 @@ try {
     $active = $db->query("SELECT id FROM donations WHERE status='paid' AND shown=0 AND queue_state='queued'
         AND claimed_until>NOW() LIMIT 1 FOR UPDATE")->fetchColumn();
     if ($active !== false) { $db->commit(); exit('[]'); }
-    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donor_avatar,
+    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,
+        COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
         COALESCE((SELECT FLOOR(SUM(x.paid_amount)/200000) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid'),0) AS donor_level,
-        (d.claimed_until > NOW()) AS active_claim FROM donations d
+        (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
         WHERE d.status='paid' AND d.shown=0 AND d.queue_state='queued' ORDER BY d.id LIMIT 1 FOR UPDATE")
         ->fetch(PDO::FETCH_ASSOC);
     if (!$row || $row['active_claim']) { $db->commit(); exit('[]'); }

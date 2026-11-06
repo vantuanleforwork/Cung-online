@@ -69,10 +69,25 @@ function donor_context(): array {
     return ['ip'=>normalized_ip(),'device_hash'=>donor_hash($token)];
 }
 
-function donor_level(PDO $db, int $userId): int {
+function donor_progress(PDO $db, int $userId): array {
     $s = $db->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM donations WHERE user_id=? AND status='paid'");
     $s->execute([$userId]);
-    return intdiv((int)$s->fetchColumn(), 200000);
+    $total = max(0, (int)$s->fetchColumn());
+    $step = 200000;
+    $level = intdiv($total, $step);
+    $levelPaid = $total % $step;
+    return [
+        'level' => $level,
+        'total_paid' => $total,
+        'level_paid' => $levelPaid,
+        'level_size' => $step,
+        'next_level_total' => ($level + 1) * $step,
+        'remaining' => $step - $levelPaid,
+    ];
+}
+
+function donor_level(PDO $db, int $userId): int {
+    return donor_progress($db, $userId)['level'];
 }
 
 function donor_blocked(PDO $db, string $emailHash, string $ip, string $deviceHash): bool {

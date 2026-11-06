@@ -55,9 +55,9 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <label>Voice ID Custom API<input name="custom_voice_id" value="<?=h($settings['custom_voice_id'])?>" maxlength="160" placeholder="Dán Voice ID hoặc chọn trong thư viện"><small>Voice ID theo nền tảng đang chọn.</small></label></div>
 <?php voice_picker_fields('custom_api','Custom API Voice') ?></fieldset>
 
-<label>Mẫu câu đọc<textarea name="speech_template" required maxlength="600"><?=h($settings['speech_template'])?></textarea></label>
-<details class="template-help"><summary>Các biến dùng trong câu đọc</summary><p class="muted"><code>{name}</code> tên · <code>{offering}</code> lễ dâng · <code>{amount_words}</code> tiền bằng chữ · <code>{amount}</code> tiền dạng số · <code>{message}</code> lời nhắn · <code>{message_clause}</code> tự thêm “Với lời nhắn…” khi có nội dung.</p></details>
-<div class="sample">Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Cầu mong gia đình bình an…</div>
+<label>Mẫu câu đọc<textarea id="speechTemplate" name="speech_template" required maxlength="600" aria-describedby="speechTemplateHelp speechFullPreview"><?=h($settings['speech_template'])?></textarea></label>
+<details id="speechTemplateHelp" class="template-help"><summary>Các biến dùng trong câu đọc</summary><p class="muted"><code>{name}</code> tên · <code>{offering}</code> lễ dâng · <code>{amount_words}</code> tiền bằng chữ · <code>{amount}</code> tiền dạng số · <code>{message}</code> lời nhắn · <code>{message_clause}</code> tự thêm “Với lời nhắn…” khi có nội dung.</p></details>
+<div class="sample"><strong>Toàn bộ câu sẽ đọc (ví dụ):</strong><output id="speechFullPreview" aria-live="polite"></output></div>
 <div class="speech-grid common-voice-settings">
 <label>Tốc độ đọc<input type="number" name="speech_rate" min="0.75" max="1.25" step="0.05" value="<?=h($settings['speech_rate'])?>"><small id="speechRateHint"><?=($platform==='elevenlabs'||($platform==='custom_api'&&$settings['custom_api_engine']==='elevenlabs'))?'1 = bình thường. ElevenLabs hỗ trợ tối đa 1.20.':'1 = bình thường.'?></small></label>
 <label>Âm lượng<input type="number" name="speech_volume" min="0" max="1" step="0.05" value="<?=h($settings['speech_volume'])?>"><small>0 = im lặng, 1 = lớn nhất.</small></label>

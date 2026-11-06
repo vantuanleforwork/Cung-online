@@ -49,8 +49,16 @@ function render(d){
   $('donorName').textContent=d.name||'Ẩn danh';
   const avatar=$('avatar'),initial=Array.from((d.name||'Ẩn danh').trim())[0]?.toLocaleUpperCase('vi-VN')||'A';
   avatar.replaceChildren();
-  if(typeof d.donor_avatar==='string' && (/^uploads\/avatars\/[a-f0-9]{40}\.(jpg|png|webp)$/.test(d.donor_avatar)||/^https:\/\/lh3\.googleusercontent\.com\//.test(d.donor_avatar))){
-    const img=document.createElement('img');img.src=d.donor_avatar;img.alt='';img.referrerPolicy='no-referrer';avatar.append(img);
+  let avatarUrl='';
+  if(typeof d.donor_avatar==='string'&&d.donor_avatar.trim())try{
+    const url=new URL(d.donor_avatar,location.href);
+    const local=url.origin===location.origin&&/^\/uploads\/avatars\/[a-f0-9]{40}\.(jpg|png|webp)$/.test(url.pathname);
+    const google=url.protocol==='https:'&&/(^|\.)googleusercontent\.com$/i.test(url.hostname);
+    if(local||google)avatarUrl=url.href;
+  }catch(error){}
+  if(avatarUrl){
+    const img=document.createElement('img');img.src=avatarUrl;img.alt='';img.referrerPolicy='no-referrer';img.decoding='async';
+    img.addEventListener('error',()=>{avatar.replaceChildren();avatar.textContent=initial},{once:true});avatar.append(img);
   }else avatar.textContent=initial;
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
   $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('en-US');
