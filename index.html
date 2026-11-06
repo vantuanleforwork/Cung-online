@@ -13,6 +13,7 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
 @media(max-width:760px){body{padding:24px 16px}.site-shell{grid-template-columns:1fr;gap:24px;max-width:480px}.intro{padding:8px 8px 0}.intro h2{font-size:34px;letter-spacing:-.8px;margin:22px 0 12px}.intro h2 br{display:none}.intro p{max-width:none;font-size:13px;margin-bottom:0}.intro-art,.intro-note{display:none}.brand-icon{width:34px;height:34px;font-size:20px}.brand{font-size:9px;letter-spacing:2px}main{padding:26px 24px;border-radius:20px}h1{font-size:26px}.amount-field input{font-size:30px}}
 .intro h2,h1{font-family:"Times New Roman",serif}
 </style>
+<style>#amountError{min-height:1.2em;margin-top:8px;color:#a3150b;font-size:12px}</style>
 <div class="site-shell">
 <aside class="intro"><div class="brand"><span class="brand-icon" aria-hidden="true">✦</span>DÂNG HƯƠNG ONLINE</div>
 <h2>Gửi một lời nguyện,<br> trao chút <em>lòng thành.</em></h2>
@@ -37,7 +38,8 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
     <p class="section-kicker">MỘT CHÚT TÂM THÀNH</p><h1>Viết lời gửi gắm</h1>
     <p class="sub">Chọn lễ dâng và gửi lời nguyện của bạn.</p>
     <label for="amt"><span class="step">01</span>Số tiền dâng lễ</label>
-    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="20000" inputmode="numeric"><span>VNĐ</span></div>
+    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="20000" inputmode="numeric" aria-describedby="amountError"><span>VNĐ</span></div>
+    <div id="amountError" role="alert" aria-live="polite"></div>
     <div class="q">
       <button type="button" data-v="20000">20.000đ</button>
       <button type="button" data-v="50000">50.000đ</button>
@@ -63,7 +65,7 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
 </div>
 <script>
 const $=i=>document.getElementById(i);
-let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null;
+let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
 function remember(value){try{if(value)localStorage.setItem('cung_order',JSON.stringify(value));else localStorage.removeItem('cung_order')}catch(e){}}
 async function refreshStatus(generation){
   if(!order||generation!==statusGeneration)return;
@@ -95,7 +97,10 @@ $('newOrder').onclick=()=>{order=null;remember(null);statusGeneration++;clearTim
 const lim=a=>a>=50000?225:100;
 const hint=a=>a>=200000?'Từ 200k: dâng gà luộc':a>=50000?'50k đến dưới 200k: dâng hoa quả':'Dưới 50k: thắp hương';
 function upd(){
-  const a=+$('amt').value||0,l=lim(a),m=$('msg');
+  const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
+  const validAmount=raw!==''&&Number.isInteger(a)&&a>=10000&&a<=50000000;
+  $('amountError').textContent=raw===''?'Nhập số tiền từ 10.000đ.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<10000?'Số tiền tối thiểu là 10.000đ.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  $('go').disabled=!loggedIn||!validAmount;
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -107,13 +112,13 @@ $('amt').oninput=$('msg').oninput=upd;
 async function loadProfile(){
   try{
     const r=await fetch('profile.php',{cache:'no-store'}),d=await r.json();csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
-    const allowed=!!d.logged_in;$('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
-    $('go').disabled=!allowed;
+    const allowed=!!d.logged_in;loggedIn=allowed;$('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
+    upd();
     if(!allowed)return;
     profile=d.user;$('profileName').textContent=profile.name;$('profileNameInput').value=profile.name;
     $('profileEmail').textContent=profile.email;$('profileLevel').textContent='Lv'+profile.level;
     if(profile.avatar){$('profileAvatar').src=profile.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
-  }catch(e){$('go').disabled=true;$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.'}
+  }catch(e){loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.'}
 }
 $('profileForm').onsubmit=async e=>{
   e.preventDefault();$('profileError').textContent='';const form=e.currentTarget;const fd=new FormData(form);fd.set('csrf',csrfToken);
@@ -121,14 +126,16 @@ $('profileForm').onsubmit=async e=>{
   catch(err){$('profileError').textContent=err.message}
 };
 $('go').onclick=async()=>{
+  const amount=Number($('amt').value);
+  if(!loggedIn||!Number.isInteger(amount)||amount<10000||amount>50000000){upd();return}
   $('err').textContent='';
   $('go').disabled=true;
   try{
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount:+$('amt').value,message:$('msg').value})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value})});
     const d=await r.json();
     if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
     showOrder(d);
-  }catch(e){$('err').textContent='Mất kết nối, hãy thử lại.'}finally{$('go').disabled=false}
+  }catch(e){$('err').textContent='Mất kết nối, hãy thử lại.'}finally{upd()}
 };
 upd();
 loadProfile();
