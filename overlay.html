@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Lời gửi gắm · Dâng hương online</title>
-<link rel="stylesheet" href="overlay.css?v=6">
+<link rel="stylesheet" href="overlay.css?v=7">
 <body>
 <section id="previewTools" class="tools" hidden>
   <span class="eyebrow">BẢN XEM THỬ LIVESTREAM</span>
@@ -12,6 +12,42 @@
   <p>Xem và nghe thử, không sử dụng giao dịch trong hàng đợi.</p>
   <button id="previewPlay" type="button">Phát thử hình ảnh & giọng đọc</button>
 </section>
+<div id="tierIntro" class="tier-intro" hidden aria-hidden="true">
+  <div class="intro-vignette"></div>
+  <div class="dragon-scene" aria-hidden="true">
+    <svg viewBox="0 0 760 420" role="presentation">
+      <defs><linearGradient id="dragonScale" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffcf73"/><stop offset=".45" stop-color="#9c2f19"/><stop offset="1" stop-color="#220d0a"/></linearGradient><filter id="dragonGlow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <path class="dragon-wing wing-back" d="M322 212C222 70 78 63 36 91c92 25 127 87 145 167 52-13 99-28 141-46Z"/>
+      <path class="dragon-wing wing-front" d="M390 215C464 75 624 45 718 93c-95 25-150 85-178 166-53-12-101-27-150-44Z"/>
+      <path class="dragon-tail" d="M281 238C188 264 119 339 25 319c88 59 197 33 298-50"/>
+      <path class="dragon-body" d="M266 246c19-75 88-126 164-116 44 6 70 34 84 67l57 2 42 35-50 13-35-13c-13 57-70 99-142 92-78-8-139-32-120-80Z"/>
+      <path class="dragon-neck" d="M418 167c21-55 80-89 132-66 31 13 44 41 42 69l-67 28Z"/>
+      <path class="dragon-head" d="M520 116c58-39 126-16 154 32l61 15-45 27-79-4-58-22Z"/>
+      <path class="dragon-horn" d="M572 118 590 64l25 54M623 124l35-45-4 59"/>
+      <path class="dragon-jaw" d="M626 176c34 10 71 9 102-4-18 37-76 54-116 23Z"/>
+      <circle class="dragon-eye" cx="661" cy="153" r="7"/>
+      <path class="dragon-claw" d="M350 300l-25 40m48-34-5 48m82-37 20 38m8-51 37 31"/>
+    </svg>
+    <div class="dragon-fire"><i></i><i></i><i></i><i></i></div>
+    <div class="dragon-embers"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="celestial-scene" aria-hidden="true">
+    <div class="celestial-aura"></div><div class="celestial-ring ring-a"></div><div class="celestial-ring ring-b"></div>
+    <svg viewBox="0 0 360 520" role="presentation">
+      <defs><linearGradient id="celestialArmor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffde8"/><stop offset=".35" stop-color="#ead08b"/><stop offset="1" stop-color="#784db5"/></linearGradient><filter id="celestialGlow"><feGaussianBlur stdDeviation="7" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <circle class="celestial-halo" cx="180" cy="100" r="72"/>
+      <path class="celestial-cape" d="M170 174C92 200 42 298 30 480c89-31 150-68 159-164 16 92 70 137 143 164-8-190-65-285-142-306Z"/>
+      <path class="celestial-hair" d="M133 125c-2-68 101-68 95 4l-18 104-64-2Z"/>
+      <circle class="celestial-face" cx="180" cy="126" r="38"/>
+      <path class="celestial-armor" d="M126 192 180 164l55 28 31 132-75 94-91-94Z"/>
+      <path class="celestial-shoulder" d="m130 190-71 54 52 28m119-82 72 54-52 28"/>
+      <path class="celestial-blade" d="m91 253-58 109 86-77m150-32 58 109-86-77"/>
+      <path class="celestial-core" d="m180 205 22 40-22 39-22-39Z"/>
+    </svg>
+    <div class="energy-shot s1"></div><div class="energy-shot s2"></div><div class="energy-shot s3"></div><div class="energy-shot s4"></div><div class="energy-shot s5"></div><div class="energy-shot s6"></div><div class="energy-shot s7"></div><div class="energy-shot s8"></div><div class="energy-shot s9"></div><div class="energy-shot s10"></div>
+  </div>
+  <div class="intro-title"><span id="introKicker"></span><strong id="introTitle"></strong></div>
+</div>
 <article id="stage" class="stage" aria-live="polite">
   <div class="card-shine"></div>
   <header class="card-header"><span class="brand-mark">✦</span><span>DÂNG HƯƠNG ONLINE</span><span id="offeringBadge" class="offering-badge">Thắp hương</span></header>
@@ -41,5 +77,5 @@
   <div class="progress-track"><div id="progress" class="progress"></div></div>
 </article>
 <aside id="audioTools" class="audio-tools" hidden><p id="notice" role="status"></p><button id="enableAudio" type="button">Bật tiếng / nghe thử</button></aside>
-<script src="speech-runtime.js?v=5"></script><script src="overlay.js?v=8"></script>
+<script src="speech-runtime.js?v=5"></script><script src="overlay.js?v=9"></script>
 </body>

@@ -44,8 +44,20 @@ function startLease(d){
   resetExpiry(d.lease_remaining_ms??ttl);timer=setTimeout(renew,Math.min(15000,ttl/3));
   return {signal:controller.signal,close(){closed=true;clearTimeout(timer);clearTimeout(expiry);controller.abort()}};
 }
+function donationTier(d){return Math.max(1,Math.min(3,Number(d.tier)||1))}
+async function playTierIntro(d,signal){
+  const tier=donationTier(d),intro=$('tierIntro');
+  intro.hidden=true;intro.className='tier-intro';
+  if(tier<2)return;
+  $('introKicker').textContent=tier===2?'HỎA LONG KHAI LỄ':'ĐẠI LỄ TỐI THƯỢNG';
+  $('introTitle').textContent=tier===2?'RỒNG LỬA GIÁNG LÂM':'THIÊN NỮ GIÁNG LÂM';
+  void intro.offsetWidth;intro.hidden=false;intro.className='tier-intro tier-'+tier;
+  const reduced=!document.body.classList.contains('force-motion')&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try{await sleep(reduced?120:(tier===2?2800:3800),signal)}
+  finally{intro.hidden=true;intro.className='tier-intro'}
+}
 function render(d){
-  const tier=Math.max(1,Math.min(3,Number(d.tier)||1));
+  const tier=donationTier(d);
   $('donorName').textContent=d.name||'Ẩn danh';
   const avatar=$('avatar'),initial=Array.from((d.name||'Ẩn danh').trim())[0]?.toLocaleUpperCase('vi-VN')||'A';
   avatar.replaceChildren();
@@ -67,7 +79,7 @@ function render(d){
   $('offeringText').textContent={1:'Một nén tâm hương',2:'Hoa thơm, quả ngọt',3:'Lễ thành kính dâng'}[tier];
   $('donorMessage').textContent=d.message||'Một tấm lòng thành, nguyện cầu bình an.';
   for(let i=1;i<=3;i++)$('art'+i).style.display=i===tier?'':'none';
-  $('stage').style.setProperty('--duration',displaySeconds(d)+'s');
+  $('stage').dataset.tier=String(tier);$('stage').style.setProperty('--duration',displaySeconds(d)+'s');
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
 async function speak(d,signal){
@@ -90,8 +102,10 @@ async function speak(d,signal){
 }
 async function play(d){
   const lease=preview?{signal:new AbortController().signal,close(){}}:startLease(d);
-  render(d);$('stage').classList.remove('is-visible');void $('stage').offsetWidth;$('stage').classList.add('is-visible');
+  render(d);$('stage').classList.remove('is-visible');
   try{
+    await playTierIntro(d,lease.signal);
+    void $('stage').offsetWidth;$('stage').classList.add('is-visible');
     await sleep(700,lease.signal);
     const reading=speak({...d},lease.signal).catch(error=>{
       if(lease.signal.aborted)throw error;
@@ -118,9 +132,12 @@ async function acknowledge(d){
   }
 }
 async function getDemo(){
-  if(!K)return {name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Cầu mong gia đình bình an, mọi sự tốt lành.',speech_text:'Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
-  const {response,data}=await request('overlay-settings.php');
-  if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');return data.demo;
+  let value;
+  if(!K)value={name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Cầu mong gia đình bình an, mọi sự tốt lành.',speech_text:'Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
+  else{const {response,data}=await request('overlay-settings.php');if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');value=data.demo}
+  const previewTier=Number(params.get('tier'));
+  if(preview&&[1,2,3].includes(previewTier)){value.tier=previewTier;value.paid_amount={1:10000,2:50000,3:200000}[previewTier]}
+  return value;
 }
 async function test(){
   if(busy){notice('Hãy chờ lượt hiện tại phát xong để nghe thử.');return}
@@ -162,7 +179,8 @@ async function loop(){
 $('previewPlay').addEventListener('click',test);$('enableAudio').addEventListener('click',test);
 window.addEventListener('pagehide',()=>CungSpeech.stop());
 if(preview){
-  document.body.classList.add('preview');$('previewTools').hidden=false;
-  getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>noticeError(error,'Không đọc được cấu hình overlay.'));
+  document.body.classList.add('preview');if(params.get('motion')==='1')document.body.classList.add('force-motion');$('previewTools').hidden=false;
+  if(params.get('autoplay')==='1'){$('previewTools').hidden=true;test()}
+  else getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>noticeError(error,'Không đọc được cấu hình overlay.'));
 }else if(!K)notice('Thiếu khóa overlay. Thêm ?k=OVERLAY_KEY vào đường dẫn.');
 else{if(params.get('controls')==='1')notice('Bấm nghe thử trước khi phát live.');loop()}

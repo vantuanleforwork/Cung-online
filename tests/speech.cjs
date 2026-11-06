@@ -40,8 +40,8 @@ function overlay(search){
   const get=id=>{
     if(!elements.has(id)){
       const classes=new Set();elements.set(id,{textContent:'',hidden:true,disabled:false,offsetWidth:720,
-        style:{setProperty(){}},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},
-        addEventListener(){}});
+        style:{setProperty(){}},dataset:{},children:[],classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},
+        replaceChildren(){this.children=[]},append(child){this.children.push(child)},setAttribute(){},addEventListener(){}});
     }return elements.get(id);
   };
   let finishReading,renewStatus=200,stopped=0;

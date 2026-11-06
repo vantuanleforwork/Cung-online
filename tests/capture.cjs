@@ -1,6 +1,6 @@
 // Local Chrome DevTools capture with an exact viewport, including widths below Chrome's window minimum.
 const fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process');
-const [url,output,width,height,profile,platform]=process.argv.slice(2);
+const [url,output,width,height,profile,platform,delayArg]=process.argv.slice(2);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const child=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',[
   '--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',
@@ -25,7 +25,7 @@ let websocket;
   await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride',{width:+width,height:+height,deviceScaleFactor:1,mobile:+width<600});
   const loaded=new Promise(resolve=>events.set('Page.loadEventFired',resolve));
-  await send('Page.navigate',{url});await loaded;await delay(1200);
+  await send('Page.navigate',{url});await loaded;await delay(Number(delayArg||process.env.CAPTURE_DELAY_MS)||1200);
   if(platform){
     const target=platform==='custom_api_v3'?'custom_api':platform;
     const expression=`(()=>{const p=document.querySelector('[name="speech_provider"]');p.value=${JSON.stringify(target)};p.dispatchEvent(new Event('change'));
