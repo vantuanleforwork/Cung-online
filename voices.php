@@ -1,14 +1,19 @@
 <?php
 require __DIR__ . '/speech.php';
+require_once __DIR__ . '/speech-schema.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
 try {
     $db = db();
+    try { ensure_speech_schema($db); } catch (Throwable $ignore) {}
     $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
     if (!$settings) respond(500, ['error' => 'Chưa cấu hình hệ thống.']);
     
-    $rows = $db->query('SELECT id, name, voice_id, tier_min FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
+    $rows = [];
+    try {
+        $rows = $db->query('SELECT id, name, voice_id, tier_min FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $ignore) {}
     
     $tier2Voices = [];
     $tier3Voices = [];

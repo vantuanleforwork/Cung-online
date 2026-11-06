@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/common.php';
+require_once __DIR__ . '/speech-schema.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function fail($code, $msg) { http_response_code($code); exit(json_encode(['error' => $msg], JSON_UNESCAPED_UNICODE)); }
@@ -34,19 +35,29 @@ $name = clean($user['display_name'], 40) ?: 'Người gửi donate';
 $avatar = $user['custom_avatar_path'] ?: $user['google_avatar_url'];
 $msg  = clean($in['message'] ?? '', maxlen($amount));
 
+try { ensure_speech_schema($db); } catch (Throwable $ignore) {}
+
 $selectedVoiceId = null;
 $voiceName = null;
 $requestedVoice = trim((string)($in['voice_id'] ?? ''));
 if ($requestedVoice !== '' && $amount >= 50000) {
-    $currentTier = tier($amount);
-    $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? AND tier_min <= ? LIMIT 1');
-    $s->execute([$requestedVoice, $currentTier]);
-    $vRow = $s->fetch(PDO::FETCH_ASSOC);
-    if ($vRow) {
-        $selectedVoiceId = $vRow['voice_id'];
-        $voiceName = $vRow['name'];
-    }
+    try {
+        $currentTier = tier($amount);
+        $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? AND tier_min <= ? LIMIT 1');
+        $s->execute([$requestedVoice, $currentTier]);
+        $vRow = $s->fetch(PDO::FETCH_ASSOC);
+        if ($vRow) {
+            $selectedVoiceId = $vRow['voice_id'];
+            $voiceName = $vRow['name'];
+        }
+    } catch (Throwable $e) {}
 }
+
+$donationCols = [];
+try {
+    $donationCols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
+} catch (Throwable $e) {}
+$hasVoiceCols = in_array('selected_voice_id', $donationCols, true) && in_array('voice_name', $donationCols, true);
 
 $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 $statusToken = bin2hex(random_bytes(32));
@@ -54,8 +65,13 @@ for ($t = 0; $t < 5; $t++) {
     $code = PREFIX;
     for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, 31)];
     try {
-        $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
-           ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
+        if ($hasVoiceCols) {
+            $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+               ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
+        } else {
+            $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar) VALUES(?,?,?,?,?,?,?,?,?)')
+               ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar]);
+        }
         break;
     } catch (PDOException $e) { if ($t === 4) throw $e; }
 }
