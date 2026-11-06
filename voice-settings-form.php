@@ -64,5 +64,11 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="8" max="30" value="<?=h(max(8, (int)$settings['display_seconds']))?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng (tối thiểu 8 giây).</small></label></div>
 <div class="bar"><button type="submit">Lưu cấu hình</button><button type="button" id="testVoice">Nghe thử câu này</button></div>
 <p id="voiceFeedback" class="muted" role="status" aria-live="polite"></p></form>
-<p><a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>" target="_blank" rel="noopener noreferrer">Xem thử giao diện và nghe mẫu đã lưu ↗</a></p>
+<div class="preview-effect-links">
+<strong>Thử hiệu ứng OBS</strong><span class="muted">Mỗi nút mở một bản xem thử riêng, không dùng lượt donate thật.</span>
+<div class="bar">
+<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">Thử 10.000đ</a>
+<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=2&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">🐉 Thử rồng 50.000đ</a>
+<a href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=3&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer">✦ Thử đại chiêu 200.000đ</a>
+</div></div>
 <details><summary>Xử lý khi dịch vụ chưa tạo được giọng</summary><p>Kiểm tra cấu hình và hạn mức của nền tảng đang chọn. Kiểm tra lịch sử tạo giọng trước khi xóa bộ nhớ để tạo lại; việc tạo lại có thể dùng thêm hạn mức.</p><?php action_form('clear_speech_cache', [], 'Xóa bộ nhớ giọng đọc'); ?></details>
