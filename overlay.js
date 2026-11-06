@@ -122,6 +122,7 @@ async function play(d){
     return false;
   }finally{lease.close();CungSpeech.stop();$('speechState').classList.remove('is-speaking')}
 }
+globalThis.play=play;
 async function acknowledge(d){
   for(;;){
     try{
@@ -144,7 +145,7 @@ async function test(){
   busy=true;$('previewPlay').disabled=$('enableAudio').disabled=true;
   try{
     demo=await getDemo();
-    if(preview)await play(demo);
+    if(preview)await (globalThis.play||play)(demo);
     else {
       // Preview requests never claim or acknowledge real queue entries.
       if(['fpt','elevenlabs','custom_api'].includes(demo.speech?.provider)){
@@ -170,7 +171,7 @@ async function loop(){
       const {response,data,elapsed}=await request('poll.php');
       if(response.status===403){notice('Khóa overlay không đúng. Kiểm tra OVERLAY_KEY trong đường dẫn.');return}
       if(!response.ok)throw new Error('Chưa kết nối được hàng đợi. Kiểm tra cấu hình và migration 003.');
-      for(const d of data){d.lease_remaining_ms=Math.max(0,(Number(d.lease_seconds)||60)*1000-elapsed);if(await play(d))await acknowledge(d)}
+      for(const d of data){d.lease_remaining_ms=Math.max(0,(Number(d.lease_seconds)||60)*1000-elapsed);if(await (globalThis.play||play)(d))await acknowledge(d)}
     }catch(error){noticeError(error,'Mất kết nối hàng đợi, đang thử lại…')}
     finally{busy=false}
     await sleep(2000);
