@@ -95,12 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 if ($amount === false || $amount < MIN_AMOUNT) throw new InvalidArgumentException('Số tiền không hợp lệ (tối thiểu ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ).');
                 $name = (string)($_POST['name'] ?? '');
                 $message = (string)($_POST['message'] ?? '');
+                $selectedVoiceId = (string)($_POST['voice_id'] ?? '');
                 session_write_close();
-                $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '');
+                $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
             } else {
                 admin_action(db(), $_POST, $_SERVER['REMOTE_ADDR'] ?? '');
-                $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_speech','clear_speech_cache'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
+                $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_speech','clear_speech_cache','add_voice_option','delete_voice_option'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
             }
         } catch (InvalidArgumentException $e) {
             if (http_response_code() === 200) http_response_code(409);
@@ -132,8 +133,12 @@ if ($loggedIn) {
         $db = db();
         $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
         $paused = (bool)$settings['paused'];
-        if ($view === 'speech') $elevenConfigured = eleven_api_key($db) !== '';
-        if ($view === 'speech') $customConfigured = custom_api_key($db, $settings['custom_api_url'] ?? '') !== '';
+        $customVoiceOptions = [];
+        if ($view === 'speech') {
+            $elevenConfigured = eleven_api_key($db) !== '';
+            $customConfigured = custom_api_key($db, $settings['custom_api_url'] ?? '') !== '';
+            $customVoiceOptions = $db->query('SELECT * FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
+        }
         $params = [];
         if ($view === 'queue') {
             $table = 'donations';
@@ -216,7 +221,11 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 .test-feedback.loading{display:block;background:#eef3f8;border:1px solid #b3cde5;color:#1b3d63}
 .test-feedback.success{display:block;background:#e6f4ea;border:1px solid #81c995;color:#135222}
 .test-feedback.error{display:block;background:#fce8e6;border:1px solid #ea868f;color:#801b1b}
-.custom-test-grid{display:grid;grid-template-columns:140px 180px 1fr auto;gap:10px;align-items:end;margin-top:12px}
+.custom-test-grid{display:grid;grid-template-columns:110px 140px 1fr 180px auto;gap:10px;align-items:end;margin-top:12px}
+.btn-var-insert{background:#f3e9d7;color:#5a1d12;border:1px solid #bda88e;border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600;transition:all .15s}
+.btn-var-insert:hover{background:#7a1f17;color:#fff}
+.btn-sample-apply{background:#fffaf0;color:#674323;border:1px solid #c5b59f;border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;text-align:left;transition:all .15s}
+.btn-sample-apply:hover{background:#5a1d12;color:#fff}
 @media(max-width:768px){.custom-test-grid{grid-template-columns:1fr}}
 </style><main>
 <h1>Quản trị dâng hương</h1>
@@ -254,7 +263,7 @@ foreach ($options as $key=>$label): ?><option value="<?=h($key)?>" <?=$filter===
 <?php foreach ($rows as $row): ?>
 <tr><td>#<?=h($row['id'])?> · <code><?=h($row['code'] ?: 'Ẩn danh')?></code><br><span class="muted"><?=h($row['created_at'])?></span></td>
 <td>Đăng ký: <?=number_format((int)$row['expected_amount'])?>đ<br>Nhận: <?=number_format((int)$row['paid_amount'])?>đ<br><code><?=h($row['tx_id'])?></code></td>
-<td class="message"><strong><?=h($row['name'])?></strong><p><?=nl2br(h($row['message']))?></p>
+<td class="message"><strong><?=h($row['name'])?></strong><?php if(!empty($row['voice_name'])): ?><span class="muted" style="color:#784db5;font-weight:600"> · 🎙 <?=h($row['voice_name'])?></span><?php endif ?><p><?=nl2br(h($row['message']))?></p>
 <?php if ($row['status']==='paid' && !$row['shown'] && !$row['playing'] && $row['queue_state']!=='skipped'): ?>
 <details><summary>Sửa tên / lời nhắn</summary><form method="post"><?php csrf_field() ?><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<?=h($row['id'])?>">
 <label>Tên <input name="name" value="<?=h($row['name'])?>" maxlength="40"></label>

@@ -17,6 +17,16 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
 <style>
 .amount-preview{margin-top:4px;color:#8b7c69;font-size:11px}.amount-preview strong{color:#795d36;font-weight:700}
 .history{margin-top:28px;padding-top:22px;border-top:1px solid #e2d8c7}.history-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.history h2{margin:0;font:400 21px/1.3 Georgia,"Times New Roman",serif}.history-sub{margin:4px 0 12px;color:#8b7c69;font-size:11px}.history-list{display:grid;gap:8px}.history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e7ddce;border-radius:10px;background:#fffdf8}.history-main{min-width:0}.history-amount{display:block;color:#795d36;font:600 15px/1.3 "Segoe UI",Arial,sans-serif}.history-date{display:block;color:#9b8c79;font-size:10px}.history-side{display:flex;align-items:center;gap:8px;flex-shrink:0}.history-status{padding:4px 7px;border-radius:999px;background:#eee7da;color:#786448;font-size:10px;white-space:nowrap}.history-code{color:#9b8c79;font-size:10px}.history-more{display:block;margin:12px auto 0;padding:9px 16px;border:1px solid #d3c4aa;border-radius:8px;background:transparent;color:#786448;cursor:pointer;font:12px "Segoe UI",Arial,sans-serif}.history-more:disabled{opacity:.55;cursor:wait}.history-empty{margin:10px 0 0;color:#9b8c79;font-size:12px;text-align:center}
+.voice-select-box{margin-top:20px;padding:14px 16px;border:1px solid #e1d8c9;border-radius:12px;background:#fffdf8}
+.voice-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.voice-head label{margin:0;font-size:12px;font-weight:600;color:#62523f}
+.voice-badge{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700}
+.voice-badge.locked{background:#eee6d7;color:#8a7962}
+.voice-badge.unlocked{background:#e8f0fe;color:#1a73e8}
+.voice-badge.vip{background:#f3e8fd;color:#784db5}
+.voice-select{width:100%;padding:11px 13px;border:1px solid #e1d8c9;border-radius:8px;background:#fff;font:inherit;font-size:13.5px}
+.voice-select:disabled{background:#f6f1e7;color:#9b8c78;cursor:not-allowed}
+.voice-hint{margin:6px 0 0;font-size:11px;color:#8c7b66}
 </style>
 <div class="site-shell">
 <aside class="intro"><div class="brand"><span class="brand-icon" aria-hidden="true">✦</span>DÂNG HƯƠNG ONLINE</div>
@@ -55,9 +65,19 @@ main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:2
       <button type="button" data-v="50000">50,000đ</button>
       <button type="button" data-v="200000">200,000đ</button>
     </div>
-    <label for="msg"><span class="step">02</span>Lời nguyện của bạn</label>
-    <textarea id="msg" maxlength="100" placeholder="Cầu mong gia đình bình an, mọi sự tốt lành…" aria-describedby="hint cnt"></textarea>
-    <div class="row"><span id="hint">Dưới 50k: thắp hương</span><span id="cnt">0/100</span></div>
+    <label for="msg"><span class="step">02</span>Lời nhắn của bạn</label>
+    <textarea id="msg" maxlength="100" placeholder="Viết lời nhắn gửi đến streamer…" aria-describedby="hint cnt"></textarea>
+    <div class="row"><span id="hint">Dưới 50k: thông báo chuẩn</span><span id="cnt">0/100</span></div>
+    <div class="voice-select-box">
+      <div class="voice-head">
+        <label for="voiceSelect"><span class="step">03</span>Chọn giọng đọc</label>
+        <span id="voiceBadge" class="voice-badge locked">Mặc định</span>
+      </div>
+      <select id="voiceSelect" class="voice-select" disabled>
+        <option value="">Giọng đọc mặc định của kênh</option>
+      </select>
+      <p id="voiceHint" class="voice-hint">Mốc dưới 50k dùng giọng mặc định. Donate từ 50.000đ để tự chọn giọng đọc!</p>
+    </div>
     <button class="go" id="go" type="button" disabled>Tiếp tục · Tạo mã QR &nbsp; →</button>
     <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn có thể xuất hiện trên livestream.</p>
     <div id="err" role="alert"></div>
@@ -111,8 +131,40 @@ function showOrder(value){
 }
 $('newOrder').onclick=()=>{order=null;remember(null);statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block'};
 const lim=a=>a>=50000?225:100;
-const hint=a=>a>=200000?'Từ 200k: dâng gà luộc':a>=50000?'50k đến dưới 200k: dâng hoa quả':'Dưới 50k: thắp hương';
+const hint=a=>a>=200000?'Từ 200k: Mở khóa Thiên Nữ & toàn bộ giọng VIP':a>=50000?'Từ 50k: Mở khóa Hỏa Long & tự chọn giọng đọc':'Dưới 50k: Giọng đọc mặc định';
 const money=a=>Number(a).toLocaleString('en-US')+'đ';
+let availableVoices=null;
+function syncVoiceOptions(a){
+  const sel=$('voiceSelect'),badge=$('voiceBadge'),h=$('voiceHint');
+  if(!sel||!badge||!h)return;
+  const tier=a>=200000?3:(a>=50000?2:1);
+  if(tier===1){
+    sel.disabled=true;
+    sel.replaceChildren(new Option('Giọng đọc mặc định của kênh',''));
+    badge.className='voice-badge locked';badge.textContent='Mặc định';
+    h.textContent='💡 Mốc dưới 50k dùng giọng mặc định. Donate từ 50.000đ để tự chọn giọng đọc!';
+    return;
+  }
+  sel.disabled=false;
+  badge.className='voice-badge '+(tier===3?'vip':'unlocked');
+  badge.textContent=tier===3?'⭐ Mở khóa VIP 200k':'✦ Mở khóa mốc 50k';
+  h.textContent=tier===3?'👑 Đã mở khóa toàn bộ giọng đọc VIP đặc biệt!':'✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.';
+  const list=tier===3?(availableVoices?.tier3?.voices||[]):(availableVoices?.tier2?.voices||[]);
+  const current=sel.value;
+  sel.replaceChildren(new Option('Giọng đọc mặc định của mốc '+money(tier===3?200000:50000),''));
+  for(const v of list){
+    const prefix=(tier===3&&v.tier_min===3)?'⭐ ':'';
+    sel.append(new Option(prefix+v.name,v.id));
+  }
+  if(current&&Array.from(sel.options).some(o=>o.value===current))sel.value=current;
+}
+async function loadVoices(){
+  try{
+    const r=await fetch('voices.php',{cache:'no-store'}),d=await r.json();
+    availableVoices=d;
+    syncVoiceOptions(Number($('amt').value)||10000);
+  }catch(e){}
+}
 function historyDate(value){
   const date=new Date(String(value||'').replace(' ','T'));
   return Number.isNaN(date.getTime())?String(value||''):date.toLocaleString('vi-VN',{dateStyle:'short',timeStyle:'short'});
@@ -170,6 +222,7 @@ function upd(){
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
   $('hint').textContent=hint(a);
+  syncVoiceOptions(a);
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
@@ -196,7 +249,7 @@ $('go').onclick=async()=>{
   $('err').textContent='';
   $('go').disabled=true;
   try{
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,voice_id:$('voiceSelect')?.value||''})});
     const d=await r.json();
     if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
     showOrder(d);loadHistory(true);
@@ -204,6 +257,7 @@ $('go').onclick=async()=>{
 };
 upd();
 loadProfile();
+loadVoices();
 try{
   const saved=JSON.parse(localStorage.getItem('cung_order'));
   if(saved&&typeof saved.status_token==='string'&&/^[a-f0-9]{64}$/.test(saved.status_token)&&

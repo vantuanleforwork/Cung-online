@@ -30,9 +30,23 @@ $c->execute([$user['id']]); if ($c->fetchColumn()>=3) fail(429,'Tài khoản đa
 $c=$db->prepare("SELECT COUNT(*) FROM donations WHERE device_hash=? AND status='pending' AND created_at>NOW()-INTERVAL 10 MINUTE");
 $c->execute([$deviceHash]); if ($c->fetchColumn()>=3) fail(429,'Trình duyệt đang có quá nhiều mã chờ. Hãy thử lại sau ít phút.');
 
-$name = clean($user['display_name'], 40) ?: 'Người gửi lễ';
+$name = clean($user['display_name'], 40) ?: 'Người gửi donate';
 $avatar = $user['custom_avatar_path'] ?: $user['google_avatar_url'];
 $msg  = clean($in['message'] ?? '', maxlen($amount));
+
+$selectedVoiceId = null;
+$voiceName = null;
+$requestedVoice = trim((string)($in['voice_id'] ?? ''));
+if ($requestedVoice !== '' && $amount >= 50000) {
+    $currentTier = tier($amount);
+    $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? AND tier_min <= ? LIMIT 1');
+    $s->execute([$requestedVoice, $currentTier]);
+    $vRow = $s->fetch(PDO::FETCH_ASSOC);
+    if ($vRow) {
+        $selectedVoiceId = $vRow['voice_id'];
+        $voiceName = $vRow['name'];
+    }
+}
 
 $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 $statusToken = bin2hex(random_bytes(32));
@@ -40,8 +54,8 @@ for ($t = 0; $t < 5; $t++) {
     $code = PREFIX;
     for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, 31)];
     try {
-        $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar) VALUES(?,?,?,?,?,?,?,?,?)')
-           ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar]);
+        $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+           ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
         break;
     } catch (PDOException $e) { if ($t === 4) throw $e; }
 }

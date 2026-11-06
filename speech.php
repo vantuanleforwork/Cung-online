@@ -37,12 +37,27 @@ function money_words(int $amount) {
 
 function speech_text(array $donation, array $settings) {
     $amount = (int)$donation['paid_amount'];
-    $message = trim($donation['message']);
-    $text = strtr($settings['speech_template'], [
-        '{name}' => $donation['name'], '{offering}' => offering($amount),
-        '{amount}' => number_format($amount, 0, ',', '.') . ' đồng', '{amount_words}' => money_words($amount),
-        '{message}' => $message, '{message_clause}' => $message === '' ? '' : 'Với lời nhắn: ' . $message,
-    ]);
+    $message = trim((string)($donation['message'] ?? ''));
+    $name = trim((string)($donation['name'] ?? '')) ?: 'Ẩn danh';
+    $amountFormatted = number_format($amount, 0, ',', '.') . ' đồng';
+    $amountNum = number_format($amount, 0, ',', '.');
+    $amountWords = money_words($amount);
+    $messageClause = $message === '' ? '' : 'Với lời nhắn: ' . $message;
+
+    $replace = [
+        '{user}' => $name,
+        '{name}' => $name,
+        '{amount}' => $amountFormatted,
+        '{so_tien}' => $amountFormatted,
+        '{amount_num}' => $amountNum,
+        '{amount_words}' => $amountWords,
+        '{message}' => $message,
+        '{noi_dung}' => $message,
+        '{content}' => $message,
+        '{message_clause}' => $messageClause,
+        '{offering}' => offering($amount),
+    ];
+    $text = strtr($settings['speech_template'], $replace);
     return trim(preg_replace('/\s+/u', ' ', $text));
 }
 function speech_options(array $settings) {
@@ -52,9 +67,37 @@ function speech_options(array $settings) {
         'volume' => (float)$settings['speech_volume'],
         'display_seconds' => max(8, min(30, (int)$settings['display_seconds'])),
         'eleven_voice_id' => $settings['eleven_voice_id'] ?? '', 'eleven_model' => $settings['eleven_model'] ?? 'eleven_flash_v2_5',
+        'tier1_voice_id' => $settings['tier1_voice_id'] ?? '',
+        'tier2_voice_id' => $settings['tier2_voice_id'] ?? '',
+        'tier3_voice_id' => $settings['tier3_voice_id'] ?? '',
         'custom_api_url' => $settings['custom_api_url'] ?? 'https://api.vibi.pro/v1',
         'custom_api_engine' => $settings['custom_api_engine'] ?? 'elevenlabs',
         'custom_api_model' => $settings['custom_api_model'] ?? 'eleven_flash_v2_5', 'custom_voice_id' => $settings['custom_voice_id'] ?? ''];
+}
+function speech_options_for_donation(array $settings, array $donation) {
+    $options = speech_options($settings);
+    $amount = (int)($donation['paid_amount'] ?? $donation['expected_amount'] ?? 10000);
+    $t = tier($amount);
+    $activeVoice = '';
+    if (!empty($donation['selected_voice_id']) && $amount >= 50000) {
+        $activeVoice = trim((string)$donation['selected_voice_id']);
+    }
+    if ($activeVoice === '') {
+        if ($t === 1) {
+            $activeVoice = trim((string)($settings['tier1_voice_id'] ?? ''));
+        } elseif ($t === 2) {
+            $activeVoice = trim((string)($settings['tier2_voice_id'] ?? '')) ?: trim((string)($settings['tier1_voice_id'] ?? ''));
+        } else {
+            $activeVoice = trim((string)($settings['tier3_voice_id'] ?? '')) ?: (trim((string)($settings['tier2_voice_id'] ?? '')) ?: trim((string)($settings['tier1_voice_id'] ?? '')));
+        }
+    }
+    if ($activeVoice === '') {
+        $activeVoice = $options['custom_voice_id'] ?: $options['eleven_voice_id'];
+    }
+    $options['custom_voice_id'] = $activeVoice;
+    $options['eleven_voice_id'] = $activeVoice;
+    $options['tier'] = $t;
+    return $options;
 }
 function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null) {
     if ($options['provider'] === 'custom_api') {
@@ -67,7 +110,7 @@ function provider_audio(PDO $db, string $text, array $options, ?string $elevenKe
     }
     return fpt_audio($db, $text, $options);
 }
-function preview_donation() { return ['name' => 'Nguyễn Văn An', 'paid_amount' => 10000, 'tier' => 1, 'message' => 'Cầu mong gia đình bình an, mọi sự tốt lành.']; }
+function preview_donation() { return ['name' => 'Nguyễn Văn An', 'paid_amount' => 10000, 'tier' => 1, 'message' => 'Chúc kênh livestream phát triển thuận lợi, vạn sự như ý!']; }
 
 function fpt_audio(PDO $db, string $text, array $options) {
     if (!function_exists('curl_init') || fpt_api_key() === '') throw new RuntimeException('Cần cấu hình API key FPT.AI và bật PHP cURL.');

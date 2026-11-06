@@ -16,7 +16,7 @@ try {
         $s->execute([$id, $token]); $row = $s->fetch(PDO::FETCH_ASSOC);
         if (!$row) respond(409, ['error' => 'Lượt phát đã hết hạn.']);
     }
-    $url = provider_audio($db, speech_text($row, $settings), speech_options($settings));
+    $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row));
     respond($url === null ? 202 : 200, ['audio_url' => $url]);
 } catch (Throwable $e) {
     error_log('TTS: ' . $e->getMessage());

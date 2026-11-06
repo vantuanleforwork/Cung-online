@@ -8,8 +8,9 @@ function speech_settings_input(array $in) {
     }
     if (preg_match('/[<>\x00-\x08\x0B\x0C\x0E-\x1F]/u', $template)) throw new InvalidArgumentException('Mẫu câu chỉ hỗ trợ văn bản thuần.');
     preg_match_all('/\{([^{}]*)\}/u', $template, $matches);
+    $allowedVars = ['name','user','offering','amount','so_tien','amount_num','amount_words','message','noi_dung','content','message_clause'];
     foreach ($matches[1] as $variable) {
-        if (!in_array($variable, ['name','offering','amount','amount_words','message','message_clause'], true)) {
+        if (!in_array($variable, $allowedVars, true)) {
             throw new InvalidArgumentException('Biến không được hỗ trợ: {' . $variable . '}');
         }
     }
@@ -46,9 +47,28 @@ function speech_settings_input(array $in) {
         if ($customKey === '' && custom_api_key(db(), $custom['custom_api_url']) === '') throw new InvalidArgumentException('Nhập API key Custom Voice. Khi đổi API URL, cần nhập lại key cho địa chỉ mới.');
         if ($custom['custom_api_engine'] === 'elevenlabs' && $rate > 1.2) throw new InvalidArgumentException('Engine ElevenLabs của Custom API hỗ trợ tốc độ tối đa 1.20.');
     }
-    return ['speech_enabled' => isset($in['speech_enabled']) ? 1 : 0, 'speech_template' => trim($template),
-        'speech_provider' => $provider, 'speech_voice' => $voice, 'speech_rate' => $rate, 'speech_volume' => $volume,
-        'display_seconds' => $seconds, 'eleven_voice_id' => $elevenVoice, 'eleven_model' => $elevenModel] + $custom;
+    $tier1Voice = trim((string)($in['tier1_voice_id'] ?? $current['tier1_voice_id'] ?? ''));
+    $tier2Voice = trim((string)($in['tier2_voice_id'] ?? $current['tier2_voice_id'] ?? ''));
+    $tier3Voice = trim((string)($in['tier3_voice_id'] ?? $current['tier3_voice_id'] ?? ''));
+    foreach (['tier1_voice_id' => $tier1Voice, 'tier2_voice_id' => $tier2Voice, 'tier3_voice_id' => $tier3Voice] as $varName => $val) {
+        if ($val !== '' && !preg_match('/^[A-Za-z0-9_.-]{1,160}$/D', $val)) {
+            throw new InvalidArgumentException("Voice ID cho $varName không hợp lệ.");
+        }
+    }
+    return [
+        'speech_enabled' => isset($in['speech_enabled']) ? 1 : 0,
+        'speech_template' => trim($template),
+        'speech_provider' => $provider,
+        'speech_voice' => $voice,
+        'speech_rate' => $rate,
+        'speech_volume' => $volume,
+        'display_seconds' => $seconds,
+        'eleven_voice_id' => $elevenVoice,
+        'eleven_model' => $elevenModel,
+        'tier1_voice_id' => $tier1Voice,
+        'tier2_voice_id' => $tier2Voice,
+        'tier3_voice_id' => $tier3Voice,
+    ] + $custom;
 }
 
 function admin_action(PDO $db, array $in, string $ip) {
@@ -61,7 +81,7 @@ function admin_action(PDO $db, array $in, string $ip) {
         $audit = ['action' => $action];
         if ($action === 'save_speech') {
             $settings = speech_settings_input($in);
-            $db->prepare('UPDATE app_settings SET speech_enabled=?,speech_template=?,speech_provider=?,speech_voice=?,speech_rate=?,speech_volume=?,display_seconds=?,eleven_voice_id=?,eleven_model=?,custom_api_url=?,custom_api_engine=?,custom_api_model=?,custom_voice_id=? WHERE id=1')
+            $db->prepare('UPDATE app_settings SET speech_enabled=?,speech_template=?,speech_provider=?,speech_voice=?,speech_rate=?,speech_volume=?,display_seconds=?,eleven_voice_id=?,eleven_model=?,tier1_voice_id=?,tier2_voice_id=?,tier3_voice_id=?,custom_api_url=?,custom_api_engine=?,custom_api_model=?,custom_voice_id=? WHERE id=1')
                ->execute(array_values($settings));
             $audit['settings'] = $settings;
             $key = $settings['speech_provider'] === 'elevenlabs' ? posted_eleven_key($in) : '';
@@ -77,6 +97,22 @@ function admin_action(PDO $db, array $in, string $ip) {
                 $db->exec("DELETE FROM tts_credentials WHERE provider='custom_api'");
                 $audit['custom_key_cleared_for_new_url'] = true;
             }
+        } elseif ($action === 'add_voice_option') {
+            $name = clean($in['name'] ?? '', 80);
+            $voiceId = trim((string)($in['voice_id'] ?? ''));
+            $tierMin = (int)($in['tier_min'] ?? 2);
+            if ($tierMin !== 2 && $tierMin !== 3) $tierMin = 2;
+            if ($name === '' || $voiceId === '') throw new InvalidArgumentException('Nhập đầy đủ tên giọng và Voice ID.');
+            if (!preg_match('/^[A-Za-z0-9_.-]{1,160}$/D', $voiceId)) throw new InvalidArgumentException('Voice ID không hợp lệ.');
+            $db->prepare('INSERT INTO custom_voice_options(name,voice_id,tier_min) VALUES(?,?,?)')->execute([$name, $voiceId, $tierMin]);
+            $audit['voice_name'] = $name;
+            $audit['voice_id'] = $voiceId;
+            $audit['tier_min'] = $tierMin;
+        } elseif ($action === 'delete_voice_option') {
+            $id = filter_var($in['id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$id || $id < 1) throw new InvalidArgumentException('ID không hợp lệ.');
+            $db->prepare('DELETE FROM custom_voice_options WHERE id=?')->execute([$id]);
+            $audit['deleted_id'] = $id;
         } elseif ($action === 'clear_speech_cache') {
             $db->exec('DELETE FROM tts_audio_cache');
         } elseif ($action === 'pause' || $action === 'resume') {
@@ -185,7 +221,7 @@ function admin_action(PDO $db, array $in, string $ip) {
     }
 }
 
-function push_test_webhook(PDO $db, int $amount, string $name = '', string $message = '', string $ip = ''): array {
+function push_test_webhook(PDO $db, int $amount, string $name = '', string $message = '', string $ip = '', string $selectedVoiceId = ''): array {
     if ($amount < MIN_AMOUNT) {
         throw new InvalidArgumentException('Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ.');
     }
@@ -195,11 +231,22 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
     $message = clean($message, maxlen($amount));
     if ($message === '') {
         $defaultMessages = [
-            1 => 'Thử nghiệm hiệu ứng 10.000đ - Cầu mong gia đình bình an.',
-            2 => 'Thử nghiệm hiệu ứng Hỏa Long 50.000đ - Chúc vạn sự hanh thông!',
-            3 => 'Thử nghiệm hiệu ứng Thiên Nữ 200.000đ - Đại cát đại lợi, vạn sự như ý!'
+            1 => 'Thử nghiệm donate 10.000đ - Chúc kênh livestream phát triển thuận lợi!',
+            2 => 'Thử nghiệm donate 50.000đ - Hiệu ứng Hỏa Long giáng lâm!',
+            3 => 'Thử nghiệm donate 200.000đ - Hiệu ứng Thiên Nữ đại chiêu tối thượng!'
         ];
-        $message = $defaultMessages[$tier] ?? ('Thử nghiệm hiệu ứng ' . number_format($amount, 0, ',', '.') . 'đ');
+        $message = $defaultMessages[$tier] ?? ('Thử nghiệm donate ' . number_format($amount, 0, ',', '.') . 'đ');
+    }
+    $voiceName = null;
+    $selectedVoiceId = trim($selectedVoiceId);
+    if ($selectedVoiceId !== '' && $amount >= 50000) {
+        $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? LIMIT 1');
+        $s->execute([$selectedVoiceId]);
+        $opt = $s->fetch(PDO::FETCH_ASSOC);
+        if ($opt) { $selectedVoiceId = $opt['voice_id']; $voiceName = $opt['name']; }
+        else { $selectedVoiceId = null; }
+    } else {
+        $selectedVoiceId = null;
     }
     
     $tx = 'TEST_' . date('YmdHis') . '_' . strtoupper(bin2hex(random_bytes(3)));
@@ -226,9 +273,9 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
             VALUES(?,?,?,?,?,'IN','matched')")
            ->execute([$tx, $amount, $payloadData['content'], trim(ACCOUNT_NO), 'TEST_OBS']);
         
-        $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip)
-            VALUES(?,?,?,?,?,'paid',?,0,'queued',?)")
-           ->execute([$code, $name, $message, $amount, $amount, $tx, $ip]);
+        $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,selected_voice_id,voice_name)
+            VALUES(?,?,?,?,?,'paid',?,0,'queued',?,?,?)")
+           ->execute([$code, $name, $message, $amount, $amount, $tx, $ip, $selectedVoiceId, $voiceName]);
         $donationId = (int)$db->lastInsertId();
         
         $db->prepare("UPDATE payment_transactions SET donation_id=? WHERE tx_id=?")

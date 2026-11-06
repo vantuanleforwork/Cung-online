@@ -24,9 +24,20 @@ if(form&&button){
   let previousEngine=engine.value;
   function syncSpeechPreview(){
     if(!speechTemplate||!speechFullPreview)return;
-    const sample={name:'Nguyễn Văn An',offering:'thắp hương',amount:'10.000 đồng',amount_words:'mười nghìn đồng',
-      message:'Cầu mong gia đình bình an, mọi sự tốt lành.',message_clause:'Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.'};
-    speechFullPreview.textContent=speechTemplate.value.replace(/\{(name|offering|amount|amount_words|message|message_clause)\}/g,(_,key)=>sample[key]).replace(/\s+/g,' ').trim()||'Chưa có nội dung để đọc.';
+    const sample={
+      name:'Nguyễn Văn An',
+      user:'Nguyễn Văn An',
+      offering:'thắp hương',
+      amount:'10.000 đồng',
+      so_tien:'10.000 đồng',
+      amount_num:'10.000',
+      amount_words:'mười nghìn đồng',
+      message:'Chúc kênh livestream phát triển thuận lợi!',
+      noi_dung:'Chúc kênh livestream phát triển thuận lợi!',
+      content:'Chúc kênh livestream phát triển thuận lợi!',
+      message_clause:'Với lời nhắn: Chúc kênh livestream phát triển thuận lợi!'
+    };
+    speechFullPreview.textContent=speechTemplate.value.replace(/\{(name|user|offering|amount|so_tien|amount_num|amount_words|message|noi_dung|content|message_clause)\}/g,(_,key)=>sample[key]).replace(/\s+/g,' ').trim()||'Chưa có nội dung để đọc.';
   }
   function syncModel(){
     if(!preset)return;
@@ -58,6 +69,35 @@ if(form&&button){
   }
   selectModel(model.value);syncPlatform();syncSpeechPreview();
   speechTemplate?.addEventListener('input',syncSpeechPreview);
+
+  document.querySelectorAll('.btn-var-insert').forEach(btn=>{
+    if(typeof btn?.addEventListener!=='function'||!btn.dataset?.var)return;
+    btn.addEventListener('click',()=>{
+      if(!speechTemplate)return;
+      const v=btn.dataset.var;
+      const start=typeof speechTemplate.selectionStart==='number'?speechTemplate.selectionStart:speechTemplate.value.length;
+      const end=typeof speechTemplate.selectionEnd==='number'?speechTemplate.selectionEnd:speechTemplate.value.length;
+      const before=speechTemplate.value.substring(0,start);
+      const after=speechTemplate.value.substring(end);
+      const spaceBefore=before.length>0&&!/\s$/.test(before)?' ':'';
+      const spaceAfter=after.length>0&&!/^\s/.test(after)?' ':'';
+      speechTemplate.value=before+spaceBefore+v+spaceAfter+after;
+      const nextPos=start+spaceBefore.length+v.length+spaceAfter.length;
+      speechTemplate.setSelectionRange?.(nextPos,nextPos);
+      speechTemplate.focus?.();
+      syncSpeechPreview();
+    });
+  });
+
+  document.querySelectorAll('.btn-sample-apply').forEach(btn=>{
+    if(typeof btn?.addEventListener!=='function'||!btn.dataset?.template)return;
+    btn.addEventListener('click',()=>{
+      if(!speechTemplate)return;
+      speechTemplate.value=btn.dataset.template;
+      speechTemplate.focus?.();
+      syncSpeechPreview();
+    });
+  });
   platform.addEventListener('change',()=>{
     previewController?.abort();CungSpeech.stop();syncPlatform();feedback.textContent='';
   });
@@ -163,7 +203,7 @@ const webhookFeedback=document.getElementById('obsWebhookFeedback');
 const testWebhookButtons=document.querySelectorAll('[data-test-webhook-amount]');
 const customWebhookForm=document.getElementById('customWebhookForm');
 
-async function sendTestWebhook(amount,name,message,triggerBtn){
+async function sendTestWebhook(amount,name,message,triggerBtn,voiceId=''){
   if(!webhookFeedback)return;
   if(triggerBtn)triggerBtn.disabled=true;
   webhookFeedback.className='test-feedback loading';
@@ -177,6 +217,7 @@ async function sendTestWebhook(amount,name,message,triggerBtn){
     body.set('amount',String(amount));
     if(name)body.set('name',name);
     if(message)body.set('message',message);
+    if(voiceId)body.set('voice_id',voiceId);
 
     const res=await voiceAction(body);
     webhookFeedback.className='test-feedback success';
@@ -204,6 +245,7 @@ if(customWebhookForm&&typeof customWebhookForm.addEventListener==='function'){
     const amount=Number(customWebhookForm.elements?.namedItem('custom_amount')?.value)||10000;
     const name=customWebhookForm.elements?.namedItem('custom_name')?.value||'';
     const message=customWebhookForm.elements?.namedItem('custom_message')?.value||'';
-    sendTestWebhook(amount,name,message,submitBtn);
+    const voiceId=customWebhookForm.elements?.namedItem('custom_voice_id')?.value||'';
+    sendTestWebhook(amount,name,message,submitBtn,voiceId);
   });
 }

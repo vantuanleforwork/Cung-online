@@ -76,9 +76,9 @@ function render(d){
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
   $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('en-US');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
-  $('offeringBadge').textContent={1:'Thắp hương',2:'Dâng hoa quả',3:'Dâng lễ'}[tier];
-  $('offeringText').textContent={1:'Một nén tâm hương',2:'Hoa thơm, quả ngọt',3:'Lễ thành kính dâng'}[tier];
-  $('donorMessage').textContent=d.message||'Một tấm lòng thành, nguyện cầu bình an.';
+  $('offeringBadge').textContent={1:'Donate',2:'Donate Hỏa Long',3:'Donate Đại Lễ'}[tier]||'Donate';
+  $('offeringText').textContent={1:'Đã gửi tặng',2:'Hỏa Long xuất hiện',3:'Đại lễ tối thượng'}[tier]||'Đã gửi tặng';
+  $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
   for(let i=1;i<=3;i++)$('art'+i).style.display=i===tier?'':'none';
   $('stage').dataset.tier=String(tier);$('stage').style.setProperty('--duration',displaySeconds(d)+'s');
 }
@@ -135,7 +135,7 @@ async function acknowledge(d){
 }
 async function getDemo(){
   let value;
-  if(!K)value={name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Cầu mong gia đình bình an, mọi sự tốt lành.',speech_text:'Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Cầu mong gia đình bình an, mọi sự tốt lành.',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
+  if(!K)value={name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Chúc kênh livestream phát triển thuận lợi, vạn sự như ý!',speech_text:'Nguyễn Văn An đã donate mười nghìn đồng. Với lời nhắn: Chúc kênh livestream phát triển thuận lợi, vạn sự như ý!',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
   else{const {response,data}=await request('overlay-settings.php');if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');value=data.demo}
   if(preview){value.tier=selectedPreviewTier;value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier]}
   return value;
