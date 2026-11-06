@@ -222,6 +222,11 @@ function admin_action(PDO $db, array $in, string $ip) {
 }
 
 function push_test_webhook(PDO $db, int $amount, string $name = '', string $message = '', string $ip = '', string $selectedVoiceId = ''): array {
+    try {
+        if (function_exists('ensure_speech_schema')) {
+            ensure_speech_schema($db);
+        }
+    } catch (Throwable $ignore) {}
     if ($amount < MIN_AMOUNT) {
         throw new InvalidArgumentException('Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ.');
     }
@@ -273,9 +278,16 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
             VALUES(?,?,?,?,?,'IN','matched')")
            ->execute([$tx, $amount, $payloadData['content'], trim(ACCOUNT_NO), 'TEST_OBS']);
         
-        $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,selected_voice_id,voice_name)
-            VALUES(?,?,?,?,?,'paid',?,0,'queued',?,?,?)")
-           ->execute([$code, $name, $message, $amount, $amount, $tx, $ip, $selectedVoiceId, $voiceName]);
+        $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
+        if (in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true)) {
+            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,selected_voice_id,voice_name)
+                VALUES(?,?,?,?,?,'paid',?,0,'queued',?,?,?)")
+               ->execute([$code, $name, $message, $amount, $amount, $tx, $ip, $selectedVoiceId, $voiceName]);
+        } else {
+            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip)
+                VALUES(?,?,?,?,?,'paid',?,0,'queued',?)")
+               ->execute([$code, $name, $message, $amount, $amount, $tx, $ip]);
+        }
         $donationId = (int)$db->lastInsertId();
         
         $db->prepare("UPDATE payment_transactions SET donation_id=? WHERE tx_id=?")

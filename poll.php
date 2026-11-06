@@ -1,11 +1,13 @@
 <?php
 require __DIR__ . '/speech.php';
+require_once __DIR__ . '/speech-schema.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 if (!hash_equals(OVERLAY_KEY, $_GET['k'] ?? '')) { http_response_code(403); exit('[]'); }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit('[]'); }
 $db = db();
 try {
+    try { ensure_speech_schema($db); } catch (Throwable $ignore) {}
     $db->beginTransaction();
     $settings = $db->query('SELECT * FROM app_settings WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC);
     if (!$settings) throw new RuntimeException('Missing queue settings');
@@ -14,7 +16,10 @@ try {
     $active = $db->query("SELECT id FROM donations WHERE status='paid' AND shown=0 AND queue_state='queued'
         AND claimed_until>NOW() LIMIT 1 FOR UPDATE")->fetchColumn();
     if ($active !== false) { $db->commit(); exit('[]'); }
-    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.selected_voice_id,d.voice_name,
+    $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
+    $hasVoiceCols = in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true);
+    $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
+    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,{$voiceSelect}
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
         COALESCE((SELECT FLOOR(SUM(x.paid_amount)/200000) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid'),0) AS donor_level,
         (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
