@@ -59,8 +59,8 @@
         const row = document.createElement('li'); row.className = 'music-queue-row';
         const text = document.createElement('div');
         const link = document.createElement('a'); link.href = 'https://www.youtube.com/watch?v='+song.video_id;
-        link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = song.title || 'YouTube · '+song.video_id;
-        const person = document.createElement('small'); person.textContent = song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
+        link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = song.title || 'Đang lấy tên bài…';
+        const person = document.createElement('small'); person.textContent = song.donation_id === null ? 'Thêm bởi quản trị viên' : song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
         text.append(link,person);
         const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : 'Chờ phát';
         row.append(text,badge); list.append(row);

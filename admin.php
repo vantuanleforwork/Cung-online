@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
-            } elseif (in_array($action, ['save_donation_settings','music_pause','music_resume','music_next','music_remove'], true)) {
+            } elseif (in_array($action, ['save_donation_settings','music_pause','music_resume','music_next','music_remove','music_add'], true)) {
                 music_admin_action(db(), $_POST);
                 $_SESSION['flash'] = 'Đã cập nhật cài đặt / hàng đợi nhạc.';
                 redirect_admin($action === 'save_donation_settings' ? 'donate' : 'music');
@@ -325,6 +325,7 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php endif ?>
 <?php endif ?></main>
 <?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
-<?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=33"></script><?php endif ?>
+<?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=36"></script><?php endif ?>
 <?php if ($loggedIn && $view==='revenue'): ?><script src="revenue-chart.js?v=35"></script><?php endif ?>
+<?php if ($loggedIn && $view==='music'): ?><script src="music-queue-admin.js?v=36"></script><?php endif ?>
 </body></html>

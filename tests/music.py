@@ -43,12 +43,17 @@ def run():
                     except subprocess.CalledProcessError: time.sleep(.1)
                 sql('CREATE DATABASE layout_test CHARACTER SET utf8mb4',None)
                 sql((ROOT/'schema.sql').read_text(encoding='utf-8'))
-                # Emulate version 7 and verify authenticated automatic migration to 8.
-                sql("ALTER TABLE app_settings DROP COLUMN overlay_x,DROP COLUMN overlay_y,DROP COLUMN overlay_width,DROP COLUMN overlay_font_size; UPDATE app_settings SET speech_schema_version=7,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
+                # Emulate an installed version 12 without the new idle settings.
+                sql("ALTER TABLE donation_settings DROP COLUMN music_idle_enabled,DROP COLUMN music_idle_message; ALTER TABLE music_requests MODIFY donation_id INT NOT NULL,DROP COLUMN title_retry_at; UPDATE app_settings SET speech_schema_version=12,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
                 for pattern in ['*.php','*.js','*.mjs','*.css','*.html']:
                     for source in ROOT.glob(pattern):
                         if source.name != 'config.php': shutil.copy2(source,site/source.name)
                 shutil.copytree(ROOT/'vendor',site/'vendor')
+                # Stub only the external oEmbed lookup in the disposable copy.
+                music_source=(site/'music.php').read_text(encoding='utf-8')
+                music_source=music_source.replace('function youtube_song_title(string $videoId): string {', "function youtube_song_title(string $videoId): string {\n    return $videoId === 'FWYrRSWabIs' ? '' : 'Fixture metadata ' . $videoId;")
+                (site/'music.php').write_text(music_source,encoding='utf-8')
+
                 password='layout-fixture-password'
                 password_hash=subprocess.check_output([str(PHP),'-r','echo password_hash($argv[1], PASSWORD_DEFAULT);',password],text=True,creationflags=FLAGS)
                 config=(ROOT/'config.example.php').read_text(encoding='utf-8')
@@ -74,6 +79,8 @@ def run():
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 assert admin(dict(action='login',csrf=csrf,password=password))[0]==200
                 code,html=admin();assert code==200 and 'overlayPositionForm' in html
+                assert sql('SELECT speech_schema_version FROM app_settings')=='13'
+                assert sql('SELECT music_idle_enabled FROM donation_settings')=='0'
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 def request(path,body=None,headers=None):
                     req=urllib.request.Request(base+'/'+path,data=json.dumps(body).encode() if body is not None else None,headers={'Content-Type':'application/json',**(headers or {})})
@@ -82,9 +89,37 @@ def run():
                     except urllib.error.HTTPError as error:return error.code,json.loads(error.read().decode('utf-8-sig'))
                 values=dict(message_min=20000,tier2_min=75000,tier3_min=300000,music_min=60000,music_seconds=30,music_volume=40,music_opacity=80,music_x=48,music_y=740,music_width=360,music_height=160,music_order='time',music_enabled='1')
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**values))[0]==200
+                idle_values=values|dict(music_idle_enabled='1',music_idle_message='Order nhạc <b>theo yêu cầu</b> 🎵')
+                assert admin(dict(action='save_donation_settings',csrf=csrf,**idle_values))[0]==200
+                assert sql('SELECT music_idle_enabled,music_idle_message FROM donation_settings')=='1\tOrder nhạc <b>theo yêu cầu</b> 🎵'
+                assert admin(dict(action='save_donation_settings',csrf=csrf,**(idle_values|dict(music_idle_message='x'*301))))[0]==409
+                assert admin(dict(action='save_donation_settings',csrf=csrf,**values))[0]==200
+                assert sql('SELECT music_idle_enabled FROM donation_settings')=='0'
                 assert request('donation-settings.php')[1]['tier2_min']==75000
                 assert admin(dict(action='save_donation_settings',csrf='bad',**values))[0]==403
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**(values|dict(tier3_min=70000))))[0]==409
+                counts=sql('SELECT (SELECT COUNT(*) FROM donations),(SELECT COUNT(*) FROM payment_transactions)')
+                assert admin(dict(action='music_add',csrf='wrong',music_url='https://youtu.be/dQw4w9WgXcQ'))[0]==403
+                assert admin(dict(action='music_add',csrf=csrf,music_url='https://evil.test/song'))[0]==409
+                assert admin(dict(action='music_add',csrf=csrf,music_url='https://youtu.be/dQw4w9WgXcQ'))[0]==200
+                manual=request('music-queue.php')[1]['items'][0]
+                assert manual['donation_id'] is None and manual['name']=='Quản trị viên' and manual['paid_amount']==0
+                assert manual['title']=='Fixture metadata dQw4w9WgXcQ'
+                manual_beat=request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]
+                assert manual_beat['item']['id']==manual['id']
+                assert admin(dict(action='music_remove',csrf=csrf,id=manual['id']))[0]==200
+                assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]['item'] is None
+                assert sql('SELECT (SELECT COUNT(*) FROM donations),(SELECT COUNT(*) FROM payment_transactions)')==counts
+                assert sql("SELECT COUNT(*) FROM admin_audit WHERE action='music_add'")=='1'
+                assert admin(dict(action='music_add',csrf=csrf,music_url='https://youtu.be/FWYrRSWabIs'))[0]==200
+                missing=request('music-queue.php')[1]['items'][0]
+                assert missing['title']==''
+                retry_at=sql('SELECT title_retry_at FROM music_requests WHERE id='+str(missing['id']))
+                assert retry_at and request('music-title.php?k=layout-fixture-key',dict(id=missing['id']))[1]['title']==''
+                assert sql('SELECT title_retry_at FROM music_requests WHERE id='+str(missing['id']))==retry_at
+                sql("UPDATE music_requests SET title_retry_at=NOW()-INTERVAL 1 SECOND,video_id='9bZkp7q19f0' WHERE id="+str(missing['id']))
+                assert request('music-queue.php')[1]['items'][0]['title']=='Fixture metadata 9bZkp7q19f0'
+                assert admin(dict(action='music_remove',csrf=csrf,id=missing['id']))[0]==200
                 fixture="<?php require 'common.php'; donor_session(); $_SESSION['donor_id']=1; db()->prepare(\"INSERT IGNORE INTO donor_users(id,google_sub,email,email_hash,display_name) VALUES(1,'fixture','music@example.test',?,'Music donor')\")->execute([donor_hash('music@example.test')]); echo json_encode(['csrf'=>$_SESSION['donor_csrf']]);"
                 (site/'fixture.php').write_text(fixture,encoding='utf-8')
                 donor_csrf=request('fixture.php')[1]['csrf']
@@ -99,7 +134,7 @@ def run():
                     return request('webhook.php',{'transactions':[dict(id=tx,transferAmount=amount,content=order['code'],accountNumber='123456789',transferType='IN',gateway='MB')]},{'Authorization':'Bearer music-fixture-secret'})
                 assert pay(one,'music-one')[0]==200
                 assert pay(one,'music-one')[0]==200
-                assert sql('SELECT COUNT(*) FROM music_requests')=='1'
+                assert sql('SELECT COUNT(*) FROM music_requests WHERE donation_id IS NOT NULL')=='1'
                 price_locked=create(20000,kind='message')[1]
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**(values|dict(message_min=40000))))[0]==200
                 assert pay(price_locked,'price-locked',20000)[0]==200
@@ -108,6 +143,12 @@ def run():
 
                 two=create(100000,'https://youtu.be/9bZkp7q19f0?si=share')[1];assert pay(two,'music-two',100000)[0]==200
                 assert len(request('music-queue.php')[1]['items'])==2
+                sql("UPDATE donations SET message='' WHERE tx_id='music-one'; UPDATE app_settings SET paused=0,speech_enabled=0")
+                alert=request('poll.php?k=layout-fixture-key',{})[1][0]
+                assert alert['donation_kind']=='music' and alert['music_title']=='Fixture metadata dQw4w9WgXcQ'
+                assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0]==200
+                sql("UPDATE app_settings SET paused=1")
+
                 owner='a'*32
                 def beat(**extra):return request('music-overlay.php?k=layout-fixture-key',dict(owner=owner,**extra))[1]
                 assert request('music-overlay.php?k=bad',dict(owner=owner))[0]==403
@@ -139,10 +180,10 @@ def run():
                 assert request('music-title.php?k=wrong',dict(id=1))[0]==403
                 # Inspect real browser UI and preview without calling external YouTube.
                 cookie=next(c.value for c in jar if c.name=='cung_admin')
-                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,text=True,creationflags=FLAGS,timeout=60)
+                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,text=True,creationflags=FLAGS,timeout=75)
                 assert browser.returncode==0,browser.stdout+browser.stderr
                 print(browser.stdout.strip())
-                print('PASS: strict YouTube validation, editable tiers/minimum, real payment enqueue/dedup, order, lease fencing, pause/resume/next/remove, duration limit, stale event safety and underpayment')
+                print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:
                 for process in reversed(processes):
                     process.terminate();process.wait(timeout=20)

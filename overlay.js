@@ -76,7 +76,10 @@ function render(d){
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
   $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('vi-VN');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
-  $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
+  if(d.donation_kind==='music'){
+    const order=d.music_title?'Đã order bài '+d.music_title:'Đã order nhạc YouTube';
+    $('donorMessage').textContent=order+(d.message?'\n'+d.message:'');
+  }else $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
   $('stage').dataset.tier=String(tier);$('stage').style.setProperty('--duration',displaySeconds(d)+'s');
   globalThis.CungLayout?.apply(d.speech?.overlay);
 }

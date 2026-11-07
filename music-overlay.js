@@ -25,19 +25,25 @@
     document.getElementById('musicPercent').textContent = metric.percent+'%';
     document.getElementById('musicTime').textContent = clock(metric.elapsed)+' / '+clock(metric.total);
     nextBox.hidden = !upcoming || !metric.showNext;
-    nextTitle.textContent = upcoming ? (upcoming.title || titles.get(Number(upcoming.id)) || 'YouTube · '+upcoming.video_id) : '';
+    nextTitle.textContent = upcoming ? (upcoming.title || titles.get(Number(upcoming.id)) || 'Đang lấy tên bài…') : '';
     return metric;
   }
-  function prepareUpcoming(next) {
-    upcoming = next;
-    if (!next || next.title || titles.has(Number(next.id))) return;
-    const id = Number(next.id);
-    titles.set(id,'');
+  const titleRetries = new Map();
+  function prepareTitle(id) {
+    id = Number(id);
+    if (!id || titles.get(id) || performance.now() < (titleRetries.get(id) || 0)) return;
+    titleRetries.set(id,performance.now()+60000);
     const metadataController = new AbortController();
     const metadataTimeout = setTimeout(() => metadataController.abort(),6000);
     fetch('music-title.php?k='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id}),signal:metadataController.signal})
       .then(response => response.ok ? response.json() : null)
-      .then(data => { if (data?.title) titles.set(id,data.title); updateProgress(); })
+      .then(data => {
+        if (data?.title) {
+          titles.set(id,data.title);
+          if (Number(item?.id) === id && !item.title) { item.title = data.title; title.textContent = data.title; }
+        }
+        updateProgress();
+      })
       .catch(() => {})
       .finally(() => clearTimeout(metadataTimeout));
   }
@@ -66,12 +72,16 @@
     player?.pauseVideo?.();
   }
   async function start(next) {
-    stop(); item = next; card.hidden = false;
+    stop();
+    item = next;
+    card.classList.remove('is-idle');
+    document.getElementById('musicIdle').hidden = true;
+    card.hidden = false;
     lastMovement = performance.now(); lastPosition = Number(next.position_seconds)||0; autoplayBlocked = false;
     updateProgress();
     const version = generation;
     title.textContent = next.title || 'Đang tải nhạc YouTube…';
-    sender.textContent = next.name+' · '+Number(next.paid_amount).toLocaleString('vi-VN')+'đ';
+    sender.textContent = next.donation_id === null ? 'Thêm bởi quản trị viên' : next.name+' · '+Number(next.paid_amount).toLocaleString('vi-VN')+'đ';
     try {
       await youtubeAPI();
       if (version !== generation || !item) return;
@@ -123,8 +133,12 @@
       if (!data.owner) { stop(); return; }
       settings = data.settings; paused = data.paused;
       CungMusicLayout.apply(settings);
-      prepareUpcoming(data.next);
-      if (!data.item) { stop(); return; }
+      upcoming = data.next;
+      prepareTitle(data.untitled_id);
+      if (item && Number(item.id) === Number(data.item?.id) && data.item.title && !item.title) {
+        item.title = data.item.title; title.textContent = item.title;
+      }
+      if (!data.item) { stop(); CungMusicLayout.showIdle(settings); return; }
       if (Number(item?.id) !== Number(data.item.id)) { start(data.item); return; }
       if (player?.getPlayerState) {
         player.setVolume(Number(settings.music_volume));

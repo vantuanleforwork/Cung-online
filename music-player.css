@@ -1,5 +1,6 @@
 /* Compact audio widget. The underlying video remains loaded with zero opacity. */
 .music-card {
+  box-sizing: border-box;
   position: absolute;
   left: 48px;
   top: 740px;
@@ -45,4 +46,12 @@
   background-size: 120px 120px;
 }
 .music-editor .music-card { cursor: grab; touch-action: none; user-select: none; outline: 2px dashed #c5f467; outline-offset: 5px; }
-.music-card [hidden] { display: none !important; }
+.music-card[hidden], .music-card [hidden] { display: none !important; }
+
+.music-card.is-idle > header,
+.music-card.is-idle > .music-progress,
+.music-card.is-idle > .music-clock,
+.music-card.is-idle > .music-next { display: none; }
+.music-idle { min-height: 0; overflow: auto; }
+.music-idle strong { color: #c5f467; font-size: 12px; letter-spacing: 1px; }
+.music-idle p { margin: 8px 0 0; font-size: 16px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }

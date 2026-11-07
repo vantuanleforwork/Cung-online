@@ -19,7 +19,8 @@ try {
     $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
     $hasVoiceCols = in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true);
     $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
-    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,{$voiceSelect}
+    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,{$voiceSelect}
+        (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
         COALESCE((SELECT SUM(x.paid_amount) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid' AND x.is_test=0),0) AS donor_total,
         (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
@@ -32,6 +33,11 @@ try {
        ->execute([$token, $row['id']]);
     $db->commit();
     unset($row['active_claim']);
+    if ($row['donation_kind'] === 'music' && $row['music_request_id']) {
+        try { $row['music_title'] = refresh_music_title($db,(int)$row['music_request_id']); }
+        catch (Throwable $ignore) { $row['music_title'] = ''; }
+    }
+
     $row['donor_level'] = donor_level_progress((int)$row['donor_total'])['level'];
     unset($row['donor_total']);
     $row['claim_token'] = $token;

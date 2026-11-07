@@ -14,7 +14,7 @@ function ensure_speech_schema(PDO $db) {
         if (!in_array('voice_name', $donationCols, true)) {
             $db->exec('ALTER TABLE donations ADD COLUMN voice_name VARCHAR(80) NULL DEFAULT NULL');
         }
-        if ((int)$db->query('SELECT speech_schema_version FROM app_settings WHERE id=1')->fetchColumn() >= 12) { $done = true; return; }
+        if ((int)$db->query('SELECT speech_schema_version FROM app_settings WHERE id=1')->fetchColumn() >= 13) { $done = true; return; }
     } catch (PDOException $e) {
         if ((int)($e->errorInfo[1] ?? 0) !== 1054) throw $e;
     }
@@ -87,7 +87,7 @@ function ensure_speech_schema(PDO $db) {
             SET d.is_test=1 WHERE LEFT(d.tx_id,5)='TEST_' OR p.gateway='TEST_OBS'");
         ensure_music_schema($db);
         $db->exec('UPDATE donation_settings SET music_height=160 WHERE music_height=292');
-        $db->exec('UPDATE app_settings SET speech_schema_version=12 WHERE id=1');
+        $db->exec('UPDATE app_settings SET speech_schema_version=13 WHERE id=1');
         $done = true;
     } finally {
         $s = $db->prepare('SELECT RELEASE_LOCK(?)'); $s->execute([$lock]);

@@ -27,6 +27,10 @@ $donate = donation_settings($db);
       <?php endforeach ?>
         <label>Thứ tự phát<select name="music_order"><option value="time" <?=$donate['music_order']==='time'?'selected':''?>>Thanh toán trước phát trước</option><option value="amount" <?=$donate['music_order']==='amount'?'selected':''?>>Số tiền cao trước, bằng tiền theo thời gian</option></select></label>
       </div>
+      <h3>Khung nhạc chờ</h3>
+      <label><input type="checkbox" name="music_idle_enabled" <?=$donate['music_idle_enabled']?'checked':''?>> Luôn hiển thị khung nhạc chờ khi chưa có bài</label>
+      <label>Nội dung mời order nhạc<textarea name="music_idle_message" maxlength="300" rows="3"><?=h($donate['music_idle_message'])?></textarea></label>
+      <p class="muted">Khung chờ xuất hiện khi bật donate phát nhạc và hàng đợi trống. Khi có bài, khung tự chuyển sang trình phát.</p>
       <h3>Vị trí và kích thước trong OBS</h3>
       <p class="muted">Khung 1920 × 1080. Kéo trình phát trong preview hoặc nhập thông số. Widget hiển thị tên bài, tiến độ và bài sắp phát. Vùng video được đặt trong suốt hoàn toàn.</p>
       <div class="speech-grid">
@@ -34,7 +38,8 @@ $donate = donation_settings($db);
         <label><?=h($label)?> (px)<input type="number" name="<?=h($key)?>" min="<?=$min?>" max="<?=$max?>" required value="<?=h($donate[$key])?>"></label>
       <?php endforeach ?>
       </div>
-      <div class="preview-iframe-wrapper"><iframe id="musicPositionPreview" src="music-preview.html?v=34" title="Preview vị trí và kích thước trình phát nhạc"></iframe></div>
+      <label>Xem trước<select name="music_preview_state"><option value="playing">Đang phát nhạc</option><option value="idle">Chờ order nhạc</option></select></label>
+      <div class="preview-iframe-wrapper"><iframe id="musicPositionPreview" src="music-preview.html?v=36" title="Preview vị trí và kích thước trình phát nhạc"></iframe></div>
       <p class="muted">Nhạc chỉ xếp hàng khi thanh toán đủ mức tối thiểu. Video bị chặn nhúng hoặc lỗi sẽ được bỏ qua. Bài đang phát hoàn tất trước khi áp dụng thứ tự mới.</p>
     </section>
     <button type="submit">Lưu cài đặt donate</button>

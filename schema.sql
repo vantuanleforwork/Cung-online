@@ -139,13 +139,16 @@ CREATE TABLE IF NOT EXISTS donation_settings (
         music_order VARCHAR(16) NOT NULL DEFAULT 'time', music_volume INT NOT NULL DEFAULT 50,
         music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
         music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
-        music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1
+        music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1,
+        music_idle_enabled TINYINT NOT NULL DEFAULT 0,
+        music_idle_message VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE IF NOT EXISTS music_requests (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, donation_id INT NOT NULL UNIQUE,
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, donation_id INT NULL UNIQUE,
         video_id VARCHAR(11) NOT NULL, state VARCHAR(16) NOT NULL DEFAULT 'waiting',
         position_seconds DECIMAL(10,2) NOT NULL DEFAULT 0, title VARCHAR(200) NOT NULL DEFAULT '',
+        title_retry_at DATETIME NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX music_waiting(state,id), FOREIGN KEY(donation_id) REFERENCES donations(id) ON DELETE CASCADE
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;

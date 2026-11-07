@@ -16,16 +16,29 @@
     card.style.setProperty('--music-opacity', Math.max(0,Math.min(1,Number(layout.music_opacity)/100)));
     return {...layout};
   }
+  function showIdle(settings) {
+    card.classList.add('is-idle');
+    document.getElementById('musicIdleMessage').textContent = settings.music_idle_message || '';
+    document.getElementById('musicIdle').hidden = false;
+    card.hidden = !Number(settings.music_enabled) || !Number(settings.music_idle_enabled);
+  }
   function fit() {
     scale = Math.min(innerWidth/1920,innerHeight/1080);
     if (editor) frame.style.transform = 'translate(-50%,-50%) scale('+scale+')';
   }
-  window.CungMusicLayout = {apply};
+  window.CungMusicLayout = {apply, showIdle};
   if (!editor) return;
   fit(); window.addEventListener('resize',fit);
   window.addEventListener('message', event => {
     if (event.origin !== location.origin || event.source !== parent || event.data?.type !== 'music:layout') return;
-    apply(event.data.layout); fit();
+    apply(event.data.layout);
+    if (layout.music_preview_state === 'idle') showIdle(layout);
+    else {
+      card.classList.remove('is-idle');
+      document.getElementById('musicIdle').hidden = true;
+      card.hidden = false;
+    }
+    fit();
     parent.postMessage({type:'music:changed',layout:{music_x:Math.round(layout.music_x),music_y:Math.round(layout.music_y)}},location.origin);
   });
   let drag;
