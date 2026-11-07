@@ -5,3 +5,5 @@
 - For UI design, agree on visual direction, palette and information hierarchy with the user before implementing a new direction. The current approved direction is blue-black with lime accents.
 - Avoid generic three-card horizontal layouts and unrequested purple-blue gradients. Use clear design tokens, whitespace, semantic HTML and readable CSS.
 - Ensure accessible contrast, keyboard focus, restrained hover interactions and responsive desktop/mobile layouts.
+
+- When creating or rewriting shared-hosting ZIPs, explicitly store Unix regular-file permissions 0644 (create_system=3) for production files. Verify every archive entry has the intended permissions as well as matching content before delivery. Default ZipInfo/writestr permissions can become 0600 and cause CSS/JS HTTP 403 after cPanel extraction.
