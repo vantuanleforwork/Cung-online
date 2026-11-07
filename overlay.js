@@ -49,7 +49,7 @@ async function playTierIntro(d,signal){
   const tier=donationTier(d),intro=$('tierIntro');
   intro.hidden=true;intro.className='tier-intro';
   if(tier<2)return;
-  $('introKicker').textContent=tier===2?'HỎA LONG KHAI LỄ':'ĐẠI LỄ TỐI THƯỢNG';
+  $('introKicker').textContent=tier===2?'HỎA LONG XUẤT HIỆN':'TIÊN NỮ GIÁNG TRẦN';
   $('introTitle').textContent=tier===2?'RỒNG LỬA GIÁNG LÂM':'THIÊN NỮ GIÁNG LÂM';
   void intro.offsetWidth;intro.hidden=false;intro.className='tier-intro tier-'+tier;
   const reduced=!document.body.classList.contains('force-motion')&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -74,13 +74,11 @@ function render(d){
     img.addEventListener('error',()=>{avatar.replaceChildren();avatar.textContent=initial},{once:true});avatar.append(img);
   }else avatar.textContent=initial;
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
-  $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('en-US');
+  $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('vi-VN');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
-  $('offeringBadge').textContent={1:'Donate',2:'Donate Hỏa Long',3:'Donate Đại Lễ'}[tier]||'Donate';
-  $('offeringText').textContent={1:'Đã gửi tặng',2:'Hỏa Long xuất hiện',3:'Đại lễ tối thượng'}[tier]||'Đã gửi tặng';
   $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
-  for(let i=1;i<=3;i++)$('art'+i).style.display=i===tier?'':'none';
   $('stage').dataset.tier=String(tier);$('stage').style.setProperty('--duration',displaySeconds(d)+'s');
+  globalThis.CungLayout?.apply(d.speech?.overlay);
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
 async function speak(d,signal){
@@ -98,9 +96,9 @@ async function speak(d,signal){
       if(!d.audio_url)await sleep(600,signal);
     }
   }
-  $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI GỬI GẮM';
+  $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
   try{await CungSpeech.read(d,{signal})}
-  finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI GỬI GẮM'}
+  finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI NHẮN'}
 }
 async function play(d){
   const lease=preview?{signal:new AbortController().signal,close(){}}:startLease(d);

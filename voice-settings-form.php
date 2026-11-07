@@ -64,18 +64,18 @@ function voice_picker_fields(string $provider, string $label) { ?>
   <button type="button" class="btn-var-insert" data-var="{message_clause}">+ {message_clause} (tự thêm lời nhắn)</button>
   <button type="button" class="btn-var-insert" data-var="{noi_dung}">+ {noi_dung} (lời nhắn)</button>
 </div>
-<details id="speechTemplateHelp" class="template-help" open style="background:#fcf8f0;border:1px solid #d8cbb5;border-radius:10px;padding:14px;margin:12px 0 16px;">
-  <summary style="cursor:pointer;font-weight:700;color:#5a1d12">Danh sách biến &amp; hướng dẫn mẫu câu đọc donate</summary>
+<details id="speechTemplateHelp" class="template-help" open style="background:var(--field);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0 16px;">
+  <summary style="cursor:pointer;font-weight:700;color:var(--ink)">Danh sách biến &amp; hướng dẫn mẫu câu đọc donate</summary>
   <div style="margin-top:10px;font-size:13px;line-height:1.7;">
     <table style="width:100%;border-collapse:collapse;background:transparent;">
-      <tr><th style="width:180px;padding:6px 8px;border-bottom:1px solid #e2d7c5;text-align:left">Biến</th><th style="padding:6px 8px;border-bottom:1px solid #e2d7c5;text-align:left">Ý nghĩa</th><th style="padding:6px 8px;border-bottom:1px solid #e2d7c5;text-align:left">Ví dụ thực tế khi đọc</th></tr>
+      <tr><th style="width:180px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left">Biến</th><th style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:left">Ý nghĩa</th><th style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:left">Ví dụ thực tế khi đọc</th></tr>
       <tr><td style="padding:6px 8px"><code>{user}</code> hoặc <code>{name}</code></td><td style="padding:6px 8px">Tên người gửi donate</td><td style="padding:6px 8px"><em>Nguyễn Văn An</em></td></tr>
       <tr><td style="padding:6px 8px"><code>{amount_words}</code></td><td style="padding:6px 8px">Số tiền đọc thành chữ (<strong>khuyên dùng</strong> để giọng đọc AI mượt nhất)</td><td style="padding:6px 8px"><em>năm mươi nghìn đồng</em></td></tr>
       <tr><td style="padding:6px 8px"><code>{amount}</code> hoặc <code>{so_tien}</code></td><td style="padding:6px 8px">Số tiền dạng số có chữ đồng</td><td style="padding:6px 8px"><em>50.000 đồng</em></td></tr>
       <tr><td style="padding:6px 8px"><code>{message_clause}</code></td><td style="padding:6px 8px">Tự động thêm “Với lời nhắn…” khi có nhắn (nếu không nhắn thì tự bỏ qua)</td><td style="padding:6px 8px"><em>Với lời nhắn: Chúc kênh ngày càng phát triển</em></td></tr>
       <tr><td style="padding:6px 8px"><code>{noi_dung}</code> hoặc <code>{message}</code></td><td style="padding:6px 8px">Lời nhắn thuần của người gửi</td><td style="padding:6px 8px"><em>Chúc kênh ngày càng phát triển</em></td></tr>
     </table>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #d8cbb5;">
+    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
       <strong>Mẫu câu gợi ý (bấm vào để dùng ngay):</strong>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
         <button type="button" class="btn-sample-apply" data-template="{user} đã donate {amount_words}. {message_clause}">Mẫu 1: {user} đã donate {amount_words}. {message_clause}</button>
@@ -100,7 +100,7 @@ function voice_picker_fields(string $provider, string $label) { ?>
     </label>
   </div>
   <div style="margin-top:12px">
-    <label>Mốc 3: Từ 200.000đ trở lên (VIP / Đại chiêu)
+    <label>Mốc 3: Từ 200.000đ trở lên (VIP / Tiên nữ)
       <input name="tier3_voice_id" value="<?=h($settings['tier3_voice_id'] ?? '')?>" placeholder="Voice ID mặc định mốc 3 (để trống dùng mốc 2)" maxlength="160">
       <small>Áp dụng khi người donate mốc 200k chọn "Mặc định".</small>
     </label>
@@ -113,11 +113,12 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="8" max="30" value="<?=h(max(8, (int)$settings['display_seconds']))?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng (tối thiểu 8 giây).</small></label></div>
 <div class="bar"><button type="submit">Lưu cấu hình</button><button type="button" id="testVoice">Nghe thử câu này</button></div>
 <p id="voiceFeedback" class="muted" role="status" aria-live="polite"></p></form>
+<?php require __DIR__ . '/overlay-position-form.php'; ?>
 
-<div class="api-panel" style="margin-top:24px;background:#fbf7ef">
-  <h3 style="margin-top:0;color:#5a1d12">Danh sách giọng đọc cho người donate tự chọn (Frontend)</h3>
+<div class="api-panel" style="margin-top:24px;background:var(--surface)">
+  <h3 style="margin-top:0;color:var(--ink)">Danh sách giọng đọc cho người donate tự chọn (Frontend)</h3>
   <p class="muted">Người donate từ 50.000đ hoặc từ 200.000đ sẽ được chọn 1 trong các giọng này tại trang gửi donate. Mốc dưới 50k không được chọn (sử dụng giọng mặc định Mốc 1).</p>
-  <form method="post" style="display:grid;grid-template-columns:1fr 1fr 190px auto;gap:10px;align-items:end;margin:16px 0">
+  <form method="post" class="voice-option-form">
     <?php csrf_field() ?>
     <input type="hidden" name="action" value="add_voice_option">
     <label style="margin:0">Tên giọng hiển thị<input name="name" required maxlength="80" placeholder="Ví dụ: Chị Google, Nam MC..."></label>
@@ -140,13 +141,13 @@ function voice_picker_fields(string $provider, string $label) { ?>
         <tr>
           <td><strong><?=h($opt['name'])?></strong></td>
           <td><code><?=h($opt['voice_id'])?></code></td>
-          <td><?=((int)$opt['tier_min'] === 3) ? '<span style="color:#784db5;font-weight:700">⭐ Từ 200.000đ (VIP)</span>' : '<span style="color:#b03a1c;font-weight:600">✦ Từ 50.000đ</span>'?></td>
+          <td><?=((int)$opt['tier_min'] === 3) ? '<span style="color:var(--accent);font-weight:700">⭐ Từ 200.000đ (VIP)</span>' : '<span style="color:var(--warning);font-weight:600">✦ Từ 50.000đ</span>'?></td>
           <td>
             <form method="post" class="inline" onsubmit="return confirm('Bạn có chắc muốn xóa giọng <?=h(addslashes($opt['name']))?> khỏi danh sách chọn?');">
               <?php csrf_field() ?>
               <input type="hidden" name="action" value="delete_voice_option">
               <input type="hidden" name="id" value="<?=h($opt['id'])?>">
-              <button type="submit" style="background:#8f2512;padding:5px 10px;font-size:12px">Xóa</button>
+              <button type="submit" style="background:#642c31;padding:5px 10px;font-size:12px">Xóa</button>
             </form>
           </td>
         </tr>
@@ -155,12 +156,12 @@ function voice_picker_fields(string $provider, string $label) { ?>
   </div>
 </div>
 <div class="overlay-preview-card" id="overlayPreviewContainer" data-overlay-key="<?=h(rawurlencode(OVERLAY_KEY))?>">
-  <h3>Xem thử hiệu ứng trực tiếp trên web</h3>
-  <span class="muted">Khung bên dưới mô phỏng chính xác những gì sẽ xuất hiện trên màn hình OBS (bao gồm hoạt cảnh Hỏa Long / Thiên Nữ, card hiển thị và giọng đọc).</span>
+  <h3>Xem thử OBS · 1920 × 1080</h3>
+  <span class="muted">Đặt Browser Source trong OBS: Width 1920, Height 1080. Preview bên dưới thu nhỏ cùng khung ngang, gồm hiệu ứng, thông điệp và giọng đọc đã lưu.</span>
   <div class="bar" style="margin-top:12px">
     <button type="button" class="preview-tier-btn active" data-preview-tier-btn="1">Thử 10.000đ</button>
     <button type="button" class="preview-tier-btn" data-preview-tier-btn="2">🐉 Thử rồng 50.000đ</button>
-    <button type="button" class="preview-tier-btn" data-preview-tier-btn="3">✦ Thử đại chiêu 200.000đ</button>
+    <button type="button" class="preview-tier-btn" data-preview-tier-btn="3">✦ Thử tiên nữ 200.000đ</button>
     <button type="button" class="preview-tier-btn" id="previewReloadBtn" title="Phát lại hoạt cảnh đang chọn">⟳ Phát lại</button>
     <a id="previewOpenTab" href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer" class="preview-tier-btn" style="margin-left:auto;">Mở tab riêng ↗</a>
   </div>
@@ -170,15 +171,15 @@ function voice_picker_fields(string $provider, string $label) { ?>
 </div>
 
 <div class="obs-test-card">
-  <h3>Đẩy webhook test vào OBS (Livestream)</h3>
-  <span class="muted">Tạo một lượt donate thử nghiệm đưa trực tiếp vào hàng đợi OBS. Nếu OBS đang mở Browser Source, hiệu ứng và giọng đọc sẽ kích hoạt ngay lập tức!</span>
+  <h3>Phát thử trên OBS</h3>
+  <span class="muted">Phát hiệu ứng và giọng đọc trên OBS. Lượt thử không được cộng vào lịch sử, bảng xếp hạng hoặc doanh thu.</span>
   <div class="bar" style="margin-top:12px">
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="10000">📡 Bắn test 10.000đ vào OBS</button>
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="50000">🐉 Bắn test 50.000đ vào OBS</button>
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="200000">✦ Bắn test 200.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="10000">📡 Phát thử 10.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="50000">🐉 Phát thử 50.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="200000">✦ Phát thử 200.000đ vào OBS</button>
   </div>
   <details style="margin-top:14px">
-    <summary style="cursor:pointer;font-weight:600;color:#533924">Tùy chỉnh số tiền &amp; lời nhắn test</summary>
+    <summary style="cursor:pointer;font-weight:600;color:var(--ink)">Tùy chỉnh số tiền &amp; lời nhắn test</summary>
     <form id="customWebhookForm" method="post" style="margin-top:10px">
       <div class="custom-test-grid">
         <label style="margin:0">Số tiền (đ)<input type="number" name="custom_amount" min="10000" step="1000" value="50000" required></label>
@@ -203,7 +204,7 @@ function voice_picker_fields(string $provider, string $label) { ?>
           </select>
           <input type="text" name="custom_voice_id_text" id="customTestVoiceManual" placeholder="Dán Voice ID vibi (UUID) hoặc ElevenLabs..." style="display:none;margin-top:6px;width:100%" maxlength="160">
         </label>
-        <button type="submit" class="btn-push-obs" style="height:38px;white-space:nowrap">Bắn test vào OBS</button>
+        <button type="submit" class="btn-push-obs" style="height:38px;white-space:nowrap">Phát thử vào OBS</button>
       </div>
     </form>
   </details>

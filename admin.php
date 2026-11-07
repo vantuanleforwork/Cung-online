@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 respond(200, $res);
             } else {
                 admin_action(db(), $_POST, $_SERVER['REMOTE_ADDR'] ?? '');
-                $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_speech','clear_speech_cache','add_voice_option','delete_voice_option'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
+                $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_overlay','save_speech','clear_speech_cache','add_voice_option','delete_voice_option'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
             }
         } catch (InvalidArgumentException $e) {
             if (http_response_code() === 200) http_response_code(409);
@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
 
 $loggedIn = !empty($_SESSION['admin']);
 $view = is_string($_GET['view'] ?? null) ? $_GET['view'] : 'queue';
-if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users'], true)) $view = 'queue';
+if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users', 'revenue'], true)) $view = 'queue';
 $page = max(1, (int)($_GET['page'] ?? 1));
 $offset = min($page - 1, 1000000) * 30;
 $rows = []; $paused = false; $total = 0; $elevenConfigured = false; $customConfigured = false; $userDonations=[]; $blockedRows=[];
@@ -148,17 +148,20 @@ if ($loggedIn) {
             $customConfigured = custom_api_key($db, $settings['custom_api_url'] ?? '') !== '';
             $customVoiceOptions = $db->query('SELECT * FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
         }
+        if ($view === 'revenue') {
+            require __DIR__ . '/revenue-data.php';
+        } else {
         $params = [];
         if ($view === 'queue') {
             $table = 'donations';
-            $where = '(code LIKE ? OR EXISTS (SELECT 1 FROM payment_transactions p WHERE p.tx_id=donations.tx_id AND UPPER(p.content) LIKE ?))';
+            $where = 'is_test=0 AND (code LIKE ? OR EXISTS (SELECT 1 FROM payment_transactions p WHERE p.tx_id=donations.tx_id AND UPPER(p.content) LIKE ?))';
             $params = [PREFIX . '%', '%' . PREFIX . '%'];
             if ($search !== '') { $where .= ' AND (code=? OR tx_id=?)'; $params[] = $search; $params[] = $search; }
             if (in_array($filter, ['held', 'queued', 'skipped'], true)) { $where .= " AND status='paid' AND queue_state=? AND shown=0"; $params[] = $filter; }
             elseif ($filter === 'shown') $where .= ' AND shown=1';
             elseif ($filter === 'pending') $where .= " AND status='pending'";
         } elseif ($view === 'payments') {
-            $table = 'payment_transactions'; $where = 'UPPER(content) LIKE ?';
+            $table = 'payment_transactions'; $where = "UPPER(content) LIKE ? AND COALESCE(gateway,'')<>'TEST_OBS' AND LEFT(tx_id,5)<>'TEST_'";
             $params[] = '%' . PREFIX . '%';
             if ($search !== '') { $where .= ' AND tx_id=?'; $params[] = $search; }
             if (in_array($filter, ['unmatched', 'matched', 'anonymous', 'below_min', 'wrong_account', 'ignored_out', 'ignored_manual', 'legacy_review'], true)) {
@@ -168,10 +171,11 @@ if ($loggedIn) {
             $table='donor_users';$where='1=1';
             if ($search!=='') { $where='(email LIKE ? OR display_name LIKE ?)'; $params=['%'.$search.'%','%'.$search.'%']; }
         } else {
-            $table = $view === 'logs' ? 'webhook_logs' : 'admin_audit'; $where = '1=1';
+            $table = $view === 'logs' ? 'webhook_logs' : 'admin_audit'; $where = "action<>'test_webhook_obs' AND LEFT(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(detail),detail,'{}'),'$.tx_id')),''),5)<>'TEST_'
+                AND NOT EXISTS (SELECT 1 FROM donations t WHERE t.is_test=1 AND t.id=JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(detail),detail,'{}'),'$.donation_id')))";
             if ($view === 'logs') {
                 // Inspect content fields only; an unrelated payload may mention the prefix elsewhere.
-                $where = "JSON_SEARCH(UPPER(JSON_EXTRACT(IF(JSON_VALID(payload),payload,'{}'), '$.transactions[*].content')), 'one', ?) IS NOT NULL";
+                $where = "JSON_SEARCH(UPPER(JSON_EXTRACT(IF(JSON_VALID(payload),payload,'{}'), '$.transactions[*].content')), 'one', ?) IS NOT NULL AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(payload),payload,'{}'), '$.transactions[0].gateway')),'')<>'TEST_OBS'";
                 $params[] = '%' . PREFIX . '%';
             }
         }
@@ -179,11 +183,11 @@ if ($loggedIn) {
         $order = $view === 'payments' ? 'created_at DESC,tx_id DESC' : ($view==='users' ? 'created_at DESC,id DESC' : 'id DESC');
         $columns = $view === 'logs' ? 'id,created_at,response_code,outcome,transaction_count,duplicate_count,detail' : '*';
         if ($view === 'queue') $columns .= ',(claimed_until>NOW() AND shown=0) AS playing';
-        if ($view === 'users') $columns = "donor_users.*,(SELECT COUNT(*) FROM donations d WHERE d.user_id=donor_users.id) AS donation_count,(SELECT COALESCE(SUM(paid_amount),0) FROM donations d WHERE d.user_id=donor_users.id AND d.status='paid') AS total_paid";
+        if ($view === 'users') $columns = "donor_users.*,(SELECT COUNT(*) FROM donations d WHERE d.user_id=donor_users.id AND d.is_test=0) AS donation_count,(SELECT COALESCE(SUM(paid_amount),0) FROM donations d WHERE d.user_id=donor_users.id AND d.status='paid' AND d.is_test=0) AS total_paid";
         $s = $db->prepare("SELECT $columns FROM $table WHERE $where ORDER BY $order LIMIT 30 OFFSET $offset");
         $s->execute($params); $rows = $s->fetchAll(PDO::FETCH_ASSOC);
         if ($view==='users') {
-            $s=$db->prepare('SELECT id,created_at,ip,device_hash,code,status,paid_amount FROM donations WHERE user_id=? ORDER BY id DESC LIMIT 20');
+            $s=$db->prepare('SELECT id,created_at,ip,device_hash,code,status,paid_amount FROM donations WHERE user_id=? AND is_test=0 ORDER BY id DESC LIMIT 20');
             foreach ($rows as $user) { $s->execute([$user['id']]); $userDonations[$user['id']]=$s->fetchAll(PDO::FETCH_ASSOC); }
             $blockedRows=$db->query('SELECT * FROM blocked_donors ORDER BY created_at DESC LIMIT 200')->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -199,45 +203,26 @@ if ($loggedIn) {
                 $detail['payload'] = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
             }
         }
+        }
     } catch (Throwable $e) {
         error_log('Admin list: ' . $e->getMessage()); http_response_code(500);
         $error = 'Chưa đọc được dữ liệu. Kiểm tra cấu hình và chạy đủ migration.';
     }
 }
 $stateLabels = ['held' => 'Chờ duyệt', 'queued' => 'Chờ phát', 'skipped' => 'Đã bỏ qua'];
-$decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Lễ ẩn danh',
+$decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Donate ẩn danh',
     'below_min' => 'Dưới 10.000đ', 'wrong_account' => 'Sai tài khoản nhận', 'ignored_out' => 'Tiền ra',
     'ignored_manual' => 'Không thuộc dự án', 'legacy_review' => 'Dữ liệu cũ thiếu thông tin'];
 ?>
-<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quản trị dâng hương</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#f4ecdc;color:#2a1a14;font:15px/1.5 system-ui,sans-serif}main{max-width:1400px;margin:32px auto;padding:0 20px}h1{font-size:26px}a{color:#7a1f17}nav{display:flex;gap:18px;flex-wrap:wrap;margin:20px 0}button,input,textarea,select{font:inherit;padding:8px;border:1px solid #b9a98f;border-radius:4px}button{background:#7a1f17;color:white;cursor:pointer}button:disabled{opacity:.5}input,textarea{max-width:100%;background:#fffdf6}textarea{width:100%;min-height:80px}.inline{display:inline-block;margin:3px}.notice{padding:12px;background:#e3ecd9;border:1px solid #78915a}.error{background:#ffe1d9;border-color:#ac4030}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;background:#fffaf0}th,td{padding:12px;border-bottom:1px solid #d8cbb5;text-align:left;vertical-align:top}th{white-space:nowrap}td{min-width:90px}.message{min-width:260px;max-width:450px;overflow-wrap:anywhere}.muted{color:#715f4b;font-size:13px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#fffaf0;padding:16px}details{margin:8px 0}.login{max-width:420px;background:#fffaf0;padding:24px}label{display:block;margin:10px 0}code{overflow-wrap:anywhere}.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.pagination{margin:20px 0;display:flex;gap:20px}
-.speech-panel{max-width:900px;background:#fffaf0;border:1px solid #d8cbb5;border-radius:18px;padding:28px;margin-top:24px;box-shadow:0 12px 40px #2a1a1409}.speech-panel h2{margin-top:0}.speech-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.speech-grid input,.speech-grid select{width:100%}.speech-panel textarea{padding:16px;min-height:120px;line-height:1.7}.speech-panel code{background:#eee2ca;padding:3px 6px;border-radius:4px}.sample{border-left:3px solid #b8892e;padding:12px 18px;background:#f4ecdc;line-height:1.8}.sample strong,.sample output{display:block}.sample strong{margin-bottom:4px;color:#715f4b;font-size:12px}.sample output{color:#2a1a14}.speech-panel label{font-weight:600}.speech-panel small{display:block;font-weight:400;color:#715f4b;margin-top:5px}@media(max-width:600px){.speech-grid{grid-template-columns:1fr}.speech-panel{padding:18px}}
-.api-panel{min-width:0;border:1px solid #d8cbb5;border-radius:12px;padding:16px;margin:20px 0}.api-panel legend{font-weight:600;color:#795d36;padding:0 8px}.voice-picker{border:1px solid #e1d8c9;border-radius:10px;padding:14px;margin:12px 0}.voice-picker summary{cursor:pointer;font-weight:600}.voice-results{width:100%;margin-top:12px}.voice-picker .voice-search{flex:1;min-width:160px}
-[hidden]{display:none!important}.platform-select select{display:block;width:100%;margin-top:8px;padding:12px}.platform-select small{display:block;font-weight:400;color:#715f4b;margin-top:8px}.api-panel p{margin:4px 0}.api-panel select{width:100%}.common-voice-settings{margin:18px 0}.template-help{font-size:13px;margin-bottom:16px}
-.overlay-preview-card{margin:24px 0;padding:22px;border:1px solid #d8cbb5;border-radius:14px;background:#fbf6ee;box-shadow:0 4px 16px rgba(42,26,20,0.04)}
-.overlay-preview-card h3{margin:0 0 6px 0;color:#5a1d12;font-size:18px}
-.preview-iframe-wrapper{position:relative;width:100%;aspect-ratio:16/9;background:#0c0806;border-radius:10px;border:2px solid #5a1d12;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.25);margin:14px 0}
-.preview-iframe-wrapper iframe{width:100%;height:100%;border:0;display:block}
-.preview-tier-btn{display:inline-block;padding:8px 14px;border:1px solid #9a7043;border-radius:999px;background:#fffdf6;color:#6d351d;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s ease}
-.preview-tier-btn:hover,.preview-tier-btn.active{background:#7a1f17;color:#fff;border-color:#7a1f17}
-.obs-test-card{margin:24px 0;padding:22px;border:1px solid #c9bba6;border-radius:14px;background:#f5efe2}
-.obs-test-card h3{margin:0 0 6px 0;color:#1e4325;font-size:18px}
-.btn-push-obs{background:#235832;color:#fff;border:1px solid #184224;border-radius:999px;padding:8px 15px;font-weight:600;cursor:pointer;transition:background .15s ease}
-.btn-push-obs:hover{background:#184224}
-.test-feedback{margin-top:14px;padding:12px 16px;border-radius:8px;font-size:14px;display:none;line-height:1.6}
-.test-feedback.loading{display:block;background:#eef3f8;border:1px solid #b3cde5;color:#1b3d63}
-.test-feedback.success{display:block;background:#e6f4ea;border:1px solid #81c995;color:#135222}
-.test-feedback.error{display:block;background:#fce8e6;border:1px solid #ea868f;color:#801b1b}
-.custom-test-grid{display:grid;grid-template-columns:110px 140px 1fr 180px auto;gap:10px;align-items:end;margin-top:12px}
-.btn-var-insert{background:#f3e9d7;color:#5a1d12;border:1px solid #bda88e;border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600;transition:all .15s}
-.btn-var-insert:hover{background:#7a1f17;color:#fff}
-.btn-sample-apply{background:#fffaf0;color:#674323;border:1px solid #c5b59f;border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;text-align:left;transition:all .15s}
-.btn-sample-apply:hover{background:#5a1d12;color:#fff}
-@media(max-width:768px){.custom-test-grid{grid-template-columns:1fr}}
-</style><main>
-<h1>Quản trị dâng hương</h1>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản trị donate · Van Tuan Le</title>
+<link rel="stylesheet" href="ui-tokens.css?v=32">
+<link rel="stylesheet" href="admin-theme.css?v=32"></head>
+<body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
+<?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
+<a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>
+<main class="admin-main">
+<header class="admin-heading"><div><p class="nav-caption">VAN TUAN LE / QUẢN TRỊ</p><h1><?=h($loggedIn ? (['queue'=>'Hàng đợi donate','payments'=>'Giao dịch','revenue'=>'Doanh thu','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'][$view] ?? 'Quản trị donate') : 'Creator console')?></h1></div></header>
 <?php if ($error): ?><p class="notice error" role="alert"><?=h($error)?></p><?php endif ?>
 <?php if ($flash): ?><p class="notice" role="status"><?=h($flash)?></p><?php endif ?>
 <?php if (!$loggedIn): ?>
@@ -247,16 +232,17 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <label>Mật khẩu <input type="password" name="password" required autocomplete="current-password" maxlength="1024"></label><button>Đăng nhập</button></form>
 <?php endif ?></div>
 <?php else: ?>
-<div class="bar"><strong>Hàng đợi: <?=$paused ? 'TẠM DỪNG' : 'ĐANG CHẠY'?></strong>
+<div class="bar queue-controls"><strong>Hàng đợi: <?=$paused ? 'TẠM DỪNG' : 'ĐANG CHẠY'?></strong>
 <?php action_form($paused ? 'resume' : 'pause', [], $paused ? 'Tiếp tục phát' : 'Tạm dừng'); action_form('logout', [], 'Đăng xuất'); ?>
 <a href="admin.php?<?=h(http_build_query(['view'=>$view,'filter'=>$filter,'q'=>$search,'page'=>$page]))?>">Làm mới</a></div>
 <p class="muted">Tạm dừng áp dụng cho lượt tiếp theo; lượt đang phát sẽ hoàn tất. Mọi thay đổi được lưu vào nhật ký quản trị.</p>
-<nav><?php foreach (['queue'=>'Lượt lễ','payments'=>'Giao dịch','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
-<a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav>
+
 <?php if ($view === 'speech' && isset($settings['speech_template'])): ?>
-<section class="speech-panel"><p class="muted">THÔNG BÁO TRÊN LIVESTREAM</p><h2>Mỗi lời nhắn, một lời gửi gắm.</h2>
-<p>Tự viết câu thông báo theo cách của bạn. Giọng đọc phát cùng hoạt cảnh sau khi lượt lễ được duyệt.</p>
+<section class="speech-panel"><p class="muted">THÔNG BÁO TRÊN LIVESTREAM</p><h2>Thiết lập trải nghiệm trên live.</h2>
+<p>Tự viết câu thông báo theo cách của bạn. Giọng đọc phát cùng hoạt cảnh sau khi lượt donate được duyệt.</p>
 <?php require __DIR__ . '/voice-settings-form.php'; ?></section>
+<?php elseif ($view === 'revenue' && isset($revenueRows)): ?>
+<?php require __DIR__ . '/revenue-view.php'; ?>
 <?php else: ?>
 <?php if (in_array($view,['queue','payments','users'],true)): ?>
 <form method="get" class="bar"><input type="hidden" name="view" value="<?=h($view)?>">
@@ -272,7 +258,7 @@ foreach ($options as $key=>$label): ?><option value="<?=h($key)?>" <?=$filter===
 <?php foreach ($rows as $row): ?>
 <tr><td>#<?=h($row['id'])?> · <code><?=h($row['code'] ?: 'Ẩn danh')?></code><br><span class="muted"><?=h($row['created_at'])?></span></td>
 <td>Đăng ký: <?=number_format((int)$row['expected_amount'])?>đ<br>Nhận: <?=number_format((int)$row['paid_amount'])?>đ<br><code><?=h($row['tx_id'])?></code></td>
-<td class="message"><strong><?=h($row['name'])?></strong><?php if(!empty($row['voice_name'])): ?><span class="muted" style="color:#784db5;font-weight:600"> · 🎙 <?=h($row['voice_name'])?></span><?php endif ?><p><?=nl2br(h($row['message']))?></p>
+<td class="message"><strong><?=h($row['name'])?></strong><?php if(!empty($row['voice_name'])): ?><span class="muted" style="color:var(--accent);font-weight:600"> · 🎙 <?=h($row['voice_name'])?></span><?php endif ?><p><?=nl2br(h($row['message']))?></p>
 <?php if ($row['status']==='paid' && !$row['shown'] && !$row['playing'] && $row['queue_state']!=='skipped'): ?>
 <details><summary>Sửa tên / lời nhắn</summary><form method="post"><?php csrf_field() ?><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<?=h($row['id'])?>">
 <label>Tên <input name="name" value="<?=h($row['name'])?>" maxlength="40"></label>
@@ -303,7 +289,7 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php foreach ($rows as $row): ?><tr><td>#<?=h($row['id'])?><br><?=h($row['created_at'])?></td><td>HTTP <?=h($row['response_code'])?> · <?=h($row['outcome'])?></td><td><?=h($row['transaction_count'])?> · trùng: <?=h($row['duplicate_count'])?></td><td><?=h($row['detail'])?><br><a href="?view=logs&amp;detail=<?=h($row['id'])?>">Xem dữ liệu</a></td></tr><?php endforeach ?>
 <?php elseif ($view === 'users'): ?>
 <tr><th>Hồ sơ Google</th><th>Tổng đã nhận</th><th>Các lượt gần đây / chặn</th></tr>
-<?php foreach ($rows as $row): $level=intdiv((int)$row['total_paid'],200000); ?>
+<?php foreach ($rows as $row): $level=donor_level_progress((int)$row['total_paid'])['level']; ?>
 <tr><td><strong><?=h($row['display_name'])?></strong> · Lv<?=$level?><br><?=h($row['email'])?><br><span class="muted">Tạo tài khoản <?=h($row['created_at'])?> · <?=h($row['donation_count'])?> lượt</span>
 <form method="post" class="inline"><?php csrf_field() ?><input type="hidden" name="action" value="block_user"><input type="hidden" name="user_id" value="<?=h($row['id'])?>"><input type="hidden" name="block_type" value="email"><button>Chặn Gmail</button></form></td>
 <td><?=number_format((int)$row['total_paid'])?>đ</td><td>
@@ -326,5 +312,5 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php if ($offset+30<$total): ?><a href="?<?=h(http_build_query(['view'=>$view,'filter'=>$filter,'q'=>$search,'page'=>$page+1]))?>">Trang sau →</a><?php endif ?></div>
 <?php endif ?>
 <?php endif ?></main>
-<?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><?php endif ?>
-</html>
+<?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
+</body></html>

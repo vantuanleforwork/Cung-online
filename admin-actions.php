@@ -79,7 +79,11 @@ function admin_action(PDO $db, array $in, string $ip) {
         // Same lock order as poll.php; changes take effect between activities.
         $previousSettings = $db->query('SELECT * FROM app_settings WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC);
         $audit = ['action' => $action];
-        if ($action === 'save_speech') {
+        if ($action === 'save_overlay') {
+            $layout = overlay_layout_input($in);
+            $db->prepare('UPDATE app_settings SET overlay_x=?,overlay_y=?,overlay_width=?,overlay_font_size=? WHERE id=1')->execute(array_values($layout));
+            $audit['overlay'] = $layout;
+        } elseif ($action === 'save_speech') {
             $settings = speech_settings_input($in);
             $db->prepare('UPDATE app_settings SET speech_enabled=?,speech_template=?,speech_provider=?,speech_voice=?,speech_rate=?,speech_volume=?,display_seconds=?,eleven_voice_id=?,eleven_model=?,tier1_voice_id=?,tier2_voice_id=?,tier3_voice_id=?,custom_api_url=?,custom_api_engine=?,custom_api_model=?,custom_voice_id=? WHERE id=1')
                ->execute(array_values($settings));
@@ -270,50 +274,20 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
     $tx = 'TEST_' . date('YmdHis') . '_' . strtoupper(bin2hex(random_bytes(3)));
     $code = PREFIX . 'T' . strtoupper(bin2hex(random_bytes(2)));
     
-    $payloadData = [
-        'gateway' => 'TEST_OBS',
-        'transactionDate' => date('Y-m-d H:i:s'),
-        'accountNumber' => trim(ACCOUNT_NO),
-        'subAccount' => null,
-        'code' => $code,
-        'content' => $code . ' TEST OBS ' . number_format($amount, 0, '', '') . 'D',
-        'transferType' => 'in',
-        'description' => 'Test webhook OBS from admin',
-        'transferAmount' => $amount,
-        'id' => $tx,
-        'referenceCode' => $tx
-    ];
-    $rawPayload = json_encode(['transactions' => [$payloadData]], JSON_UNESCAPED_UNICODE);
-    
     $db->beginTransaction();
     try {
-        $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision)
-            VALUES(?,?,?,?,?,'IN','matched')")
-           ->execute([$tx, $amount, $payloadData['content'], trim(ACCOUNT_NO), 'TEST_OBS']);
-        
         $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
         if (in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true)) {
-            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,selected_voice_id,voice_name)
-                VALUES(?,?,?,?,?,'paid',?,0,'queued',?,?,?)")
+            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,selected_voice_id,voice_name,is_test)
+                VALUES(?,?,?,?,?,'paid',?,0,'queued',?,?,?,1)")
                ->execute([$code, $name, $message, $amount, $amount, $tx, $ip, $selectedVoiceId, $voiceName]);
         } else {
-            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip)
-                VALUES(?,?,?,?,?,'paid',?,0,'queued',?)")
+            $db->prepare("INSERT INTO donations(code,name,message,expected_amount,paid_amount,status,tx_id,shown,queue_state,ip,is_test)
+                VALUES(?,?,?,?,?,'paid',?,0,'queued',?,1)")
                ->execute([$code, $name, $message, $amount, $amount, $tx, $ip]);
         }
         $donationId = (int)$db->lastInsertId();
         
-        $db->prepare("UPDATE payment_transactions SET donation_id=? WHERE tx_id=?")
-           ->execute([$donationId, $tx]);
-        
-        $db->prepare("INSERT INTO webhook_logs(response_code,outcome,transaction_count,duplicate_count,detail,payload)
-            VALUES(200,'processed',1,0,?,?)")
-           ->execute(['Đẩy test webhook OBS từ admin (' . number_format($amount, 0, ',', '.') . 'đ)', $rawPayload]);
-           
-        $audit = ['action' => 'test_webhook_obs', 'donation_id' => $donationId, 'amount' => $amount, 'tx_id' => $tx, 'tier' => $tier];
-        $db->prepare("INSERT INTO admin_audit(action,detail,ip) VALUES('test_webhook_obs',?,?)")
-           ->execute([json_encode($audit, JSON_UNESCAPED_UNICODE), $ip]);
-           
         $db->commit();
         
         // Kích hoạt tạo trước giọng đọc ngay khi bấm test để OBS nhận được là phát ngay lập tức
@@ -341,7 +315,7 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
             'name' => $name,
             'message' => $message,
             'code' => $code,
-            'text' => 'Đã đẩy thành công lượt test ' . number_format($amount, 0, ',', '.') . 'đ (Đơn #' . $donationId . ') vào hàng đợi OBS!'
+            'text' => 'Đã đẩy thành công lượt test ' . number_format($amount, 0, ',', '.') . 'đ (Đơn #' . $donationId . ') để phát thử trên OBS!'
         ];
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();

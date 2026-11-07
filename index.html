@@ -4,162 +4,40 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Donate cho Van Tuan Le · Tiếp thêm động lực livestream</title>
-<style>
-:root{--lac:#8a2e20;--lac-dark:#702316;--ivory:#fffdfa;--gold:#c2944b;--gold-dark:#99702e;--ink:#28201a;--muted:#7d6f5d;--border:#e5dcce;--bg:#f6f2ea}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:grid;place-items:center;padding:40px 20px;background:radial-gradient(ellipse at 18% 22%,#ede3cb 0%,transparent 60%),radial-gradient(ellipse at 85% 80%,#e8dec4 0%,transparent 55%),var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6}
-.site-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.18fr);align-items:start;gap:56px;max-width:1040px;width:100%}
-.intro{padding:16px 0;position:sticky;top:40px}
-.brand{display:inline-flex;gap:10px;align-items:center;letter-spacing:2px;font-size:11px;font-weight:700;color:var(--lac);text-transform:uppercase;background:#f0e6d2;padding:6px 14px;border-radius:999px;border:1px solid #dfd1b8}
-.brand-icon{color:var(--gold-dark);font-size:13px}
-.intro h1{font:700 42px/1.25 Georgia,"Times New Roman",serif;letter-spacing:-1.2px;margin:28px 0 16px;color:#1e1712}
-.intro h1 em{font-style:normal;color:var(--lac);background:linear-gradient(135deg,var(--lac),#b3402e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.intro p{color:var(--muted);font-size:15px;line-height:1.7;margin:0 0 24px}
-.intro-features{display:grid;gap:12px;margin:24px 0}
-.feature-item{display:flex;gap:12px;align-items:flex-start;background:#fffaf0;border:1px solid var(--border);border-radius:12px;padding:12px 14px}
-.feature-icon{font-size:18px;line-height:1;margin-top:2px}
-.feature-copy strong{display:block;font-size:13px;color:var(--ink)}
-.feature-copy span{font-size:12px;color:var(--muted);line-height:1.4}
-.intro-note{border-top:1px solid var(--border);padding-top:18px;font-size:12px;color:var(--muted);margin-top:20px}
 
-main{width:100%;background:var(--ivory);border:1px solid var(--border);border-radius:24px;padding:32px 34px;box-shadow:0 20px 60px #4d3a240d,0 4px 12px #4d3a2405}
-.card-header{margin-bottom:20px}
-.section-kicker{margin:0 0 4px;color:var(--lac);font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase}
-.card-header h2{margin:0 0 6px;font:700 27px/1.3 Georgia,"Times New Roman",serif;color:#1e1712;letter-spacing:-.4px}
-.sub{margin:0;font-size:13px;color:var(--muted)}
-
-.account{padding:14px 16px;border:1px solid var(--border);border-radius:14px;margin-bottom:24px;background:#fffdf9}
-.account-button,.account button{display:inline-block;border:1px solid var(--lac);border-radius:8px;background:var(--lac);color:#fff;padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:background .15s}
-.account-button:hover,.account button:hover{background:var(--lac-dark)}
-.account-head{display:flex;align-items:center;gap:12px}
-.account-head img{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
-.account-head .sub{margin:0;font-size:12px}
-.level{margin-left:auto;color:var(--gold-dark);font-weight:800;font-size:14px;background:#fbf3e4;padding:4px 10px;border-radius:999px;border:1px solid #ebd8b5}
-.level-progress{margin:14px 0 4px}
-.level-progress-copy{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--gold-dark);font-size:11.5px;font-weight:700}
-.level-progress-track{height:7px;margin-top:7px;overflow:hidden;border-radius:999px;background:#e9dfce;box-shadow:inset 0 1px 2px #4a341a14}
-.level-progress-bar{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--lac),var(--gold));transition:width .45s ease}
-.level-progress-note{margin:6px 0 0;color:var(--muted);font-size:11px}
-.account details{margin-top:10px}
-.account summary{cursor:pointer;color:var(--gold-dark);font-weight:600;font-size:12.5px}
-.account form{margin-top:10px}
-.account small{display:block;color:var(--muted);margin-top:3px}
-.account .logout{margin-top:10px;background:transparent;color:var(--lac);border-color:#e4d1c4;font-size:12px}
-.account #profileError{display:block;color:#b3261e;font-size:12px;margin-top:6px}
-
-label{display:block;margin:20px 0 8px;font-size:12.5px;font-weight:700;color:#44372c}
-label .step{display:inline-block;background:#f0e5d4;color:var(--lac);font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;margin-right:8px;letter-spacing:.5px}
-input,textarea,select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:14px;transition:border-color .15s,box-shadow .15s}
-input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px #c2944b25}
-textarea{min-height:105px;resize:vertical;line-height:1.6}
-.amount-field{position:relative}
-.amount-field input{font:700 30px/1.2 Georgia,"Times New Roman",serif;padding:14px 64px 14px 16px;color:#1e1712}
-.amount-field span{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted)}
-.amount-preview{margin-top:5px;color:var(--muted);font-size:12px}
-.amount-preview strong{color:var(--lac);font-weight:700}
-#amountError{min-height:1.2em;margin-top:4px;color:#b3261e;font-size:12px}
-.q{display:flex;gap:8px;margin-top:10px}
-.q button{flex:1;padding:10px 0;border:1px solid #dfd5c4;border-radius:9px;background:#fdfcf9;color:#5a4a39;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer;transition:all .15s}
-.q button:hover{background:#f3ecdf;border-color:#cfbeaa}
-.q button[aria-pressed=true]{background:#ede3cb;border-color:var(--gold);color:var(--lac)}
-.row{display:flex;justify-content:space-between;gap:12px;margin-top:6px;font-size:11.5px;color:var(--muted)}
-
-.voice-select-box{margin-top:20px;padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:#fffdf9}
-.voice-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.voice-head label{margin:0;font-size:12px;font-weight:700;color:#44372c}
-.voice-badge{padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
-.voice-badge.locked{background:#eee6d7;color:#8a7962}
-.voice-badge.unlocked{background:#e8f0fe;color:#1a73e8}
-.voice-badge.vip{background:#f3e8fd;color:#784db5}
-.voice-select{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:8px;background:#fff;font:inherit;font-size:13.5px}
-.voice-select:disabled{background:#f6f1e7;color:#9b8c78;cursor:not-allowed}
-.voice-hint{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
-
-.go{width:100%;margin-top:24px;padding:16px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--lac),#9c3422);color:#fff;font:700 15px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.3px;cursor:pointer;box-shadow:0 8px 24px #8a2e2025;transition:transform .1s,box-shadow .15s,opacity .15s}
-.go:hover{background:linear-gradient(135deg,var(--lac-dark),#85291b);box-shadow:0 10px 28px #8a2e2035}
-.go:active{transform:translateY(1px)}
-.go:disabled{opacity:.55;cursor:wait;box-shadow:none}
-.privacy-note{font-size:11px;color:var(--muted);text-align:center;margin:12px 0 0}
-.privacy-note span{color:var(--gold);margin-right:4px}
-#err{min-height:1.2em;margin-top:8px;color:#b3261e;font-size:12px;text-align:center}
-
-#res{display:none;text-align:center;padding:10px 0}
-#res h2{font:700 25px/1.3 Georgia,"Times New Roman",serif;margin:0 0 8px;color:#1e1712}
-#res img{width:100%;max-width:310px;border-radius:16px;background:#fff;border:1px solid var(--border);margin:16px 0 10px;box-shadow:0 12px 36px #00000010}
-#res code{display:inline-block;margin:6px 0;padding:8px 20px;background:#f5edd9;border-radius:8px;font-size:20px;font-weight:800;letter-spacing:.12em;color:var(--lac);border:1px dashed #d5be9b}
-#paymentStatus{border:1px solid #d4e2c8;background:#f2f7ec;color:#456635;padding:14px;border-radius:10px;font-size:13.5px;font-weight:600;margin:16px 0}
-#newOrder{border:1px solid var(--border);border-radius:9px;background:#fff;padding:11px 22px;color:#5a4a39;cursor:pointer;font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin-top:14px}
-#newOrder:hover{background:#f8f3ea}
-
-.history{margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
-.history-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-.history-head h3{margin:0;font:700 20px/1.3 Georgia,"Times New Roman",serif;color:#1e1712}
-.history-tabs{display:flex;gap:6px}
-.history-tab{padding:5px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s}
-.history-tab.active{background:var(--lac);color:#fff;border-color:var(--lac)}
-.history-list{display:grid;gap:10px}
-.history-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fffdfa;transition:background .15s}
-.history-item:hover{background:#fff}
-.history-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#f0e3cc;color:var(--lac);display:grid;place-items:center;font-weight:700;font-size:15px;border:1px solid #e2d1b7}
-.history-body{flex:1;min-width:0}
-.history-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.history-name{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.history-amount{font-size:14px;font-weight:800;color:var(--lac);white-space:nowrap}
-.history-message{margin:4px 0 6px;font-size:12.5px;color:#4c3e32;line-height:1.45;background:#fcf8f0;padding:6px 10px;border-radius:7px;border-left:2px solid var(--gold);word-break:break-word}
-.history-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
-.history-status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:#eef6e8;color:#3b6d26}
-.history-empty{margin:14px 0;color:var(--muted);font-size:12.5px;text-align:center;padding:20px;border:1px dashed var(--border);border-radius:12px}
-.history-more{display:block;margin:14px auto 0;padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);cursor:pointer;font-size:12px;font-weight:600}
-.history-more:hover{background:#f8f3ea}
-
-@media(max-width:760px){
-  body{padding:20px 14px}
-  .site-shell{grid-template-columns:1fr;gap:24px;max-width:480px}
-  .intro{position:static;padding:0}
-  .intro h1{font-size:32px;margin:18px 0 10px}
-  .intro-features{display:none}
-  main{padding:24px 20px;border-radius:20px}
-  .card-header h2{font-size:24px}
-  .amount-field input{font-size:26px}
+<link rel="stylesheet" href="ui-tokens.css?v=32">
+<link rel="stylesheet" href="leaderboard.css?v=29">
+<link rel="stylesheet" href="site.css?v=32">
+<script>
+if (location.pathname.endsWith('/index.html')) {
+  history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
 }
-</style>
+</script>
+<script src="leaderboard.js?v=29" defer></script>
 </head>
-<body>
+<body class="donate-site">
+<header class="site-header"><a class="site-wordmark" href="./" aria-label="Van Tuan Le, trang chủ"><span class="monogram">VT</span> VAN TUAN LE</a><span class="header-caption">CREATOR SUPPORT</span></header>
 
 <div class="site-shell">
   <aside class="intro">
-    <div class="brand"><span class="brand-icon">✦</span>DONATE · VAN TUAN LE</div>
-    <h1>Ủng hộ livestream<br><em>Van Tuan Le</em></h1>
-    <p>Mỗi lượt donate và lời nhắn là nguồn động lực quý giá tiếp thêm năng lượng cho Van Tuan Le trên mỗi buổi livestream!</p>
+    <div class="brand">CỘNG ĐỒNG · VAN TUAN LE</div>
+    <h1>Một lời nhắn.<br><em>Thêm động lực.</em></h1>
 
-    <div class="intro-features">
+    <div class="intro-features" aria-label="Tính năng donate">
       <div class="feature-item">
-        <span class="feature-icon">✨</span>
-        <div class="feature-copy">
-          <strong>Thông báo trực tiếp trên live</strong>
-          <span>Lời nhắn của bạn hiển thị ngay trên màn hình OBS livestream</span>
-        </div>
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="3"/><path d="M8 21h8m-4-4v4m-5-10h3l2-3 2 6 2-3h2"/></svg></span>
+        <strong>Thông báo trực tiếp trên live</strong>
       </div>
       <div class="feature-item">
-        <span class="feature-icon">🎙️</span>
-        <div class="feature-copy">
-          <strong>Giọng đọc AI thông minh</strong>
-          <span>Từ 50.000đ mở khóa tự chọn các chất giọng đọc AI đặc biệt</span>
-        </div>
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></svg></span>
+        <strong>Giọng đọc AI thông minh</strong>
       </div>
       <div class="feature-item">
-        <span class="feature-icon">🐉</span>
-        <div class="feature-copy">
-          <strong>Hiệu ứng đồ họa độc quyền</strong>
-          <span>Hiệu ứng Hỏa Long giáng lâm và Thiên Nữ đại chiêu theo từng mốc</span>
-        </div>
+        <span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 6.2L21 12l-6.2 2.8L12 21l-2.8-6.2L3 12l6.2-2.8L12 3Zm7-1v4m-2-2h4"/></svg></span>
+        <strong>Hiệu ứng đồ họa độc quyền</strong>
       </div>
     </div>
 
-    <p class="intro-note">✦ Thông báo và giọng đọc AI sẽ tự động kích hoạt ngay sau khi chuyển khoản thành công.</p>
-  </aside>
-
-  <main>
     <section class="account" id="account">
       <div id="signedOut">
         <strong>Đăng nhập Google để lưu tên &amp; cấp ủng hộ</strong>
@@ -190,10 +68,27 @@ textarea{min-height:105px;resize:vertical;line-height:1.6}
       </div>
     </section>
 
+    <section class="leaderboard" aria-labelledby="leaderboardTitle">
+      <h2 id="leaderboardTitle">Top donate</h2>
+      <div class="leaderboard-tabs" role="tablist" aria-label="Thời gian xếp hạng">
+        <button id="leaderboard-day" class="leaderboard-tab" type="button" role="tab" data-period="day" aria-selected="true" aria-controls="leaderboardPanel">Ngày</button>
+        <button id="leaderboard-month" class="leaderboard-tab" type="button" role="tab" data-period="month" aria-selected="false" aria-controls="leaderboardPanel" tabindex="-1">Tháng</button>
+        <button id="leaderboard-all" class="leaderboard-tab" type="button" role="tab" data-period="all" aria-selected="false" aria-controls="leaderboardPanel" tabindex="-1">Tổng</button>
+      </div>
+      <div id="leaderboardPanel" hidden role="tabpanel" aria-labelledby="leaderboard-day">
+        <ol id="leaderboardList" class="leaderboard-list"></ol>
+        <p id="leaderboardStatus" class="leaderboard-status" role="status"></p>
+      </div>
+      <button id="leaderboardToggle" class="leaderboard-toggle" type="button" aria-expanded="false" aria-controls="leaderboardPanel">Hiển thị</button>
+    </section>
+  </aside>
+
+  <div class="donation-column">
+  <main class="donation-panel" aria-label="Gửi donate">
+
+
     <div id="f">
       <div class="card-header">
-        <p class="section-kicker">ỦNG HỘ LIVESTREAM</p>
-        <h2>Gửi donate cho Van Tuan Le</h2>
         <p class="sub">Nhập số tiền và viết lời nhắn gửi đến buổi livestream.</p>
       </div>
 
@@ -225,7 +120,7 @@ textarea{min-height:105px;resize:vertical;line-height:1.6}
         <p id="voiceHint" class="voice-hint">✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.</p>
       </div>
 
-      <button class="go" id="go" type="button">Ủng hộ ngay · Quét mã QR &nbsp; →</button>
+      <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
       <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
       <div id="err" role="alert"></div>
     </div>
@@ -241,20 +136,22 @@ textarea{min-height:105px;resize:vertical;line-height:1.6}
       <button type="button" id="newOrder">Tạo lượt donate khác</button>
     </div>
 
+  </main>
+
     <!-- Lịch sử các phiên donate thành công gần nhất -->
     <section id="history" class="history">
       <div class="history-head">
         <h3>Lịch sử donate</h3>
         <div class="history-tabs" id="historyTabs">
-          <button type="button" class="history-tab active" data-scope="all">🔥 Gần nhất</button>
-          <button type="button" class="history-tab" data-scope="me" id="tabMe" hidden>👤 Của tôi</button>
+          <button type="button" class="history-tab active" data-scope="all">Gần nhất</button>
+          <button type="button" class="history-tab" data-scope="me" id="tabMe" hidden>Của tôi</button>
         </div>
       </div>
       <div id="historyList" class="history-list"></div>
       <p id="historyEmpty" class="history-empty" hidden>Chưa có lượt donate thành công nào.</p>
       <button type="button" id="historyMore" class="history-more" hidden>Xem thêm</button>
     </section>
-  </main>
+  </div>
 </div>
 
 <script>
@@ -293,6 +190,7 @@ async function refreshStatus(generation){
     if(finished){
       // Tải lại lịch sử phiên donate thành công ngay khi thanh toán xong
       loadHistory(true);
+      window.dispatchEvent(new Event('donation:paid'));
     }
   }catch(e){if(generation===statusGeneration)$('paymentStatus').textContent='Chưa kết nối được để kiểm tra thanh toán; sẽ tự thử lại. Bạn không cần chuyển lại.'}
   finally{clearTimeout(timer);if(!finished&&generation===statusGeneration)statusTimer=setTimeout(()=>refreshStatus(generation),4000)}
@@ -426,13 +324,12 @@ function renderProfile(user){
   $('profileEmail').textContent=user.email;$('profileLevel').textContent='Lv'+user.level;
   if(user.avatar){$('profileAvatar').src=user.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
   const progress=user.level_progress||{},level=Math.max(0,Number(progress.level??user.level)||0);
-  const levelPaid=Math.max(0,Number(progress.level_paid)||0),levelSize=Math.max(1,Number(progress.level_size)||200000);
-  const total=Math.max(0,Number(progress.total_paid)||0),remaining=Math.max(0,Number(progress.remaining) || (levelSize-levelPaid));
-  const percent=Math.max(0,Math.min(100,Math.round(levelPaid/levelSize*100)));
+  const remaining=Math.max(0,Number(progress.remaining)||0);
+  const percent=Math.max(0,Math.min(100,Number(progress.percent)||0));
   $('profileProgressText').textContent='Tiến trình lên Lv'+(level+1);
-  $('profileProgressAmount').textContent=money(levelPaid)+' / '+money(levelSize);
+  $('profileProgressAmount').textContent=percent+'%';
   $('profileProgressBar').style.width=percent+'%';$('profileProgressTrack').setAttribute('aria-valuenow',String(percent));
-  $('profileProgressNote').textContent='Còn '+money(remaining)+' để lên cấp tiếp theo · Tổng đã ủng hộ '+money(total);
+  $('profileProgressNote').textContent='Còn '+money(remaining)+' để lên Lv'+(level+1);
 }
 
 function upd(){

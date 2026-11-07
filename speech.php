@@ -60,11 +60,12 @@ function speech_text(array $donation, array $settings) {
     $text = strtr($settings['speech_template'], $replace);
     return trim(preg_replace('/\s+/u', ' ', $text));
 }
+require_once __DIR__ . '/overlay-layout.php';
 function speech_options(array $settings) {
     // Only these public options are ever sent to the overlay. Never expose credentials.
     return ['enabled' => (bool)$settings['speech_enabled'], 'provider' => $settings['speech_provider'],
         'voice' => $settings['speech_voice'], 'rate' => (float)$settings['speech_rate'],
-        'volume' => (float)$settings['speech_volume'],
+        'volume' => (float)$settings['speech_volume'], 'overlay' => overlay_layout_options($settings),
         'display_seconds' => max(8, min(30, (int)$settings['display_seconds'])),
         'eleven_voice_id' => $settings['eleven_voice_id'] ?? '', 'eleven_model' => $settings['eleven_model'] ?? 'eleven_flash_v2_5',
         'tier1_voice_id' => $settings['tier1_voice_id'] ?? '',

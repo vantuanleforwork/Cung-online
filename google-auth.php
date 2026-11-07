@@ -19,7 +19,7 @@ if ($action === 'logout' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['donor_csrf'],$_POST['csrf'])) { http_response_code(403); exit('Phiên không hợp lệ.'); }
     $_SESSION=[]; session_regenerate_id(true); session_destroy();
     setcookie(session_name(),'',['expires'=>time()-3600,'path'=>'/','secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off','httponly'=>true,'samesite'=>'Lax']);
-    header('Location: index.html',true,303); exit;
+    header('Location: ./',true,303); exit;
 }
 if ($action !== 'callback' || $_SERVER['REQUEST_METHOD'] !== 'GET') { http_response_code(404); exit; }
 try {
@@ -36,7 +36,7 @@ try {
     if (!$id) throw new RuntimeException('Không tạo được hồ sơ.');
     session_regenerate_id(true);
     $_SESSION=['donor_id'=>$id,'donor_csrf'=>bin2hex(random_bytes(32)),'donor_last_active'=>time()];
-    header('Location: index.html',true,303); exit;
+    header('Location: ./',true,303); exit;
 } catch (Throwable $e) {
     error_log('Google sign-in: '.$e->getMessage()); http_response_code(400);
     echo htmlspecialchars($e instanceof RuntimeException && strpos($e->getMessage(),'thử lại')!==false ? $e->getMessage() : 'Đăng nhập Google chưa thành công. Hãy thử lại.',ENT_QUOTES,'UTF-8');

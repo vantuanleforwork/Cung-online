@@ -1,0 +1,32 @@
+/* All positions and type sizes are authored in OBS pixels, then scaled together. */
+#obsFrame{position:absolute;left:50%;top:50%;width:1920px;height:1080px;overflow:hidden;transform-origin:center;background:transparent;pointer-events:none}
+#obsFrame .tier-intro{position:absolute;width:1920px;height:1080px;inset:0}
+#obsFrame .intro-title{width:1200px;bottom:86px}
+#obsFrame .intro-title strong{font-size:72px}
+#obsFrame .stage,body.preview #obsFrame .stage{left:960px;top:64px;bottom:auto;width:760px;max-height:1032px;border-radius:24px;transform:translate(-50%,24px) scale(.98);transform-origin:top center}
+#obsFrame .stage.is-visible,body.preview #obsFrame .stage.is-visible{transform:translate(-50%,0) scale(1)}
+#obsFrame .card-header{padding:20px 30px;font-size:11px;letter-spacing:2.3px}
+#obsFrame .offering-badge{font-size:10px;letter-spacing:1.4px;padding:5px 12px}
+#obsFrame .card-main{padding:28px 34px 24px}
+#obsFrame .donor{padding-right:115px;gap:16px}
+#obsFrame .avatar{flex-basis:50px;height:50px;font-size:26px}
+#obsFrame h2{font-size:29px}
+#obsFrame .eyebrow{font-size:9px;letter-spacing:2.7px}
+#obsFrame .donation-amount{font-size:52px}
+#obsFrame .amount-row{margin:22px 118px 26px 0;gap:10px}
+#obsFrame .amount-divider{display:block}
+#obsFrame .offering-text{flex-basis:auto;font-size:15px}
+#obsFrame .offering-art{right:20px;top:8px;width:126px;height:168px;opacity:1}
+#obsFrame blockquote p{font-size:21px;line-height:1.65}
+#obsFrame .card-footer{padding:18px 32px}
+#obsFrame .blessing{font-size:9px;letter-spacing:2.3px}
+#obsFrame .speech-state{font-size:8px;letter-spacing:1.4px}
+body.preview .tools{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);margin:0;z-index:70;width:100%;max-width:900px;padding:12px;border-radius:18px;background:#101915de}
+body.preview .tools h1,body.preview .tools>p,body.preview .tools>.eyebrow{display:none}
+body.preview .preview-tiers{margin:0 0 8px}
+body.layout-editor .tools,body.layout-editor .audio-tools{display:none!important}
+body.layout-editor{background:radial-gradient(ellipse at 50% 40%,#34413a,#111c19)}
+body.layout-editor #obsFrame{outline:2px solid #c1aa6b80;background-image:linear-gradient(#d4dfcc10 1px,transparent 1px),linear-gradient(90deg,#d4dfcc10 1px,transparent 1px);background-size:120px 120px}
+body.layout-editor #obsFrame::after{content:'';position:absolute;left:959px;top:0;height:1080px;border-left:2px dashed #dfcc8b66;pointer-events:none}
+body.layout-editor #obsFrame .stage{pointer-events:auto;cursor:grab;touch-action:none;user-select:none;transition:none;outline:2px dashed #f0cf89;outline-offset:7px}
+body.layout-editor #obsFrame .stage.is-dragging{cursor:grabbing}

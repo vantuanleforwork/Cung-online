@@ -1,5 +1,11 @@
 # Triển khai
 
+## Video Veo cho OBS · bản 024
+
+Hai cảnh rồng và tiên nữ được tích hợp thành video liền cảnh 1920 × 1080, mỗi cảnh 7,85 giây với tiếng đi cùng video. Gói cập nhật: `Cung-online-Cinematic-024.zip`; hướng dẫn: `HUONG-DAN-OBS-024.txt`. Giữ cấu trúc thư mục khi upload, đăng nhập admin và refresh nguồn OBS. Vị trí thông điệp mặc định ở giữa phía trên, có kéo thả preview trong admin.
+
+Kiểm tra: `node tests/cinematic.cjs`, `node tests/dragon.cjs`, `python tests/overlay-layout.py`, `node tests/admin-voice.cjs`.
+
 ## Giao diện nền tảng và Eleven v3 · bản 006
 
 Giải nén `Cung-online-Voice-Settings-006.zip` vào thư mục website, mở admin và tải lại Ctrl+F5. Không cần SQL hoặc sửa config.php. Bản mới có view `voice-settings-form.php`; phải upload cùng các tệp của ZIP.

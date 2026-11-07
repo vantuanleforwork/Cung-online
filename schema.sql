@@ -32,6 +32,7 @@ CREATE TABLE donations (
   paid_amount BIGINT NULL,
   status ENUM('pending','paid') NOT NULL DEFAULT 'pending',
   tx_id VARCHAR(64) NULL UNIQUE,           -- id giao dịch Pay2S, chống xử lý trùng
+  is_test TINYINT NOT NULL DEFAULT 0,
   shown TINYINT NOT NULL DEFAULT 0,        -- overlay đã phát chưa
   claim_token CHAR(64) NULL,
   claimed_until DATETIME NULL,
@@ -84,6 +85,10 @@ CREATE TABLE app_settings (
   speech_rate DECIMAL(3,2) NOT NULL DEFAULT 1.00,
   speech_volume DECIMAL(3,2) NOT NULL DEFAULT 1.00,
   display_seconds INT NOT NULL DEFAULT 8,
+  overlay_x INT NOT NULL DEFAULT 960,
+  overlay_y INT NOT NULL DEFAULT 64,
+  overlay_width INT NOT NULL DEFAULT 760,
+  overlay_font_size INT NOT NULL DEFAULT 22,
   eleven_voice_id VARCHAR(80) NOT NULL DEFAULT '',
   eleven_model VARCHAR(40) NOT NULL DEFAULT 'eleven_flash_v2_5',
   custom_api_url VARCHAR(255) NOT NULL DEFAULT 'https://api.vibi.pro/v1',

@@ -1,0 +1,47 @@
+/* Shared palette, spacing and control states for the donation site and admin. */
+:root {
+  color-scheme: dark;
+  --bg: #080f17;
+  --surface: #152535;
+  --surface-raised: #20364a;
+  --field: #0b1520;
+  --ink: #f3f7fc;
+  --muted: #a6b5c6;
+  --border: #3a5268;
+  --accent: #c5f467;
+  --accent-hover: #d5ff88;
+  --danger: #ff938d;
+  --warning: #ffd084;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --text-xs: 14px;
+  --text-sm: 16px;
+  --text-md: 16px;
+  --text-lg: 22px;
+  --text-xl: 32px;
+  --font-ui: "Segoe UI", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: var(--text-sm)/1.6 var(--font-ui); }
+button, input, textarea, select { font: inherit; }
+button, a, input, select, textarea { transition: background-color .16s, border-color .16s, color .16s, box-shadow .16s; }
+a { color: var(--accent); text-underline-offset: 4px; }
+button { cursor: pointer; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+input, select, textarea { color: var(--ink); background: var(--field); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; max-width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: #8295aa; opacity: 1; }
+input[type=checkbox] { accent-color: var(--accent); width: auto; }
+button { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; background: var(--surface-raised); color: var(--ink); font-weight: 650; }
+button:hover:not(:disabled) { background: #24394d; border-color: #668098; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

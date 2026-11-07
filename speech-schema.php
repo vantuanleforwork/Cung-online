@@ -14,7 +14,7 @@ function ensure_speech_schema(PDO $db) {
         if (!in_array('voice_name', $donationCols, true)) {
             $db->exec('ALTER TABLE donations ADD COLUMN voice_name VARCHAR(80) NULL DEFAULT NULL');
         }
-        if ((int)$db->query('SELECT speech_schema_version FROM app_settings WHERE id=1')->fetchColumn() >= 7) { $done = true; return; }
+        if ((int)$db->query('SELECT speech_schema_version FROM app_settings WHERE id=1')->fetchColumn() >= 10) { $done = true; return; }
     } catch (PDOException $e) {
         if ((int)($e->errorInfo[1] ?? 0) !== 1054) throw $e;
     }
@@ -31,6 +31,10 @@ function ensure_speech_schema(PDO $db) {
             'speech_rate' => 'DECIMAL(3,2) NOT NULL DEFAULT 1.00',
             'speech_volume' => 'DECIMAL(3,2) NOT NULL DEFAULT 1.00',
             'display_seconds' => 'INT NOT NULL DEFAULT 8',
+            'overlay_x' => 'INT NOT NULL DEFAULT 960',
+            'overlay_y' => 'INT NOT NULL DEFAULT 64',
+            'overlay_width' => 'INT NOT NULL DEFAULT 760',
+            'overlay_font_size' => 'INT NOT NULL DEFAULT 22',
             'eleven_voice_id' => "VARCHAR(80) NOT NULL DEFAULT ''",
             'eleven_model' => "VARCHAR(40) NOT NULL DEFAULT 'eleven_flash_v2_5'",
             'custom_api_url' => "VARCHAR(255) NOT NULL DEFAULT 'https://api.vibi.pro/v1'",
@@ -76,7 +80,12 @@ function ensure_speech_schema(PDO $db) {
         $db->exec("UPDATE app_settings SET tier1_voice_id=COALESCE(NULLIF(tier1_voice_id,''),NULLIF(custom_voice_id,''),eleven_voice_id,'') WHERE id=1");
         $db->exec("UPDATE app_settings SET tier2_voice_id=COALESCE(NULLIF(tier2_voice_id,''),tier1_voice_id) WHERE id=1");
         $db->exec("UPDATE app_settings SET tier3_voice_id=COALESCE(NULLIF(tier3_voice_id,''),tier2_voice_id) WHERE id=1");
-        $db->exec('UPDATE app_settings SET speech_schema_version=7 WHERE id=1');
+        if (!in_array('is_test', $donationCols, true)) {
+            $db->exec('ALTER TABLE donations ADD COLUMN is_test TINYINT NOT NULL DEFAULT 0');
+        }
+        $db->exec("UPDATE donations d LEFT JOIN payment_transactions p ON p.tx_id=d.tx_id
+            SET d.is_test=1 WHERE LEFT(d.tx_id,5)='TEST_' OR p.gateway='TEST_OBS'");
+        $db->exec('UPDATE app_settings SET speech_schema_version=10 WHERE id=1');
         $done = true;
     } finally {
         $s = $db->prepare('SELECT RELEASE_LOCK(?)'); $s->execute([$lock]);

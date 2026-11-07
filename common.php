@@ -69,21 +69,27 @@ function donor_context(): array {
     return ['ip'=>normalized_ip(),'device_hash'=>donor_hash($token)];
 }
 
-function donor_progress(PDO $db, int $userId): array {
-    $s = $db->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM donations WHERE user_id=? AND status='paid'");
-    $s->execute([$userId]);
-    $total = max(0, (int)$s->fetchColumn());
+function donor_level_progress(int $total): array {
+    $total = max(0, $total);
+    $remainingInLevel = $total;
     $step = 200000;
-    $level = intdiv($total, $step);
-    $levelPaid = $total % $step;
+    $level = 0;
+    while ($remainingInLevel >= $step) {
+        $remainingInLevel -= $step;
+        $level++;
+        $step = $step > intdiv(PHP_INT_MAX - 9, 14) ? PHP_INT_MAX : intdiv($step * 14 + 9, 10);
+    }
     return [
         'level' => $level,
-        'total_paid' => $total,
-        'level_paid' => $levelPaid,
-        'level_size' => $step,
-        'next_level_total' => ($level + 1) * $step,
-        'remaining' => $step - $levelPaid,
+        'percent' => (int)floor($remainingInLevel / $step * 100),
+        'remaining' => $step - $remainingInLevel,
     ];
+}
+
+function donor_progress(PDO $db, int $userId): array {
+    $s = $db->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM donations WHERE user_id=? AND status='paid' AND is_test=0");
+    $s->execute([$userId]);
+    return donor_level_progress((int)$s->fetchColumn());
 }
 
 function donor_level(PDO $db, int $userId): int {

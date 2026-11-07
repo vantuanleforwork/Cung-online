@@ -162,29 +162,28 @@ function fireBlast(t0,dur,out){
 }
 function dragon({signal,legacy=false}={}){
   if(!enabled||!ac())return;resume();checkBlocked();
-  const c=global.CungDragon?.cues||{impact:.78,scrape:1.05,smoke:2.05,growl:5.35,inhale:6.55,fire:7.25,fireEnd:10.05,coil:10.65,flight:12.2,tail:13.65};
+  const c=global.CungDragon?.cues||{impact:.68,scrape:.85,smoke:1.1,growl:3.05,inhale:3.8,fire:4.15,fireEnd:5.55,coil:5.45,flight:6.1,tail:6.75};
   if(signal?.aborted)return;
   dragonAbort?.();
   if(signal){const cancel=()=>stop();signal.addEventListener('abort',cancel,{once:true});dragonAbort=()=>{signal.removeEventListener('abort',cancel);dragonAbort=null}}
   const t=ctx.currentTime+.015,p=panner(t,.15,0,.78);
   if(legacy){thud(t+1,.8,p);scrape(t+.75,.3,.3,p);roar(t+1.5,1.5,p);fireBlast(t+1.78,1.5,p);return}
   // Air displacement, screen impact and the metallic drag of four talons.
-  noise(t,.78,{type:'lowpass',f0:180,f1:2300,q:.7,pts:[[.55,.25],[.77,.08],[.78,.0001]],out:p});
-  thud(t+c.impact,.9,p);scrape(t+c.scrape,.65,.33,p);
-  tone('sine',31,t+c.impact,1.8,.42,{wet:.1,out:p});
+  noise(t,.68,{type:'lowpass',f0:180,f1:2300,q:.7,pts:[[.48,.25],[.6,.08],[.68,.0001]],out:p});
+  thud(t+c.impact,.9,p);scrape(t+c.scrape,.4,.33,p);
+  tone('sine',31,t+c.impact,1.3,.42,{wet:.1,out:p});
   // Heavy chest resonance under the fog; a close, textured exhalation.
-  noise(t+1.6,4.6,{type:'lowpass',f0:150,f1:310,q:.7,pts:[[1.1,.15],[3.2,.2],[4.6,.0001]],wet:.3,out:p});
-  noise(t+c.smoke,2.45,{f0:520,f1:1600,q:.6,pts:[[.3,.25],[1.4,.18],[2.45,.0001]],wet:.25,out:p});
-  tone('sine',42,t+2.7,3.4,.16,{attack:.6,wet:.3,out:p});
-  roar(t+c.growl,1.8,p);
-  noise(t+c.inhale,.7,{f0:320,f1:2100,q:1.3,pts:[[.55,.3],[.7,.0001]],out:p});
+  noise(t+.9,2.7,{type:'lowpass',f0:150,f1:310,q:.7,pts:[[.8,.15],[1.7,.2],[2.7,.0001]],wet:.3,out:p});
+  noise(t+c.smoke,1.65,{f0:520,f1:1600,q:.6,pts:[[.2,.25],[.9,.18],[1.65,.0001]],wet:.25,out:p});
+  tone('sine',42,t+1.7,2,.16,{attack:.4,wet:.3,out:p});
+  roar(t+c.growl,1.05,p);
+  noise(t+c.inhale,.35,{f0:320,f1:2100,q:1.3,pts:[[.27,.3],[.35,.0001]],out:p});
   fireBlast(t+c.fire,c.fireEnd-c.fire,p);
   // The serpentine body displaces air; tail cracks from left to right on departure.
-  const fly=panner(t+c.coil,-.55,.85,4.8);
-  noise(t+c.coil,4.8,{type:'lowpass',f0:900,f1:120,q:.7,pts:[[.7,.22],[2.2,.3],[4.8,.0001]],wet:.18,out:fly});
-  noise(t+c.tail-.25,.65,{f0:450,f1:3400,q:.6,pts:[[.24,.35],[.32,.24],[.65,.0001]],out:fly});
+  const fly=panner(t+c.coil,-.55,.85,2.3);
+  noise(t+c.coil,2.3,{type:'lowpass',f0:900,f1:120,q:.7,pts:[[.4,.22],[1.2,.3],[2.3,.0001]],wet:.18,out:fly});
+  noise(t+c.tail-.2,.5,{f0:450,f1:3400,q:.6,pts:[[.19,.35],[.26,.24],[.5,.0001]],out:fly});
   thud(t+c.tail,.27,fly);
-  bell(98,t+13.15,2.6,.15,{wet:.5,out:fly});
 }
 function celestial(){
   if(!enabled||!ac())return;resume();checkBlocked();
@@ -222,11 +221,11 @@ if(typeof module!=='undefined')module.exports=S;
 
 if(global.document){
   ['pointerdown','click','keydown'].forEach(e=>global.document.addEventListener(e,resume,{passive:true}));
-  /* Tiếng ting trước mỗi lượt donate, rồi 0,85 giây sau mới vào hiệu ứng. */
+  /* Dragon starts immediately on its eight-second clock; other tiers keep the bell lead-in. */
   if(typeof global.play==='function'){
     const basePlay=global.play;
     global.play=async function(d){
-      if(enabled){S.ting();await new Promise(r=>setTimeout(r,850))}
+      if(enabled){if(Number(d.tier)>=2)S.resume();else{S.ting();await new Promise(r=>setTimeout(r,850))}}
       return basePlay.apply(this,arguments);
     };
   }
@@ -236,9 +235,9 @@ if(global.document){
     global.playTierIntro=async function(d,signal){
       const tier=Math.max(1,Math.min(3,Number(d.tier)||1));
       if(enabled){
-        if(tier!==2&&signal)signal.addEventListener('abort',stop,{once:true});
-        if(tier===1)S.bell();else if(tier===3)S.celestial();
-        // Tier 2 starts on the first canvas frame after its images have loaded.
+        if(tier===1&&signal)signal.addEventListener('abort',stop,{once:true});
+        if(tier===1)S.bell();
+        // Video intros carry their own audio and start it with their first frame.
       }
       return baseIntro.apply(this,arguments);
     };

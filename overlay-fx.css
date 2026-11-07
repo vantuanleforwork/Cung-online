@@ -3,6 +3,7 @@
 .tier-intro.tier-2::before,.tier-intro.tier-2::after,.tier-intro.tier-3::before,.tier-intro.tier-3::after{display:none}
 .intro-vignette,.dragon-scene,.celestial-scene{display:none!important}
 .intro-fx{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0}
+.cinematic-intro .intro-title{display:none!important}
 
 .tier-intro .intro-title{bottom:10vh;opacity:0;text-shadow:none;color:transparent;animation:none}
 .tier-intro .intro-title span{display:block;font:700 12px/1.4 "Segoe UI",Arial,sans-serif;letter-spacing:.7em;color:#ffd9a0;
@@ -14,7 +15,7 @@
 .tier-intro.tier-3 .intro-title strong{background-image:linear-gradient(180deg,#fff 6%,#ffe9ac 42%,#cfa8ff 100%);
   filter:drop-shadow(0 4px 12px #000b) drop-shadow(0 0 26px #b98cff99)}
 .tier-intro.tier-3 .intro-title span{color:#f0e0ff}
-.tier-intro.tier-2 .intro-title{bottom:8vh;animation:fxTitle2 var(--fx-d,16000ms) ease both}
+.tier-intro.tier-2 .intro-title{display:none}
 .tier-intro.tier-3 .intro-title{animation:fxTitle3 var(--fx-d,5400ms) ease both}
 
 @keyframes fxTitle2{

@@ -23,7 +23,7 @@ try {
                        COALESCE(NULLIF(u.custom_avatar_path,""), NULLIF(u.google_avatar_url,""), NULLIF(d.donor_avatar,"")) AS donor_avatar
                 FROM donations d
                 LEFT JOIN donor_users u ON u.id = d.user_id
-                WHERE d.user_id = :uid AND d.status = "paid"
+                WHERE d.user_id = :uid AND d.status = "paid" AND d.is_test=0
                 ORDER BY d.id DESC LIMIT :limit OFFSET :offset';
         $s = $db->prepare($sql);
         $s->bindValue(':uid', $donorId, PDO::PARAM_INT);
@@ -33,7 +33,7 @@ try {
                        COALESCE(NULLIF(u.custom_avatar_path,""), NULLIF(u.google_avatar_url,""), NULLIF(d.donor_avatar,"")) AS donor_avatar
                 FROM donations d
                 LEFT JOIN donor_users u ON u.id = d.user_id
-                WHERE d.status = "paid"
+                WHERE d.status = "paid" AND d.is_test=0
                 ORDER BY d.id DESC LIMIT :limit OFFSET :offset';
         $s = $db->prepare($sql);
     }

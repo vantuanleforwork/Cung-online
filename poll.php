@@ -21,7 +21,7 @@ try {
     $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
     $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,{$voiceSelect}
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
-        COALESCE((SELECT FLOOR(SUM(x.paid_amount)/200000) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid'),0) AS donor_level,
+        COALESCE((SELECT SUM(x.paid_amount) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid' AND x.is_test=0),0) AS donor_total,
         (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
         WHERE d.status='paid' AND d.shown=0 AND d.queue_state='queued' ORDER BY d.id LIMIT 1 FOR UPDATE")
         ->fetch(PDO::FETCH_ASSOC);
@@ -32,6 +32,8 @@ try {
        ->execute([$token, $row['id']]);
     $db->commit();
     unset($row['active_claim']);
+    $row['donor_level'] = donor_level_progress((int)$row['donor_total'])['level'];
+    unset($row['donor_total']);
     $row['claim_token'] = $token;
     $row['tier'] = tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;

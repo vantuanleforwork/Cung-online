@@ -21,7 +21,7 @@ try {
         elseif ($row['playing']) $state = 'playing';
         else {
             $state = 'queued';
-            $s = $db->prepare("SELECT COUNT(*) FROM donations WHERE status='paid' AND shown=0 AND queue_state='queued' AND id<?");
+            $s = $db->prepare("SELECT COUNT(*) FROM donations WHERE is_test=0 AND status='paid' AND shown=0 AND queue_state='queued' AND id<?");
             $s->execute([$row['id']]);
             $ahead = (int)$s->fetchColumn();
         }
