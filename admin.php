@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 $demo = preview_donation();
                 if (!empty($_POST['tier']) && in_array((int)$_POST['tier'], [1, 2, 3], true)) {
                     $demo['tier'] = (int)$_POST['tier'];
-                    $demo['paid_amount'] = [1 => 10000, 2 => 50000, 3 => 200000][$demo['tier']];
+                    $demo['paid_amount'] = [1 => (int)donation_settings()['message_min'], 2 => (int)donation_settings()['tier2_min'], 3 => (int)donation_settings()['tier3_min']][$demo['tier']];
                 }
                 if (!empty($_POST['voice_id'])) {
                     $demo['selected_voice_id'] = trim((string)$_POST['voice_id']);
@@ -101,13 +101,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 respond(200, ['demo' => $demo]);
             } elseif ($action === 'test_webhook_obs') {
                 $amount = filter_var($_POST['amount'] ?? 10000, FILTER_VALIDATE_INT);
-                if ($amount === false || $amount < MIN_AMOUNT) throw new InvalidArgumentException('Số tiền không hợp lệ (tối thiểu ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ).');
+                if ($amount === false || $amount < 1000 || $amount > 50000000) throw new InvalidArgumentException('Số tiền không hợp lệ (tối thiểu ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ).');
                 $name = (string)($_POST['name'] ?? '');
                 $message = (string)($_POST['message'] ?? '');
                 $selectedVoiceId = (string)($_POST['voice_id'] ?? '');
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
+            } elseif (in_array($action, ['save_donation_settings','music_pause','music_resume','music_next','music_remove'], true)) {
+                music_admin_action(db(), $_POST);
+                $_SESSION['flash'] = 'Đã cập nhật cài đặt / hàng đợi nhạc.';
+                redirect_admin($action === 'save_donation_settings' ? 'donate' : 'music');
             } else {
                 admin_action(db(), $_POST, $_SERVER['REMOTE_ADDR'] ?? '');
                 $_SESSION['flash'] = 'Đã lưu thay đổi.'; redirect_admin(in_array($action, ['save_overlay','save_speech','clear_speech_cache','add_voice_option','delete_voice_option'], true) ? 'speech' : (in_array($action,['block_user','unblock_identifier'],true) ? 'users' : ''));
@@ -130,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
 
 $loggedIn = !empty($_SESSION['admin']);
 $view = is_string($_GET['view'] ?? null) ? $_GET['view'] : 'queue';
-if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users', 'revenue'], true)) $view = 'queue';
+if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users', 'revenue', 'donate', 'music'], true)) $view = 'queue';
 $page = max(1, (int)($_GET['page'] ?? 1));
 $offset = min($page - 1, 1000000) * 30;
 $rows = []; $paused = false; $total = 0; $elevenConfigured = false; $customConfigured = false; $userDonations=[]; $blockedRows=[];
@@ -148,7 +152,9 @@ if ($loggedIn) {
             $customConfigured = custom_api_key($db, $settings['custom_api_url'] ?? '') !== '';
             $customVoiceOptions = $db->query('SELECT * FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
         }
-        if ($view === 'revenue') {
+        if (in_array($view, ['donate','music'], true)) {
+            // These workspaces render their own settings and queue.
+        } elseif ($view === 'revenue') {
             require __DIR__ . '/revenue-data.php';
         } else {
         $params = [];
@@ -217,12 +223,12 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quản trị donate · Van Tuan Le</title>
 <link rel="stylesheet" href="ui-tokens.css?v=32">
-<link rel="stylesheet" href="admin-theme.css?v=32"></head>
+<link rel="stylesheet" href="admin-theme.css?v=33"></head>
 <body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
-<?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
+<?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
 <a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>
 <main class="admin-main">
-<header class="admin-heading"><div><p class="nav-caption">VAN TUAN LE / QUẢN TRỊ</p><h1><?=h($loggedIn ? (['queue'=>'Hàng đợi donate','payments'=>'Giao dịch','revenue'=>'Doanh thu','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'][$view] ?? 'Quản trị donate') : 'Creator console')?></h1></div></header>
+<header class="admin-heading"><div><p class="nav-caption">VAN TUAN LE / QUẢN TRỊ</p><h1><?=h($loggedIn ? (['queue'=>'Hàng đợi donate','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'][$view] ?? 'Quản trị donate') : 'Creator console')?></h1></div></header>
 <?php if ($error): ?><p class="notice error" role="alert"><?=h($error)?></p><?php endif ?>
 <?php if ($flash): ?><p class="notice" role="status"><?=h($flash)?></p><?php endif ?>
 <?php if (!$loggedIn): ?>
@@ -237,8 +243,12 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <a href="admin.php?<?=h(http_build_query(['view'=>$view,'filter'=>$filter,'q'=>$search,'page'=>$page]))?>">Làm mới</a></div>
 <p class="muted">Tạm dừng áp dụng cho lượt tiếp theo; lượt đang phát sẽ hoàn tất. Mọi thay đổi được lưu vào nhật ký quản trị.</p>
 
-<?php if ($view === 'speech' && isset($settings['speech_template'])): ?>
-<section class="speech-panel"><p class="muted">THÔNG BÁO TRÊN LIVESTREAM</p><h2>Thiết lập trải nghiệm trên live.</h2>
+<?php if ($view === 'donate'): ?>
+<?php require __DIR__ . '/donation-admin-form.php'; ?>
+<?php elseif ($view === 'music'): ?>
+<?php require __DIR__ . '/music-admin-queue.php'; ?>
+<?php elseif ($view === 'speech' && isset($settings['speech_template'])): ?>
+<section class="speech-panel" data-tabs="speech"><p class="muted">THÔNG BÁO TRÊN LIVESTREAM</p><h2>Thiết lập trải nghiệm trên live.</h2>
 <p>Tự viết câu thông báo theo cách của bạn. Giọng đọc phát cùng hoạt cảnh sau khi lượt donate được duyệt.</p>
 <?php require __DIR__ . '/voice-settings-form.php'; ?></section>
 <?php elseif ($view === 'revenue' && isset($revenueRows)): ?>
@@ -262,7 +272,7 @@ foreach ($options as $key=>$label): ?><option value="<?=h($key)?>" <?=$filter===
 <?php if ($row['status']==='paid' && !$row['shown'] && !$row['playing'] && $row['queue_state']!=='skipped'): ?>
 <details><summary>Sửa tên / lời nhắn</summary><form method="post"><?php csrf_field() ?><input type="hidden" name="action" value="edit"><input type="hidden" name="id" value="<?=h($row['id'])?>">
 <label>Tên <input name="name" value="<?=h($row['name'])?>" maxlength="40"></label>
-<label>Lời nhắn <textarea name="message" maxlength="<?=maxlen((int)$row['paid_amount'])?>"><?=h($row['message'])?></textarea></label><button>Lưu nội dung</button></form></details>
+<label>Lời nhắn <textarea name="message" maxlength="<?=donation_message_limit((int)$row['paid_amount'])?>"><?=h($row['message'])?></textarea></label><button>Lưu nội dung</button></form></details>
 <?php endif ?></td><td>
 <?php if ($row['status']==='pending'): ?>Chờ nhận tiền
 <?php elseif ($row['shown']): ?>Đã phát<?php action_form('replay',['id'=>$row['id']],'Phát lại'); ?>
@@ -313,4 +323,5 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php endif ?>
 <?php endif ?></main>
 <?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
+<?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=33"></script><?php endif ?>
 </body></html>

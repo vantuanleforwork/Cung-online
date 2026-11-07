@@ -153,7 +153,7 @@ async function getDemo(){
   }
   if(preview){
     value.tier=selectedPreviewTier;
-    value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier];
+    if(!K)value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier];
     if(customVoice)value.selected_voice_id=customVoice;
   }
   return value;

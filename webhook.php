@@ -85,13 +85,13 @@ try {
         $isCorrectAccount = ($payment['account_number'] === trim(ACCOUNT_NO)) || ($accIncoming !== '' && $accIncoming === $accConfig);
         $decision = $payment['direction'] !== 'IN' ? 'ignored_out' :
             (!$isCorrectAccount ? 'wrong_account' :
-            ($payment['paid_amount'] < MIN_AMOUNT ? 'below_min' : 'unmatched'));
+            ($payment['paid_amount'] < min((int)donation_settings($db)['message_min'],(int)donation_settings($db)['music_min']) ? 'below_min' : 'unmatched'));
         $insert = $db->prepare('INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision)
             VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id');
         $insert->execute([$payment['tx_id'], $payment['paid_amount'], $payment['content'],
             $payment['account_number'], $payment['gateway'], $payment['direction'], $decision]);
         if ($insert->rowCount() === 0) { $duplicates++; continue; }
-        if ($decision !== 'unmatched') continue;
+        if (!in_array($decision, ['unmatched','below_min'], true)) continue;
         $row = null;
         $cleanContent = preg_replace('/[\s\-_]+/', '', strtoupper($payment['content']));
         if (preg_match('/' . preg_quote(PREFIX, '/') . '[A-Z0-9]{6}/', strtoupper($payment['content']), $m) ||
@@ -100,6 +100,12 @@ try {
             $s->execute([$m[0]]);
             $candidate = $s->fetch(PDO::FETCH_ASSOC);
             if ($candidate && $candidate['status'] === 'pending') $row = $candidate;
+        }
+        if ($decision === 'below_min') {
+            // A valid QR created before a minimum-price change retains its accepted minimum.
+            $acceptedMinimum = $row ? ((int)($row['required_amount'] ?? 0) ?: MIN_AMOUNT) : PHP_INT_MAX;
+            if ($payment['paid_amount'] < $acceptedMinimum) continue;
+            $db->prepare("UPDATE payment_transactions SET decision='unmatched' WHERE tx_id=?")->execute([$payment['tx_id']]);
         }
         if ($row) {
             attach_payment($db, $payment, $row);

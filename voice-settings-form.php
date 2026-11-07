@@ -1,6 +1,8 @@
 <?php
 if (empty($loggedIn) || ($view ?? '') !== 'speech') { http_response_code(403); exit; }
 $platform = $settings['speech_provider'];
+$donatePrices = donation_settings($db);
+$previewAmounts = [1=>(int)$donatePrices['message_min'],2=>(int)$donatePrices['tier2_min'],3=>(int)$donatePrices['tier3_min']];
 $modelGroups = [
     'elevenlabs' => ['eleven_flash_v2_5'=>'Eleven Flash v2.5', 'eleven_v3'=>'Eleven v3'],
     'minimax' => ['speech-2.8-turbo'=>'MiniMax Speech 2.8 Turbo', 'speech-2.8-hd'=>'MiniMax Speech 2.8 HD'],
@@ -19,8 +21,11 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <button type="button" class="load-voices">Tải / tìm giọng</button><button type="button" class="more-voices" hidden>Trang tiếp</button></div>
 <select class="voice-results" aria-label="Danh sách Voice ID <?=h($label)?>" hidden></select><p class="voice-feedback muted" role="status"></p></details>
 <?php } ?>
+<div class="workspace-tabs" role="tablist" aria-label="Giọng đọc và hiển thị">
+<?php foreach (['platform'=>'Nền tảng','template'=>'Mẫu câu','voices'=>'Giọng theo mốc','display'=>'Hiển thị OBS','test'=>'Kiểm thử'] as $tab=>$label): ?><button type="button" role="tab" data-tab="<?=h($tab)?>"><?=h($label)?></button><?php endforeach ?>
+</div>
 <form method="post" id="speechForm" action="admin.php?view=speech"><?php csrf_field() ?><input type="hidden" name="action" value="save_speech">
-<label><input type="checkbox" name="speech_enabled" value="1" <?=$settings['speech_enabled']?'checked':''?>> Đọc thông báo và lời nhắn</label>
+<section data-panel="platform" role="tabpanel"><label><input type="checkbox" name="speech_enabled" value="1" <?=$settings['speech_enabled']?'checked':''?>> Đọc thông báo và lời nhắn</label>
 <label class="platform-select">Nền tảng giọng đọc<select name="speech_provider" id="speechProvider">
 <?php foreach(['browser'=>'Giọng trên máy / trình duyệt','elevenlabs'=>'ElevenLabs trực tiếp','fpt'=>'FPT.AI','custom_api'=>'Custom API Voice · vibi.pro'] as $key=>$label): ?>
 <option value="<?=h($key)?>" <?=$platform===$key?'selected':''?>><?=h($label)?></option><?php endforeach ?></select>
@@ -55,7 +60,7 @@ function voice_picker_fields(string $provider, string $label) { ?>
 <label>Voice ID Custom API<input name="custom_voice_id" value="<?=h($settings['custom_voice_id'])?>" maxlength="160" placeholder="Dán Voice ID hoặc chọn trong thư viện"><small>Voice ID theo nền tảng đang chọn.</small></label></div>
 <?php voice_picker_fields('custom_api','Custom API Voice') ?></fieldset>
 
-<label>Mẫu câu đọc thông báo donate<textarea id="speechTemplate" name="speech_template" required maxlength="600" aria-describedby="speechTemplateHelp speechFullPreview"><?=h($settings['speech_template'])?></textarea></label>
+</section><section data-panel="template" role="tabpanel"><label>Mẫu câu đọc thông báo donate<textarea id="speechTemplate" name="speech_template" required maxlength="600" aria-describedby="speechTemplateHelp speechFullPreview"><?=h($settings['speech_template'])?></textarea></label>
 <div class="variable-buttons" style="margin:8px 0 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
   <span class="muted" style="font-weight:600;font-size:13px">Chèn nhanh biến:</span>
   <button type="button" class="btn-var-insert" data-var="{user}">+ {user} (tên)</button>
@@ -87,37 +92,37 @@ function voice_picker_fields(string $provider, string $label) { ?>
 </details>
 <div class="sample"><strong>Toàn bộ câu sẽ đọc (ví dụ):</strong><output id="speechFullPreview" aria-live="polite"></output></div>
 
-<fieldset class="api-panel" style="margin-top:20px"><legend>Giọng đọc mặc định cho 3 mốc donate</legend>
-  <p class="muted">Voice ID mặc định cho từng mốc (khi người donate không chọn giọng cụ thể, hoặc mốc dưới 50k không được chọn).</p>
+</section><section data-panel="voices" role="tabpanel"><fieldset class="api-panel" style="margin-top:20px"><legend>Giọng đọc mặc định cho 3 mốc donate</legend>
+  <p class="muted">Voice ID mặc định cho từng mốc (khi người donate không chọn giọng cụ thể, hoặc ở mốc cơ bản).</p>
   <div class="speech-grid">
-    <label>Mốc 1: Dưới 50.000đ (10.000đ - 49.000đ)
+    <label>Mốc 1: Cơ bản
       <input name="tier1_voice_id" value="<?=h($settings['tier1_voice_id'] ?? '')?>" placeholder="Voice ID mặc định mốc 1 (để trống dùng Voice ID chung)" maxlength="160">
       <small>Mốc này người donate không được chọn, luôn đọc bằng giọng này.</small>
     </label>
-    <label>Mốc 2: Từ 50.000đ đến 199.000đ
+    <label>Mốc 2: Rồng
       <input name="tier2_voice_id" value="<?=h($settings['tier2_voice_id'] ?? '')?>" placeholder="Voice ID mặc định mốc 2 (để trống dùng mốc 1)" maxlength="160">
-      <small>Áp dụng khi người donate mốc 50k chọn "Mặc định".</small>
+      <small>Áp dụng khi người donate mốc rồng chọn "Mặc định".</small>
     </label>
   </div>
   <div style="margin-top:12px">
-    <label>Mốc 3: Từ 200.000đ trở lên (VIP / Tiên nữ)
+    <label>Mốc 3: Tiên nữ / VIP
       <input name="tier3_voice_id" value="<?=h($settings['tier3_voice_id'] ?? '')?>" placeholder="Voice ID mặc định mốc 3 (để trống dùng mốc 2)" maxlength="160">
-      <small>Áp dụng khi người donate mốc 200k chọn "Mặc định".</small>
+      <small>Áp dụng khi người donate mốc tiên nữ chọn "Mặc định".</small>
     </label>
   </div>
 </fieldset>
 
-<div class="speech-grid common-voice-settings">
+</section><div class="speech-grid common-voice-settings">
 <label>Tốc độ đọc<input type="number" name="speech_rate" min="0.75" max="1.25" step="0.05" value="<?=h($settings['speech_rate'])?>"><small id="speechRateHint"><?=($platform==='elevenlabs'||($platform==='custom_api'&&$settings['custom_api_engine']==='elevenlabs'))?'1 = bình thường. ElevenLabs hỗ trợ tối đa 1.20.':'1 = bình thường.'?></small></label>
 <label>Âm lượng<input type="number" name="speech_volume" min="0" max="1" step="0.05" value="<?=h($settings['speech_volume'])?>"><small>0 = im lặng, 1 = lớn nhất.</small></label>
 <label>Hiển thị tối thiểu (giây)<input type="number" name="display_seconds" min="8" max="30" value="<?=h(max(8, (int)$settings['display_seconds']))?>"><small>Khung lời nhắn chờ đọc xong rồi mới đóng (tối thiểu 8 giây).</small></label></div>
 <div class="bar"><button type="submit">Lưu cấu hình</button><button type="button" id="testVoice">Nghe thử câu này</button></div>
 <p id="voiceFeedback" class="muted" role="status" aria-live="polite"></p></form>
-<?php require __DIR__ . '/overlay-position-form.php'; ?>
+<section data-panel="display" role="tabpanel"><?php require __DIR__ . '/overlay-position-form.php'; ?></section>
 
-<div class="api-panel" style="margin-top:24px;background:var(--surface)">
+<section data-panel="voices" role="tabpanel"><div class="api-panel" style="margin-top:24px;background:var(--surface)">
   <h3 style="margin-top:0;color:var(--ink)">Danh sách giọng đọc cho người donate tự chọn (Frontend)</h3>
-  <p class="muted">Người donate từ 50.000đ hoặc từ 200.000đ sẽ được chọn 1 trong các giọng này tại trang gửi donate. Mốc dưới 50k không được chọn (sử dụng giọng mặc định Mốc 1).</p>
+  <p class="muted">Người donate được chọn giọng theo các mốc đã lưu trong Cài đặt donate. Mốc cơ bản dùng giọng mặc định.</p>
   <form method="post" class="voice-option-form">
     <?php csrf_field() ?>
     <input type="hidden" name="action" value="add_voice_option">
@@ -155,13 +160,13 @@ function voice_picker_fields(string $provider, string $label) { ?>
     </table>
   </div>
 </div>
-<div class="overlay-preview-card" id="overlayPreviewContainer" data-overlay-key="<?=h(rawurlencode(OVERLAY_KEY))?>">
+</section><section data-panel="display" role="tabpanel"><div class="overlay-preview-card" id="overlayPreviewContainer" data-overlay-key="<?=h(rawurlencode(OVERLAY_KEY))?>">
   <h3>Xem thử OBS · 1920 × 1080</h3>
   <span class="muted">Đặt Browser Source trong OBS: Width 1920, Height 1080. Preview bên dưới thu nhỏ cùng khung ngang, gồm hiệu ứng, thông điệp và giọng đọc đã lưu.</span>
   <div class="bar" style="margin-top:12px">
-    <button type="button" class="preview-tier-btn active" data-preview-tier-btn="1">Thử 10.000đ</button>
-    <button type="button" class="preview-tier-btn" data-preview-tier-btn="2">🐉 Thử rồng 50.000đ</button>
-    <button type="button" class="preview-tier-btn" data-preview-tier-btn="3">✦ Thử tiên nữ 200.000đ</button>
+    <button type="button" class="preview-tier-btn active" data-preview-tier-btn="1">Thử <?=number_format($previewAmounts[1],0,',','.')?>đ</button>
+    <button type="button" class="preview-tier-btn" data-preview-tier-btn="2">🐉 Thử rồng <?=number_format($previewAmounts[2],0,',','.')?>đ</button>
+    <button type="button" class="preview-tier-btn" data-preview-tier-btn="3">✦ Thử tiên nữ <?=number_format($previewAmounts[3],0,',','.')?>đ</button>
     <button type="button" class="preview-tier-btn" id="previewReloadBtn" title="Phát lại hoạt cảnh đang chọn">⟳ Phát lại</button>
     <a id="previewOpenTab" href="overlay.html?preview=1&amp;k=<?=h(rawurlencode(OVERLAY_KEY))?>&amp;tier=1&amp;autoplay=1&amp;motion=1" target="_blank" rel="noopener noreferrer" class="preview-tier-btn" style="margin-left:auto;">Mở tab riêng ↗</a>
   </div>
@@ -170,19 +175,19 @@ function voice_picker_fields(string $provider, string $label) { ?>
   </div>
 </div>
 
-<div class="obs-test-card">
+</section><section data-panel="test" role="tabpanel"><div class="obs-test-card">
   <h3>Phát thử trên OBS</h3>
   <span class="muted">Phát hiệu ứng và giọng đọc trên OBS. Lượt thử không được cộng vào lịch sử, bảng xếp hạng hoặc doanh thu.</span>
   <div class="bar" style="margin-top:12px">
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="10000">📡 Phát thử 10.000đ vào OBS</button>
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="50000">🐉 Phát thử 50.000đ vào OBS</button>
-    <button type="button" class="btn-push-obs" data-test-webhook-amount="200000">✦ Phát thử 200.000đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="<?=$previewAmounts[1]?>">📡 Phát thử <?=number_format($previewAmounts[1],0,',','.')?>đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="<?=$previewAmounts[2]?>">🐉 Phát thử <?=number_format($previewAmounts[2],0,',','.')?>đ vào OBS</button>
+    <button type="button" class="btn-push-obs" data-test-webhook-amount="<?=$previewAmounts[3]?>">✦ Phát thử <?=number_format($previewAmounts[3],0,',','.')?>đ vào OBS</button>
   </div>
   <details style="margin-top:14px">
     <summary style="cursor:pointer;font-weight:600;color:var(--ink)">Tùy chỉnh số tiền &amp; lời nhắn test</summary>
     <form id="customWebhookForm" method="post" style="margin-top:10px">
       <div class="custom-test-grid">
-        <label style="margin:0">Số tiền (đ)<input type="number" name="custom_amount" min="10000" step="1000" value="50000" required></label>
+        <label style="margin:0">Số tiền (đ)<input type="number" name="custom_amount" min="1000" step="1" value="<?=$previewAmounts[2]?>" required></label>
         <label style="margin:0">Tên người gửi<input type="text" name="custom_name" value="Khách thử nghiệm" maxlength="40"></label>
         <label style="margin:0">Lời nhắn<input type="text" name="custom_message" value="Chúc kênh livestream ngày càng phát triển thuận lợi!" maxlength="255"></label>
         <label style="margin:0">Giọng đọc test
@@ -211,3 +216,5 @@ function voice_picker_fields(string $provider, string $label) { ?>
   <div id="obsWebhookFeedback" class="test-feedback" role="status" aria-live="polite"></div>
 </div>
 <details><summary>Xử lý khi dịch vụ chưa tạo được giọng</summary><p>Kiểm tra cấu hình và hạn mức của nền tảng đang chọn. Kiểm tra lịch sử tạo giọng trước khi xóa bộ nhớ để tạo lại; việc tạo lại có thể dùng thêm hạn mức.</p><?php action_form('clear_speech_cache', [], 'Xóa bộ nhớ giọng đọc'); ?></details>
+
+</section>

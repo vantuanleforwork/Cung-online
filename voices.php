@@ -15,6 +15,7 @@ try {
         $rows = $db->query('SELECT id, name, voice_id, tier_min FROM custom_voice_options ORDER BY tier_min ASC, id ASC')->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $ignore) {}
     
+    $donateSettings = donation_settings($db);
     $tier2Voices = [];
     $tier3Voices = [];
     foreach ($rows as $r) {
@@ -28,20 +29,20 @@ try {
     respond(200, [
         'speech_enabled' => (bool)$settings['speech_enabled'],
         'tier1' => [
-            'min_amount' => 10000,
+            'min_amount' => (int)$donateSettings['message_min'],
             'can_choose' => false,
             'default_voice_id' => $settings['tier1_voice_id'] ?? '',
             'hint' => 'Dưới 50k sử dụng giọng đọc mặc định'
         ],
         'tier2' => [
-            'min_amount' => 50000,
+            'min_amount' => (int)$donateSettings['tier2_min'],
             'can_choose' => true,
             'default_voice_id' => $settings['tier2_voice_id'] ?? '',
             'label' => 'Mở khóa mốc 50k',
             'voices' => $tier2Voices
         ],
         'tier3' => [
-            'min_amount' => 200000,
+            'min_amount' => (int)$donateSettings['tier3_min'],
             'can_choose' => true,
             'default_voice_id' => $settings['tier3_voice_id'] ?? '',
             'label' => 'Mở khóa VIP 200k',

@@ -113,3 +113,13 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .donate-site .leaderboard-name, .donate-site .leaderboard-amount { font-size: 15px; }
 .donate-site .leaderboard-tabs { background: var(--field); }
 .donate-site .leaderboard-status { font-size: 14px; }
+
+.workspace-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 20px 0 28px; padding-bottom: 6px; }
+.workspace-tabs button { flex: 0 0 auto; background: var(--field); color: var(--muted); }
+.workspace-tabs button[aria-selected=true] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.settings-workspace { margin-top: 36px; max-width: 1100px; }
+.music-queue-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.music-queue-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
+.music-queue-row > div { min-width: 0; overflow-wrap: anywhere; }
+.music-queue-row small { display: block; color: var(--muted); margin-top: 6px; }
+.music-queue-row > span { color: var(--accent); font-size: 12px; white-space: nowrap; }

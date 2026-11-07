@@ -135,7 +135,7 @@ function admin_action(PDO $db, array $in, string $ip) {
                 $db->prepare("UPDATE payment_transactions SET decision='ignored_manual' WHERE tx_id=?")->execute([$tx]);
             } else {
                 if ($payment['direction'] !== 'IN' || $payment['account_number'] !== trim(ACCOUNT_NO) ||
-                    (int)$payment['paid_amount'] < MIN_AMOUNT) {
+                    (int)$payment['paid_amount'] < min((int)donation_settings($db)['message_min'],(int)donation_settings($db)['music_min'])) {
                     throw new InvalidArgumentException('Giao dịch không đáp ứng tài khoản nhận hoặc số tiền tối thiểu.');
                 }
                 if ($action === 'match') {
@@ -205,7 +205,7 @@ function admin_action(PDO $db, array $in, string $ip) {
                 if ($action === 'edit') {
                     if (!is_string($in['name'] ?? null) || !is_string($in['message'] ?? null)) throw new InvalidArgumentException('Tên/lời nhắn không hợp lệ.');
                     $name = clean($in['name'], 40) ?: 'Ẩn danh';
-                    $message = clean($in['message'], maxlen((int)$row['paid_amount']));
+                    $message = clean($in['message'], donation_message_limit((int)$row['paid_amount']));
                     $db->prepare('UPDATE donations SET name=?,message=?,claim_token=NULL,claimed_until=NULL WHERE id=?')->execute([$name, $message, $id]);
                     $audit['after'] = ['name' => $name, 'message' => $message];
                 } else {
@@ -231,13 +231,13 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
             ensure_speech_schema($db);
         }
     } catch (Throwable $ignore) {}
-    if ($amount < MIN_AMOUNT) {
+    if ($amount < 1000 || $amount > 50000000) {
         throw new InvalidArgumentException('Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ.');
     }
-    $tier = tier($amount);
+    $tier = donation_tier($amount);
     $name = clean($name, 40);
     if ($name === '') $name = 'Khách thử nghiệm';
-    $message = clean($message, maxlen($amount));
+    $message = clean($message, donation_message_limit($amount));
     if ($message === '') {
         $defaultMessages = [
             1 => 'Thử nghiệm donate 10.000đ - Chúc kênh livestream phát triển thuận lợi!',

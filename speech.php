@@ -9,7 +9,7 @@ function fpt_voices() {
         'leminh' => 'Lê Minh · nam miền Bắc', 'lannhi' => 'Lan Nhi · nữ miền Nam',
         'linhsan' => 'Linh San · nữ miền Nam', 'myan' => 'Mỹ An · nữ miền Trung', 'giahuy' => 'Gia Huy · nam miền Trung'];
 }
-function offering(int $amount) { return [1 => 'thắp hương', 2 => 'dâng hoa quả', 3 => 'dâng gà luộc'][tier($amount)]; }
+function offering(int $amount) { return [1 => 'thắp hương', 2 => 'dâng hoa quả', 3 => 'dâng gà luộc'][donation_tier($amount)]; }
 
 function money_words(int $amount) {
     if ($amount === 0) return 'không đồng';
@@ -78,7 +78,7 @@ function speech_options(array $settings) {
 function speech_options_for_donation(array $settings, array $donation) {
     $options = speech_options($settings);
     $amount = (int)($donation['paid_amount'] ?? $donation['expected_amount'] ?? 10000);
-    $t = tier($amount);
+    $t = donation_tier($amount);
     $activeVoice = '';
     if (!empty($donation['selected_voice_id'])) {
         $activeVoice = trim((string)$donation['selected_voice_id']);

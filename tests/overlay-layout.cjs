@@ -18,6 +18,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  const ready="!!document.getElementById('overlayPositionPreview')?.contentWindow?.CungLayout&&document.getElementById('overlayPositionPreview').contentDocument.getElementById('stage').classList.contains('is-visible')";
  for(let i=0;i<100;i++){if(await evaluate(ready))break;await wait(100)}assert(await evaluate(ready),'admin iframe ready');
  assert.deepEqual(await evaluate("document.getElementById('overlayPositionPreview').contentWindow.CungLayout.value"),{x:1200,y:120,width:880,font_size:32});
+ await evaluate("document.querySelector('[data-tab=display]').click()");await wait(100);
  await evaluate("document.getElementById('overlayPositionForm').closest('section').scrollIntoView({block:'start'})");await wait(100);
  const point=await evaluate("(()=>{const f=document.getElementById('overlayPositionPreview'),b=f.getBoundingClientRect(),c=f.contentDocument.getElementById('stage').getBoundingClientRect();return {x:b.left+c.left+c.width/2,y:b.top+c.top+40,scale:c.width/880}})()");
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y});await send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x-80,y:point.y+50,button:'left',buttons:1});await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x-80,y:point.y+50,button:'left',clickCount:1});await wait(150);
@@ -40,7 +41,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  // Check the redesigned console at its normal view routes and mobile breakpoint.
  for(const width of [1440,390]){
   await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
-  for(const view of ['queue','payments','users','speech','logs','audit','revenue']){
+  for(const view of ['queue','payments','users','speech','logs','audit','revenue','donate','music']){
    await send('Page.navigate',{url:base+'/admin.php?view='+view});
    for(let i=0;i<60;i++){if(await evaluate('document.querySelector(".admin-sidebar nav [aria-current=page]")?.getAttribute("href")==="?view='+view+'"'))break;await wait(50)}
    await wait(80);

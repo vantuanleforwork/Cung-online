@@ -26,7 +26,7 @@ try {
     }
     
     $amount = (int)$in['amount'];
-    if ($amount < MIN_AMOUNT || $amount > 50000000) {
+    if ($amount < 1000 || $amount > 50000000) {
         fail(400, 'Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ');
     }
 
@@ -45,6 +45,21 @@ try {
         fail(403, 'Tài khoản hoặc địa chỉ mạng này đang bị tạm khóa tạo lượt donate.');
     }
 
+    ensure_speech_schema($db);
+    $donateSettings = donation_settings($db);
+    $kind = $in['kind'] ?? 'message';
+    if (!is_string($kind) || !in_array($kind, ['message','music'], true)) fail(400, 'Loại donate không hợp lệ.');
+    $minimum = (int)$donateSettings[$kind === 'music' ? 'music_min' : 'message_min'];
+    if ($amount < $minimum) fail(400, 'Số tiền tối thiểu là ' . number_format($minimum,0,',','.') . 'đ.');
+    $youtubeId = null;
+    if ($kind === 'music') {
+        if (!$donateSettings['music_enabled']) fail(400, 'Donate phát nhạc đang tạm đóng.');
+        if (!is_string($in['music_url'] ?? null)) fail(400, 'Chỉ nhận link YouTube.');
+        try { $youtubeId = youtube_video_id($in['music_url']); }
+        catch (InvalidArgumentException $error) { fail(400, $error->getMessage()); }
+    }
+
+
     // Dọn dẹp các đơn 'pending' cũ của người dùng này để tránh bị nghẽn đơn
     try {
         $db->prepare("DELETE FROM donations WHERE user_id=? AND status='pending' AND created_at < NOW() - INTERVAL 15 SECOND")->execute([$user['id']]);
@@ -57,16 +72,14 @@ try {
 
     $name = clean($user['display_name'], 40) ?: 'Người gửi donate';
     $avatar = $user['custom_avatar_path'] ?: $user['google_avatar_url'];
-    $msg  = clean($in['message'] ?? '', maxlen($amount));
-
-    try { ensure_speech_schema($db); } catch (Throwable $ignore) {}
+    $msg  = clean($in['message'] ?? '', donation_message_limit($amount));
 
     $selectedVoiceId = null;
     $voiceName = null;
     $requestedVoice = trim((string)($in['voice_id'] ?? ''));
-    if ($requestedVoice !== '' && $amount >= 50000) {
+    if ($requestedVoice !== '' && donation_tier($amount) >= 2) {
         try {
-            $currentTier = tier($amount);
+            $currentTier = donation_tier($amount);
             $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? AND tier_min <= ? LIMIT 1');
             $s->execute([$requestedVoice, $currentTier]);
             $vRow = $s->fetch(PDO::FETCH_ASSOC);
@@ -89,6 +102,7 @@ try {
         $code = PREFIX;
         for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, 31)];
         try {
+            $db->beginTransaction();
             if ($hasVoiceCols) {
                 $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
                    ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
@@ -96,8 +110,11 @@ try {
                 $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar) VALUES(?,?,?,?,?,?,?,?,?)')
                    ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar]);
             }
+            $donationId = (int)$db->lastInsertId();
+            $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$donationId]);
+            $db->commit();
             break;
-        } catch (PDOException $e) { if ($t === 4) throw $e; }
+        } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); if ($t === 4 || (int)($e->errorInfo[1] ?? 0) !== 1062) throw $e; }
     }
 
     $qr = 'https://img.vietqr.io/image/' . BANK_ID . '-' . ACCOUNT_NO . '-compact2.png'
@@ -109,6 +126,7 @@ try {
         'status_token' => $statusToken
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
+    if (isset($db) && $db->inTransaction()) $db->rollBack();
     error_log('Create donation error: ' . $e->getMessage());
     fail(500, 'Không thể tạo mã ủng hộ lúc này. Vui lòng tải lại trang và thử lại.');
 }

@@ -1,3 +1,19 @@
+## Donate lời nhắn và YouTube · bản 033
+
+Upload các tệp cập nhật, đăng nhập admin một lần để tự nâng schema lên 11, rồi refresh nguồn Browser Source OBS 1920 × 1080. `config.php` giữ cấu hình triển khai riêng của host.
+
+Index có tab Lời nhắn / Phát nhạc. Cài đặt donate trong admin chứa mức tiền tối thiểu lời nhắn, mốc rồng và tiên nữ, cùng cấu hình nhạc. Mặc định lời nhắn là 10.000 / 50.000 / 200.000đ. Nhạc mặc định tối thiểu 50.000đ, tối đa 180 giây, theo thứ tự thanh toán, âm lượng 50%, nền khung đậm 90%. Những thông số này đều chỉnh được. Đơn tạo trước khi đổi giá giữ mức tối thiểu đã nhận.
+
+Link nhạc chỉ chấp nhận HTTPS với đúng host `www.youtube.com` hoặc `youtu.be` và một mã video hợp lệ. Có hỗ trợ watch, link chia sẻ, Shorts, live và embed. Server xác thực link và số tiền, chỉ tạo yêu cầu nhạc khi webhook thanh toán thành công. Webhook gửi lại không thêm bài trùng. Đơn cần duyệt chỉ phát sau khi được duyệt. Test OBS không tạo bài nhạc hay doanh thu.
+
+Hàng đợi nhạc có ở index và admin. Admin điều khiển dừng/tiếp tục, bài tiếp theo và gỡ bài. Theo số tiền thì bài chờ tiền cao hơn phát trước, bằng tiền thì theo thời gian; bài đang phát được giữ nguyên. Trình phát nằm trong nguồn OBS hiện tại. Preview riêng trong Cài đặt donate cho phép kéo vị trí, nhập kích thước và chỉnh nền trong suốt. YouTube giữ vùng video ít nhất 200 × 200px; opacity áp dụng cho nền khung. Dùng HTTPS cho website và cho phép âm thanh/autoplay của Browser Source.
+
+Trình phát dùng YouTube IFrame API chính thức, giữ hình/video và âm thanh cùng nhau. Video có thể bị chặn nhúng, giới hạn vùng hoặc chặn autoplay. Lỗi video được bỏ qua; video không tiến triển trong 45 giây cũng được chuyển tiếp. Khi trình duyệt chặn autoplay, có thể bấm nút phát qua Interact của Browser Source. Một phiên OBS giữ quyền phát, có heartbeat để tránh nhiều nguồn cùng phát một hàng đợi. Refresh trang giữa bài tiếp tục từ tiến độ gần nhất.
+
+Giọng đọc & hiển thị chia tab Nền tảng / Mẫu câu / Giọng theo mốc / Hiển thị OBS / Kiểm thử. Các trường cấu hình dùng chung vẫn lưu theo form gốc.
+
+Kiểm tra chính `python tests/music.py` dùng database riêng và iframe API mô phỏng để kiểm tra luồng tạo đơn → thanh toán → xếp hàng → phát, giới hạn thời gian và điều khiển. Kiểm tra YouTube thật đã phát được video mẫu của YouTube Developers trong Chrome; khả năng phát từng bài phụ thuộc YouTube và môi trường OBS thực tế.
+
 # Triển khai
 
 ## Video Veo cho OBS · bản 024

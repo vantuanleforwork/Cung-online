@@ -35,7 +35,7 @@ try {
     $row['donor_level'] = donor_level_progress((int)$row['donor_total'])['level'];
     unset($row['donor_total']);
     $row['claim_token'] = $token;
-    $row['tier'] = tier((int)$row['paid_amount']);
+    $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);

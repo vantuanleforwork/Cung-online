@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=32">
+<link rel="stylesheet" href="site.css?v=33">
 <script>
 if (location.pathname.endsWith('/index.html')) {
   history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
@@ -88,6 +88,11 @@ if (location.pathname.endsWith('/index.html')) {
 
 
     <div id="f">
+      <div class="workspace-tabs donation-kind-tabs" role="tablist" aria-label="Loại donate">
+        <button type="button" role="tab" id="donation-tab-message" data-donation-kind="message" aria-controls="donationFields" aria-selected="true">Lời nhắn</button>
+        <button type="button" role="tab" id="donation-tab-music" data-donation-kind="music" aria-controls="donationFields" aria-selected="false">Phát nhạc</button>
+      </div>
+      <div id="donationFields" role="tabpanel" aria-labelledby="donation-tab-message">
       <div class="card-header">
         <p class="sub">Nhập số tiền và viết lời nhắn gửi đến buổi livestream.</p>
       </div>
@@ -109,6 +114,11 @@ if (location.pathname.endsWith('/index.html')) {
       <textarea id="msg" maxlength="225" placeholder="Viết lời nhắn gửi đến Van Tuan Le trên livestream…" aria-describedby="hint cnt"></textarea>
       <div class="row"><span id="hint">Từ 50k: Mở khóa Hỏa Long &amp; tự chọn giọng đọc</span><span id="cnt">0/225</span></div>
 
+      <div id="musicLinkField" hidden>
+        <label for="musicUrl">Link nhạc YouTube</label>
+        <input id="musicUrl" type="url" maxlength="2048" placeholder="https://www.youtube.com/watch?v=… hoặc https://youtu.be/…" aria-describedby="musicRule">
+        <p id="musicRule" class="voice-hint"></p>
+      </div>
       <div class="voice-select-box">
         <div class="voice-head">
           <label for="voiceSelect"><span class="step">03</span>Chọn giọng đọc AI</label>
@@ -123,6 +133,7 @@ if (location.pathname.endsWith('/index.html')) {
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
       <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
       <div id="err" role="alert"></div>
+      </div>
     </div>
 
     <div id="res">
@@ -139,6 +150,7 @@ if (location.pathname.endsWith('/index.html')) {
   </main>
 
     <!-- Lịch sử các phiên donate thành công gần nhất -->
+    <section id="musicQueueSection" class="history" hidden aria-labelledby="musicQueueTitle"><h3 id="musicQueueTitle">Hàng đợi nhạc</h3><p id="musicQueueStatus" class="sub" role="status">Đang tải hàng đợi…</p><ol id="musicQueueList" class="music-queue-list"></ol></section>
     <section id="history" class="history">
       <div class="history-head">
         <h3>Lịch sử donate</h3>
@@ -154,6 +166,7 @@ if (location.pathname.endsWith('/index.html')) {
   </div>
 </div>
 
+<script src="donation-site.js?v=33"></script>
 <script>
 const $=i=>document.getElementById(i);
 let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
@@ -185,6 +198,7 @@ async function refreshStatus(generation){
       skipped:'Đã nhận '+money+'. Lượt này không hiển thị trên live. Vui lòng liên hệ nếu cần hỗ trợ.'
     };
     $('paymentStatus').textContent=labels[d.state]||'Đang cập nhật trạng thái…';
+    if(d.kind==='music'&&d.state!=='pending')$('paymentStatus').textContent+=d.music_eligible?' Bài nhạc đã nhận và chờ hàng đợi / duyệt.':' Số tiền thực nhận chưa đủ mức phát nhạc.';
     if(d.paused&&['review','queued'].includes(d.state))$('paymentStatus').textContent+=' Hàng đợi đang tạm dừng.';
     finished=['shown','skipped'].includes(d.state);
     if(finished){
@@ -203,29 +217,29 @@ function showOrder(value){
 }
 $('newOrder').onclick=()=>{order=null;statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block';upd();};
 
-const lim=a=>a>=50000?225:100;
-const hint=a=>a>=200000?'Từ 200k: Mở khóa Thiên Nữ & toàn bộ giọng VIP':a>=50000?'Từ 50k: Mở khóa Hỏa Long & tự chọn giọng đọc':'Dưới 50k: Giọng đọc mặc định';
+const lim=a=>a>=CungDonate.settings.tier2_min?225:100;
+const hint=a=>a>=CungDonate.settings.tier3_min?'Đã mở khóa tiên nữ và giọng VIP':a>=CungDonate.settings.tier2_min?'Đã mở khóa rồng và tự chọn giọng đọc':'Từ '+money(CungDonate.settings.tier2_min)+' mở chọn giọng và hiệu ứng rồng';
 const money=a=>Number(a).toLocaleString('vi-VN')+'đ';
 
 let availableVoices=null;
 function syncVoiceOptions(a){
   const sel=$('voiceSelect'),badge=$('voiceBadge'),h=$('voiceHint');
   if(!sel||!badge||!h)return;
-  const tier=a>=200000?3:(a>=50000?2:1);
+  const tier=a>=CungDonate.settings.tier3_min?3:(a>=CungDonate.settings.tier2_min?2:1);
   if(tier===1){
     sel.disabled=true;
     sel.replaceChildren(new Option('Giọng đọc mặc định của kênh',''));
     badge.className='voice-badge locked';badge.textContent='Mặc định';
-    h.textContent='💡 Mốc dưới 50k dùng giọng mặc định. Donate từ 50.000đ để tự chọn giọng đọc!';
+    h.textContent='Donate từ '+money(CungDonate.settings.tier2_min)+' để tự chọn giọng đọc.';
     return;
   }
   sel.disabled=false;
   badge.className='voice-badge '+(tier===3?'vip':'unlocked');
-  badge.textContent=tier===3?'⭐ Mở khóa VIP 200k':'✦ Mở khóa 50k';
+  badge.textContent='Mốc '+money(tier===3?CungDonate.settings.tier3_min:CungDonate.settings.tier2_min);
   h.textContent=tier===3?'👑 Đã mở khóa toàn bộ giọng đọc VIP đặc biệt!':'✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.';
   const list=tier===3?(availableVoices?.tier3?.voices||[]):(availableVoices?.tier2?.voices||[]);
   const current=sel.value;
-  sel.replaceChildren(new Option('Giọng đọc mặc định của mốc '+money(tier===3?200000:50000),''));
+  sel.replaceChildren(new Option('Giọng đọc mặc định của mốc '+money(tier===3?CungDonate.settings.tier3_min:CungDonate.settings.tier2_min),''));
   for(const v of list){
     const prefix=(tier===3&&v.tier_min===3)?'⭐ ':'';
     sel.append(new Option(prefix+v.name,v.id));
@@ -334,10 +348,11 @@ function renderProfile(user){
 
 function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
-  const validAmount=raw!==''&&Number.isInteger(a)&&a>=10000&&a<=50000000;
-  $('amountError').textContent=raw===''?'Nhập số tiền từ 10.000đ.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<10000?'Số tiền tối thiểu là 10.000đ.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  const minimum=CungDonate.minimum();
+  const validAmount=raw!==''&&Number.isInteger(a)&&a>=minimum&&a<=50000000;
+  $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(minimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<minimum?'Số tiền tối thiểu là '+money(minimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
-  $('go').disabled=!loggedIn||!validAmount;
+  $('go').disabled=!CungDonate.ready||!loggedIn||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled);
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -382,11 +397,12 @@ $('profileForm').onsubmit=async e=>{
 
 $('go').onclick=async()=>{
   const amount=Number($('amt').value);
-  if(!loggedIn||!Number.isInteger(amount)||amount<10000||amount>50000000){upd();return}
+  if(!loggedIn||!Number.isInteger(amount)||amount<CungDonate.minimum()||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('go').disabled=true;
   try{
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,voice_id:$('voiceSelect')?.value||''})});
+    if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,music_url:$('musicUrl').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{

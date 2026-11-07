@@ -8,7 +8,7 @@ try {
     $db = db();
     // A consistent snapshot keeps state/queue counts in agreement.
     $db->beginTransaction();
-    $s = $db->prepare('SELECT id,code,status,paid_amount,shown,queue_state,(claimed_until > NOW()) AS playing FROM donations WHERE status_token=?');
+    $s = $db->prepare('SELECT id,code,status,paid_amount,shown,queue_state,donation_kind,music_min_amount,(claimed_until > NOW()) AS playing FROM donations WHERE status_token=?');
     $s->execute([$token]);
     $row = $s->fetch(PDO::FETCH_ASSOC);
     if (!$row) { $db->rollBack(); respond(404, ['error' => 'Không tìm thấy đơn.']); }
@@ -29,7 +29,7 @@ try {
     $paused = (bool)$db->query('SELECT paused FROM app_settings WHERE id=1')->fetchColumn();
     $db->commit();
     respond(200, ['code' => $row['code'], 'state' => $state, 'paid_amount' => $row['paid_amount'],
-        'ahead' => $ahead, 'paused' => $paused]);
+        'ahead' => $ahead, 'paused' => $paused, 'kind'=>$row['donation_kind'], 'music_eligible'=>$row['donation_kind']==='music' && (int)$row['paid_amount'] >= (int)$row['music_min_amount']]);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();
     error_log('Payment status: ' . $e->getMessage());

@@ -75,7 +75,7 @@ def run():
                 'PAY2S_SECRET':"'SECRET_KEY_CUA_WEBHOOK'", 'OVERLAY_KEY':"'DOI-CHUOI-NGAU-NHIEN-NAY'",
                 'ADMIN_PASSWORD_HASH':f"'{password_hash}'", 'FPT_TTS_API_KEY':"''",
                 'PREFIX':"'DNTVTL'", 'MIN_AMOUNT':'10000', 'OVERLAY_LEASE_SECONDS':'60',
-                'ANON_FALLBACK':'true', 'REQUIRE_REVIEW':'false', 'BLOCKED':'[]',
+                'ANON_FALLBACK':'true', 'REQUIRE_REVIEW':'false', 'BLOCKED':'[]', 'DONOR_ID_HMAC_KEY':"'integration-fixture-key-at-least-32-chars'",
             }
             for key,value in overrides.items():
                 config, count = re.subn(r'(?m)^const\s+'+key+r'\s*=.*$',
@@ -187,13 +187,13 @@ def run():
             assert sql('SELECT queue_state FROM donations', 'cung_old') == 'held'
             assert sql('SELECT paused FROM app_settings', 'cung_old') == '0'
             sql('CREATE DATABASE cung_002 CHARACTER SET utf8mb4', '')
-            sql('CREATE TABLE app_settings LIKE cung_old.app_settings; INSERT INTO app_settings SELECT * FROM cung_old.app_settings; UPDATE app_settings SET paused=1;', 'cung_002')
+            sql('CREATE TABLE app_settings LIKE cung_old.app_settings; INSERT INTO app_settings SELECT * FROM cung_old.app_settings; UPDATE app_settings SET paused=1; CREATE TABLE donations LIKE cung_old.donations; CREATE TABLE payment_transactions LIKE cung_old.payment_transactions;', 'cung_002')
             def upgrade(database):
                 subprocess.run([str(PHP),'-r',
                     'require $argv[1]; $p=new PDO($argv[2],"root","",[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); ensure_speech_schema($p);',
                     str(site/'speech-schema.php'),f'mysql:host=127.0.0.1;port={port};dbname={database};charset=utf8mb4'],check=True)
             upgrade('cung_002'); upgrade('cung_002')
-            assert sql('SELECT paused,speech_schema_version FROM app_settings','cung_002') == '1\t5'
+            assert sql('SELECT paused,speech_schema_version FROM app_settings','cung_002') == '1\t11'
             assert sql("SHOW COLUMNS FROM tts_audio_cache LIKE 'audio_content'",'cung_002')
             sql((ROOT/'migrate-003.sql').read_text(encoding='utf-8'), 'cung_old')
             assert sql('SELECT speech_enabled FROM app_settings', 'cung_old') == '1'
@@ -205,12 +205,22 @@ def run():
             (site/'config.php').write_text(config, encoding='utf-8')
             sql('DELETE FROM payment_transactions; DELETE FROM donations; DELETE FROM webhook_logs;')
 
+            # Authenticated donor fixture matches the current Google-login requirement.
+            donor_jar = http.cookiejar.CookieJar()
+            donor_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(donor_jar))
+            (site/'fixture-donor.php').write_text("<?php require 'common.php'; donor_session(); $_SESSION['donor_id']=99999; $name=clean($_GET['name'] ?? 'Fixture donor',40); db()->prepare(\"INSERT INTO donor_users(id,google_sub,email,email_hash,display_name) VALUES(99999,'fixture','fixture@example.test',?,?) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name)\")->execute([donor_hash('fixture@example.test'),$name]); echo json_encode(['csrf'=>$_SESSION['donor_csrf']]);",encoding='utf-8')
             def api(endpoint, body=None, token='SECRET_KEY_CUA_WEBHOOK', raw=None, method='POST'):
                 payload = raw if raw is not None else json.dumps(body).encode() if body is not None else None
                 req = urllib.request.Request(f'http://127.0.0.1:{ports[0]}/{endpoint}', data=payload,
                     method=method, headers={'Content-Type':'application/json','Authorization':f'Bearer {token}'})
+                transport = urllib.request.urlopen
+                if endpoint == 'create.php':
+                    fixture_url = f'http://127.0.0.1:{ports[0]}/fixture-donor.php?name=' + urllib.parse.quote(body.get('name','Fixture donor'))
+                    identity = json.load(donor_opener.open(fixture_url))
+                    req.add_header('X-CSRF-Token',identity['csrf'])
+                    transport = donor_opener.open
                 try:
-                    response = urllib.request.urlopen(req, timeout=10)
+                    response = transport(req, timeout=10)
                 except urllib.error.HTTPError as error:
                     response = error
                 with response:
@@ -296,7 +306,7 @@ def run():
             assert admin({'csrf':csrf(html),'action':'pause'})[0] == 401
             _, html = admin({'csrf':csrf(html),'action':'login','password':password})
             assert 'name="password"' not in html and 'Original message' in html
-            assert sql('SELECT speech_schema_version FROM app_settings') == '5'
+            assert sql('SELECT speech_schema_version FROM app_settings') == '11'
             assert '&lt;script&gt;' in html and '<script>alert(1)</script>' not in html
             session_csrf = csrf(html)
             def action(action_name, **fields):
@@ -483,7 +493,7 @@ def run():
             # Upgrade an actual 004 layout without changing its ElevenLabs credentials/voice.
             sql('ALTER TABLE app_settings DROP COLUMN custom_api_url,DROP COLUMN custom_api_engine,DROP COLUMN custom_api_model,DROP COLUMN custom_voice_id; UPDATE app_settings SET speech_schema_version=4; ALTER TABLE tts_audio_cache DROP COLUMN task_id,DROP COLUMN next_poll_at;')
             assert admin(query='?view=speech')[0] == 200
-            assert sql('SELECT speech_schema_version,eleven_voice_id FROM app_settings') == '5\tFixtureVoice123'
+            assert sql('SELECT speech_schema_version,eleven_voice_id FROM app_settings') == '11\tFixtureVoice123'
             assert sql("SELECT api_key FROM tts_credentials WHERE provider='elevenlabs'") == 'fixture-eleven-key'
             subprocess.run([str(PHP),str(ROOT/'tests/custom-voice.php'),str(site)],check=True,env=fixture_env)
             custom_fields=dict(speech_fields,speech_provider='custom_api',custom_api_url='https://api.vibi.pro/v1',
@@ -492,6 +502,8 @@ def run():
             assert action('list_voices',catalog_provider='custom_api')[0] == 400
             assert action('save_speech',**dict(custom_fields,custom_voice_id='',custom_api_key='  fixture-vibi-key  \n'))[0] == 200
             assert sql("SELECT api_key FROM tts_credentials WHERE provider='custom_api'") == 'fixture-vibi-key'
+            # Explicitly remove tier fallback voices when exercising the missing-voice error.
+            sql("UPDATE app_settings SET tier1_voice_id='',tier2_voice_id='',tier3_voice_id=''")
             assert action('preview_voice',**dict(custom_fields,custom_voice_id=''))[0] == 400
             assert action('save_speech',**dict(custom_fields,custom_api_key='fixture-vibi-key'))[0] == 200
             assert action('save_speech',**custom_fields)[0] == 200

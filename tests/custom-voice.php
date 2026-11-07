@@ -26,7 +26,9 @@ $transport=function($base,$path,$key,$method,$payload) use (&$calls,&$poll) {
 };
 $text='Async fixture'; $key=custom_cache_key($text,$options,'mock-custom-key');
 check(custom_audio($db,$text,$options,'mock-custom-key',$transport)===null,'Task queued');
-check(custom_audio($db,$text,$options,'mock-custom-key',$transport)===null,'Task processing');
+// The create request already made one quick GET. Freeze its next poll for deterministic throttling.
+$db->prepare('UPDATE tts_audio_cache SET next_poll_at=NOW()+INTERVAL 30 SECOND WHERE cache_key=?')->execute([$key]);
+check(custom_audio($db,$text,$options,'mock-custom-key',$transport)===null,'Task poll throttled');
 for($i=0;$i<5;$i++)check(custom_audio($db,$text,$options,'mock-custom-key',$transport)===null,'Poll throttled');
 check(count($calls)===2,'Repeated poll must not submit again');
 $db->prepare('UPDATE tts_audio_cache SET next_poll_at=NOW()-INTERVAL 1 SECOND WHERE cache_key=?')->execute([$key]);

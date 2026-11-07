@@ -22,10 +22,10 @@ try {
         $row = preview_donation();
         if (isset($in['tier']) && in_array((int)$in['tier'], [1, 2, 3], true)) {
             $row['tier'] = (int)$in['tier'];
-            $row['paid_amount'] = [1 => 10000, 2 => 50000, 3 => 200000][$row['tier']];
+            $row['paid_amount'] = [1 => (int)donation_settings()['message_min'], 2 => (int)donation_settings()['tier2_min'], 3 => (int)donation_settings()['tier3_min']][$row['tier']];
         } elseif (isset($in['amount']) && (int)$in['amount'] >= 1000) {
             $row['paid_amount'] = (int)$in['amount'];
-            $row['tier'] = tier($row['paid_amount']);
+            $row['tier'] = donation_tier($row['paid_amount']);
         }
         $vId = trim((string)($in['voice_id'] ?? $in['selected_voice_id'] ?? ''));
         if ($vId !== '') {

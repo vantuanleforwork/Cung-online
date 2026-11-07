@@ -33,6 +33,10 @@ CREATE TABLE donations (
   status ENUM('pending','paid') NOT NULL DEFAULT 'pending',
   tx_id VARCHAR(64) NULL UNIQUE,           -- id giao dịch Pay2S, chống xử lý trùng
   is_test TINYINT NOT NULL DEFAULT 0,
+  donation_kind VARCHAR(16) NOT NULL DEFAULT 'message',
+  youtube_id VARCHAR(11) NULL,
+  music_min_amount INT NULL,
+  required_amount INT NOT NULL DEFAULT 0,
   shown TINYINT NOT NULL DEFAULT 0,        -- overlay đã phát chưa
   claim_token CHAR(64) NULL,
   claimed_until DATETIME NULL,
@@ -127,3 +131,29 @@ CREATE TABLE admin_login_attempts (
   attempts INT NOT NULL DEFAULT 0,
   window_start DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4;
+
+CREATE TABLE IF NOT EXISTS donation_settings (
+        id TINYINT PRIMARY KEY, message_min INT NOT NULL DEFAULT 10000,
+        tier2_min INT NOT NULL DEFAULT 50000, tier3_min INT NOT NULL DEFAULT 200000,
+        music_min INT NOT NULL DEFAULT 50000, music_seconds INT NOT NULL DEFAULT 180,
+        music_order VARCHAR(16) NOT NULL DEFAULT 'time', music_volume INT NOT NULL DEFAULT 50,
+        music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
+        music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
+        music_height INT NOT NULL DEFAULT 292, music_enabled TINYINT NOT NULL DEFAULT 1
+    ) ENGINE=InnoDB CHARACTER SET utf8mb4;
+
+CREATE TABLE IF NOT EXISTS music_requests (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, donation_id INT NOT NULL UNIQUE,
+        video_id VARCHAR(11) NOT NULL, state VARCHAR(16) NOT NULL DEFAULT 'waiting',
+        position_seconds DECIMAL(10,2) NOT NULL DEFAULT 0, title VARCHAR(200) NOT NULL DEFAULT '',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX music_waiting(state,id), FOREIGN KEY(donation_id) REFERENCES donations(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB CHARACTER SET utf8mb4;
+
+CREATE TABLE IF NOT EXISTS music_state (
+        id TINYINT PRIMARY KEY, current_id BIGINT UNSIGNED NULL, paused TINYINT NOT NULL DEFAULT 0,
+        owner VARCHAR(64) NOT NULL DEFAULT '', lease_until DATETIME NULL
+    ) ENGINE=InnoDB CHARACTER SET utf8mb4;
+
+INSERT IGNORE INTO donation_settings(id) VALUES(1);
+INSERT IGNORE INTO music_state(id) VALUES(1);

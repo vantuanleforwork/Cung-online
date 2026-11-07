@@ -10,7 +10,7 @@ try {
     $tier = isset($in['tier']) && in_array((int)$in['tier'], [1, 2, 3], true) ? (int)$in['tier'] : (int)($_GET['tier'] ?? 1);
     if (in_array($tier, [1, 2, 3], true)) {
         $demo['tier'] = $tier;
-        $demo['paid_amount'] = [1 => 10000, 2 => 50000, 3 => 200000][$tier];
+        $demo['paid_amount'] = [1 => (int)donation_settings()['message_min'], 2 => (int)donation_settings()['tier2_min'], 3 => (int)donation_settings()['tier3_min']][$tier];
     }
     $vId = trim((string)($in['voice_id'] ?? $_GET['voice_id'] ?? $_GET['voice'] ?? ''));
     if ($vId !== '') {
