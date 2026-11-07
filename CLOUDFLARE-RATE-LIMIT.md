@@ -2,9 +2,13 @@
 
 ## Trạng thái ngày 08/11/2026
 
-Website đã trả phản hồi qua Cloudflare. Rule dưới đây đang chờ triển khai. Công cụ điều khiển trình duyệt dừng vì không xác minh được URL và phiên làm việc chưa có kết nối API Cloudflare. Chưa xác định gói tài khoản hoặc kiểm tra các rule đang có.
+Đã triển khai trực tiếp trên dashboard Cloudflare và xác nhận trạng thái Active. Zone dùng gói Free. Trước khi triển khai có 0/1 rule rate limit và 0/5 custom rule.
 
-## Rule khởi điểm
+Rule `Donate public endpoints` đếm theo IP, ngưỡng 60 request / 10 giây, hành động Block trong 10 giây. Biểu thức đang dùng là biểu thức Path của gói Free bên dưới. Vì gói Free giới hạn trường biểu thức, các hostname được proxy trong zone có đường dẫn trùng cũng thuộc phạm vi rule. DNS của zone có bản ghi wildcard được proxy.
+
+Đã xác nhận rule được lưu và Active trên dashboard. Kiểm tra truy cập thông thường được thực hiện sau khi bật. Cần tiếp tục theo dõi Security Events khi có lưu lượng livestream thực tế.
+
+## Cấu hình và cách quản lý
 
 Ngưỡng đề xuất là 60 request mỗi 10 giây cho mỗi IP, Block 10 giây. Đây là lựa chọn ban đầu cho dự án, cần điều chỉnh theo Security Events khi livestream có nhiều người dùng chung IP.
 
@@ -36,4 +40,4 @@ Biểu thức chỉ dùng Path dưới đây tác động đến các đường 
 - Mở trang donate, đăng nhập Google, tra cứu đơn, xem BXH và kiểm tra admin. Kiểm tra nhận thanh toán cùng OBS trên phiên thật.
 - Theo dõi Security Events, lọc rule vừa tạo để xem request bị chặn. Nếu khách dùng chung mạng bị chặn, nâng ngưỡng hoặc Disable rule để điều chỉnh.
 
-Tệp hướng dẫn này nên giữ trên máy quản trị. Khi tiếp tục cấu hình trực tiếp, mở sẵn dashboard Cloudflare và đăng nhập vào zone ở trên.
+Tệp hướng dẫn này nên giữ trên máy quản trị. Để xem hoặc điều chỉnh, mở rule `Donate public endpoints` trong Security → Security rules.
