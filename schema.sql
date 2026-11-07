@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS donation_settings (
         music_order VARCHAR(16) NOT NULL DEFAULT 'time', music_volume INT NOT NULL DEFAULT 50,
         music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
         music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
-        music_height INT NOT NULL DEFAULT 292, music_enabled TINYINT NOT NULL DEFAULT 1
+        music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE IF NOT EXISTS music_requests (

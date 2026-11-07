@@ -45,6 +45,14 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  for(let i=0;i<150;i++){if(await evaluate(playing))break;await wait(100)}assert(await evaluate(playing),'OBS starts the paid music queue');
  assert.equal(await evaluate('testPlayers.find(p=>!p.destroyed).volume'),40);
  assert.equal(await evaluate('document.getElementById("musicCard").hidden'),false);
+ assert.equal(await evaluate('getComputedStyle(document.getElementById("musicVideo")).opacity'),'0');
+ assert.equal(await evaluate('document.getElementById("musicNext").hidden'),false);
+ assert(await evaluate('document.getElementById("musicNextTitle").textContent.includes("Fixture song")'));
+ await wait(600);
+ assert(await evaluate('Number(document.querySelector(".music-progress").getAttribute("aria-valuenow"))>0'));
+ assert.deepEqual(await evaluate('CungMusicProgress(4,8,180)'),{elapsed:4,total:8,remaining:4,percent:50,showNext:true});
+ assert.deepEqual(await evaluate('CungMusicProgress(15,240,60)'),{elapsed:15,total:60,remaining:45,percent:25,showNext:false});
+
  const firstVideo=await evaluate('testPlayers.find(p=>!p.destroyed).videoId');
  const playerShot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'music-obs-fixture-033.png'),Buffer.from(playerShot.data,'base64'));
  // Get an authenticated form token while keeping the OBS page running.

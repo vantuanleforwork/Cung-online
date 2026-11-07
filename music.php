@@ -13,7 +13,7 @@ function ensure_music_schema(PDO $db): void {
         music_order VARCHAR(16) NOT NULL DEFAULT 'time', music_volume INT NOT NULL DEFAULT 50,
         music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
         music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
-        music_height INT NOT NULL DEFAULT 292, music_enabled TINYINT NOT NULL DEFAULT 1
+        music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1
     ) ENGINE=InnoDB CHARACTER SET utf8mb4");
     $db->exec('INSERT IGNORE INTO donation_settings(id) VALUES(1)');
     $db->exec("CREATE TABLE IF NOT EXISTS music_requests (
@@ -40,7 +40,7 @@ function donation_settings(?PDO $db = null): array {
         if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
         return ['message_min'=>MIN_AMOUNT,'tier2_min'=>50000,'tier3_min'=>200000,
             'music_min'=>50000,'music_seconds'=>180,'music_order'=>'time','music_volume'=>50,
-            'music_opacity'=>90,'music_x'=>48,'music_y'=>740,'music_width'=>360,'music_height'=>292,'music_enabled'=>1];
+            'music_opacity'=>90,'music_x'=>48,'music_y'=>740,'music_width'=>360,'music_height'=>160,'music_enabled'=>1];
     }
 }
 
@@ -89,7 +89,7 @@ function music_admin_action(PDO $db, array $in): void {
     if ($action === 'save_donation_settings') {
         $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000],
             'music_min'=>[1000,50000000], 'music_seconds'=>[10,3600], 'music_volume'=>[0,100], 'music_opacity'=>[0,100],
-            'music_x'=>[0,1680], 'music_y'=>[0,820], 'music_width'=>[240,960], 'music_height'=>[260,700]];
+            'music_x'=>[0,1680], 'music_y'=>[0,940], 'music_width'=>[240,960], 'music_height'=>[140,700]];
         $values = [];
         foreach ($limits as $key => [$min,$max]) {
             $value = filter_var($in[$key] ?? null, FILTER_VALIDATE_INT);
@@ -174,7 +174,10 @@ function music_heartbeat(PDO $db, array $in): array {
             }
         }
         $db->prepare('UPDATE music_state SET current_id=? WHERE id=1')->execute([$current ? $current['id'] : null]);
+        $nextQuery = $db->query("SELECT q.id,q.video_id,q.title,d.name FROM music_requests q JOIN donations d ON d.id=q.donation_id
+            WHERE q.state='waiting' AND d.status='paid' AND d.is_test=0 AND d.queue_state='queued' ORDER BY " . music_order_sql($settings) . ' LIMIT 1');
+        $next = $nextQuery->fetch(PDO::FETCH_ASSOC) ?: null;
         $db->commit();
-        return ['owner'=>true, 'paused'=>(bool)$state['paused'] || !$settings['music_enabled'], 'item'=>$current, 'settings'=>$settings];
+        return ['next'=>$next,'owner'=>true, 'paused'=>(bool)$state['paused'] || !$settings['music_enabled'], 'item'=>$current, 'settings'=>$settings];
     } catch (Throwable $error) { if ($db->inTransaction()) $db->rollBack(); throw $error; }
 }

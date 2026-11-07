@@ -1,3 +1,11 @@
+## Widget nhạc gọn · bản 034
+
+Trình phát OBS hiển thị tên bài, người gửi, thời gian và thanh phần trăm. Vùng iframe YouTube được đặt opacity 0 theo yêu cầu, âm thanh vẫn dùng trình phát YouTube. Đây vẫn là luồng video/âm thanh từ YouTube và sử dụng băng thông video. Việc phát phụ thuộc YouTube, giới hạn nhúng và chính sách autoplay của trình duyệt.
+
+Tiến độ tính trên min(thời lượng bài, thời gian tối đa admin). Bài chưa biết thời lượng dùng giới hạn admin cho đến khi API có dữ liệu. Còn 30 giây thì hiện bài kế tiếp theo thứ tự hiện tại; bài ngắn hơn 30 giây hiện ngay từ đầu. Không có bài chờ thì vùng sắp phát được ẩn. Tạm dừng giữ nguyên tiến độ. Tên bài sắp phát được lấy qua YouTube oEmbed và cache lại; khi không lấy được tên, widget hiển thị mã video.
+
+Upload bản 034, đăng nhập admin một lần để nâng schema 12, rồi refresh Browser Source trong OBS. Chiều cao mặc định 292px cũ được đổi thành 160px cho widget gọn; vị trí và các kích thước tùy chỉnh khác được giữ. Preview trong admin dùng cùng giao diện mới. Độ đậm nền khung vẫn chỉnh riêng trong admin. Nếu autoplay bị chặn, dùng Interact của OBS để bấm Bật phát nhạc.
+
 ## Donate lời nhắn và YouTube · bản 033
 
 Upload các tệp cập nhật, đăng nhập admin một lần để tự nâng schema lên 11, rồi refresh nguồn Browser Source OBS 1920 × 1080. `config.php` giữ cấu hình triển khai riêng của host.
@@ -6,7 +14,7 @@ Index có tab Lời nhắn / Phát nhạc. Cài đặt donate trong admin chứa
 
 Link nhạc chỉ chấp nhận HTTPS với đúng host `www.youtube.com` hoặc `youtu.be` và một mã video hợp lệ. Có hỗ trợ watch, link chia sẻ, Shorts, live và embed. Server xác thực link và số tiền, chỉ tạo yêu cầu nhạc khi webhook thanh toán thành công. Webhook gửi lại không thêm bài trùng. Đơn cần duyệt chỉ phát sau khi được duyệt. Test OBS không tạo bài nhạc hay doanh thu.
 
-Hàng đợi nhạc có ở index và admin. Admin điều khiển dừng/tiếp tục, bài tiếp theo và gỡ bài. Theo số tiền thì bài chờ tiền cao hơn phát trước, bằng tiền thì theo thời gian; bài đang phát được giữ nguyên. Trình phát nằm trong nguồn OBS hiện tại. Preview riêng trong Cài đặt donate cho phép kéo vị trí, nhập kích thước và chỉnh nền trong suốt. YouTube giữ vùng video ít nhất 200 × 200px; opacity áp dụng cho nền khung. Dùng HTTPS cho website và cho phép âm thanh/autoplay của Browser Source.
+Hàng đợi nhạc có ở index và admin. Admin điều khiển dừng/tiếp tục, bài tiếp theo và gỡ bài. Theo số tiền thì bài chờ tiền cao hơn phát trước, bằng tiền thì theo thời gian; bài đang phát được giữ nguyên. Trình phát nằm trong nguồn OBS hiện tại. Preview riêng trong Cài đặt donate cho phép kéo vị trí, nhập kích thước và chỉnh nền trong suốt. Từ bản 034, iframe YouTube được đặt trong suốt và dùng widget nhạc gọn; opacity trong cài đặt áp dụng cho nền khung. Dùng HTTPS cho website và cho phép âm thanh/autoplay của Browser Source.
 
 Trình phát dùng YouTube IFrame API chính thức, giữ hình/video và âm thanh cùng nhau. Video có thể bị chặn nhúng, giới hạn vùng hoặc chặn autoplay. Lỗi video được bỏ qua; video không tiến triển trong 45 giây cũng được chuyển tiếp. Khi trình duyệt chặn autoplay, có thể bấm nút phát qua Interact của Browser Source. Một phiên OBS giữ quyền phát, có heartbeat để tránh nhiều nguồn cùng phát một hàng đợi. Refresh trang giữa bài tiếp tục từ tiến độ gần nhất.
 

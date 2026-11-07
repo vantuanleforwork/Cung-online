@@ -4,18 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Preview trình phát nhạc OBS</title>
-  <link rel="stylesheet" href="music-player.css?v=33">
+  <link rel="stylesheet" href="music-player.css?v=34">
 </head>
 <body class="music-editor">
   <div id="obsFrame">
-    <section id="musicCard" class="music-card">
-      <header>
-        <strong>Đang phát · Nhạc từ người xem</strong>
-        <span>Nguyễn Văn An · 50.000đ</span>
-      </header>
-      <div class="music-video music-preview-video">▶ YouTube</div>
-    </section>
+    <section id="musicCard" class="music-card"><header><strong id="musicTitle">Một bài nhạc từ người xem</strong><span id="musicSender">Nguyễn Văn An · 50.000đ</span></header>
+<div class="music-progress" role="progressbar" aria-label="Tiến độ bài nhạc" aria-valuemin="0" aria-valuemax="100" aria-valuenow="65"><div id="musicProgressFill" style="width:65%"></div></div>
+<div class="music-clock"><span id="musicTime">1:57 / 3:00</span><span id="musicPercent">65%</span></div>
+<div id="musicNext" class="music-next" hidden><small>SẮP PHÁT</small><strong id="musicNextTitle"></strong></div>
+<button id="musicEnable" class="music-enable" type="button" hidden>Bật phát nhạc</button>
+<div id="musicVideo" class="music-video" aria-hidden="true"></div></section>
   </div>
-  <script src="music-layout.js?v=33"></script>
+  <script src="music-layout.js?v=34"></script>
 </body>
 </html>

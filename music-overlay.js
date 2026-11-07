@@ -8,7 +8,40 @@
   const sender = document.getElementById('musicSender');
   const owner = [...crypto.getRandomValues(new Uint8Array(16))].map(value => value.toString(16).padStart(2,'0')).join('');
   let player, item, settings, paused = false, pendingEvent, inFlight = false, lastReply = 0, generation = 0;
+  const progressBar = document.querySelector('.music-progress');
+  const progressFill = document.getElementById('musicProgressFill');
+  const nextBox = document.getElementById('musicNext');
+  const nextTitle = document.getElementById('musicNextTitle');
+  const enable = document.getElementById('musicEnable');
+  const titles = new Map();
+  let upcoming = null;
   let apiPromise;
+  const clock = seconds => Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');
+  function updateProgress() {
+    if (!item || !settings) return;
+    const metric = CungMusicProgress(player?.getCurrentTime?.() || item.position_seconds, player?.getDuration?.(), settings.music_seconds);
+    progressFill.style.width = metric.percent+'%';
+    progressBar.setAttribute('aria-valuenow',String(metric.percent));
+    document.getElementById('musicPercent').textContent = metric.percent+'%';
+    document.getElementById('musicTime').textContent = clock(metric.elapsed)+' / '+clock(metric.total);
+    nextBox.hidden = !upcoming || !metric.showNext;
+    nextTitle.textContent = upcoming ? (upcoming.title || titles.get(Number(upcoming.id)) || 'YouTube · '+upcoming.video_id) : '';
+    return metric;
+  }
+  function prepareUpcoming(next) {
+    upcoming = next;
+    if (!next || next.title || titles.has(Number(next.id))) return;
+    const id = Number(next.id);
+    titles.set(id,'');
+    const metadataController = new AbortController();
+    const metadataTimeout = setTimeout(() => metadataController.abort(),6000);
+    fetch('music-title.php?k='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id}),signal:metadataController.signal})
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (data?.title) titles.set(id,data.title); updateProgress(); })
+      .catch(() => {})
+      .finally(() => clearTimeout(metadataTimeout));
+  }
+  enable.addEventListener('click', () => { autoplayBlocked = false; enable.hidden = true; player?.playVideo?.(); });
   let lastMovement = 0, lastPosition = 0, autoplayBlocked = false;
   function youtubeAPI() {
     if (window.YT?.Player) return Promise.resolve();
@@ -25,7 +58,7 @@
     generation++;
     if (player) { player.destroy(); player = null; }
     document.getElementById('musicVideo').replaceChildren();
-    card.hidden = true; item = null;
+    card.hidden = true; item = null; enable.hidden = true; nextBox.hidden = true;
   }
   function finish(event) {
     if (!item) return;
@@ -35,6 +68,7 @@
   async function start(next) {
     stop(); item = next; card.hidden = false;
     lastMovement = performance.now(); lastPosition = Number(next.position_seconds)||0; autoplayBlocked = false;
+    updateProgress();
     const version = generation;
     title.textContent = next.title || 'Đang tải nhạc YouTube…';
     sender.textContent = next.name+' · '+Number(next.paid_amount).toLocaleString('vi-VN')+'đ';
@@ -57,14 +91,14 @@
             if (version !== generation) return;
             if (event.data === YT.PlayerState.ENDED) finish('ended');
             if (event.data === YT.PlayerState.PLAYING) {
-              autoplayBlocked = false;
+              autoplayBlocked = false; enable.hidden = true;
               if (paused) event.target.pauseVideo();
               const name = event.target.getVideoData()?.title;
               if (name) { item.title = name; title.textContent = name; }
             }
           },
           onError() { if (version === generation) finish('error'); },
-          onAutoplayBlocked() { autoplayBlocked = true; title.textContent = 'Bấm ▶ để cho phép phát nhạc'; }
+          onAutoplayBlocked() { autoplayBlocked = true; enable.hidden = false; }
         }
       });
     } catch (error) {
@@ -89,6 +123,7 @@
       if (!data.owner) { stop(); return; }
       settings = data.settings; paused = data.paused;
       CungMusicLayout.apply(settings);
+      prepareUpcoming(data.next);
       if (!data.item) { stop(); return; }
       if (Number(item?.id) !== Number(data.item.id)) { start(data.item); return; }
       if (player?.getPlayerState) {
@@ -107,7 +142,8 @@
     const position = Number(player?.getCurrentTime?.()||0);
     if (position > lastPosition + .1) { lastPosition = position; lastMovement = performance.now(); }
     if (paused || autoplayBlocked) lastMovement = performance.now();
-    if (position >= Number(settings.music_seconds)) finish('ended');
+    const metric = updateProgress();
+    if (position >= metric.total) finish('ended');
     else if (player && performance.now()-lastMovement > 45000) finish('error');
   },250);
   window.addEventListener('pagehide',stop);

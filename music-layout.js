@@ -3,12 +3,12 @@
   const card = document.getElementById('musicCard');
   const frame = document.getElementById('obsFrame');
   const editor = document.body.classList.contains('music-editor');
-  let layout = {music_x:48,music_y:740,music_width:360,music_height:292,music_opacity:90};
+  let layout = {music_x:48,music_y:740,music_width:360,music_height:160,music_opacity:90};
   let scale = 1;
   function apply(value) {
     layout = {...layout,...value};
     layout.music_width = Math.max(240, Math.min(960, Number(layout.music_width)||360));
-    layout.music_height = Math.max(260, Math.min(700, Number(layout.music_height)||292));
+    layout.music_height = Math.max(140, Math.min(700, Number(layout.music_height)||160));
     layout.music_x = Math.max(0, Math.min(1920-layout.music_width, Number(layout.music_x)||0));
     layout.music_y = Math.max(0, Math.min(1080-layout.music_height, Number(layout.music_y)||0));
     card.style.left = layout.music_x+'px'; card.style.top = layout.music_y+'px';

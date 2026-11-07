@@ -75,7 +75,7 @@ def run():
                 assert admin(dict(action='login',csrf=csrf,password=password))[0]==200
                 code,html=admin();assert code==200 and 'overlayPositionForm' in html
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
-                assert sql('SELECT speech_schema_version,overlay_x,overlay_y,overlay_width,paused FROM app_settings')=='11\t960\t64\t760\t1'
+                assert sql('SELECT speech_schema_version,overlay_x,overlay_y,overlay_width,paused FROM app_settings')=='12\t960\t64\t760\t1'
                 def save(**values): return admin(dict(action='save_overlay',csrf=csrf,**values))
                 good=dict(overlay_x='1200',overlay_y='120',overlay_width='880',overlay_font_size='32')
                 assert save(**good)[0]==200

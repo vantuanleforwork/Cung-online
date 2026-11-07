@@ -80,7 +80,7 @@ def run():
                     try:
                         with opener.open(req) as response:return response.status,json.loads(response.read().decode('utf-8-sig'))
                     except urllib.error.HTTPError as error:return error.code,json.loads(error.read().decode('utf-8-sig'))
-                values=dict(message_min=20000,tier2_min=75000,tier3_min=300000,music_min=60000,music_seconds=30,music_volume=40,music_opacity=80,music_x=48,music_y=740,music_width=360,music_height=292,music_order='time',music_enabled='1')
+                values=dict(message_min=20000,tier2_min=75000,tier3_min=300000,music_min=60000,music_seconds=30,music_volume=40,music_opacity=80,music_x=48,music_y=740,music_width=360,music_height=160,music_order='time',music_enabled='1')
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**values))[0]==200
                 assert request('donation-settings.php')[1]['tier2_min']==75000
                 assert admin(dict(action='save_donation_settings',csrf='bad',**values))[0]==403
@@ -133,6 +133,10 @@ def run():
                 five=create(60000)[1];assert pay(five,'music-five',60000)[0]==200
                 six=create(60000,'https://youtu.be/9bZkp7q19f0')[1];assert pay(six,'music-six',60000)[0]==200
                 sql("UPDATE music_state SET owner='',lease_until=NULL,current_id=NULL,paused=0; UPDATE donation_settings SET music_seconds=10; UPDATE app_settings SET paused=1,speech_enabled=0")
+                sql("UPDATE music_requests SET title=CONCAT('Fixture song ',id) WHERE state='waiting'")
+                cached=request('music-title.php?k=layout-fixture-key',dict(id=sql("SELECT id FROM music_requests WHERE state='waiting' ORDER BY id LIMIT 1")))
+                assert cached[0]==200 and cached[1]['title'].startswith('Fixture song')
+                assert request('music-title.php?k=wrong',dict(id=1))[0]==403
                 # Inspect real browser UI and preview without calling external YouTube.
                 cookie=next(c.value for c in jar if c.name=='cung_admin')
                 browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,text=True,creationflags=FLAGS,timeout=60)

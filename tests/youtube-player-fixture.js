@@ -12,6 +12,7 @@ window.YT = {
     }
     getIframe() { return this.frame; }
     setVolume(value) { this.volume = value; }
+    getDuration() { return 60; }
     getCurrentTime() { return this.position + (this.state === 1 ? (performance.now()-this.started)/1000 : 0); }
     getPlayerState() { return this.state; }
     getVideoData() { return {title:'Bài nhạc kiểm thử '+this.videoId}; }

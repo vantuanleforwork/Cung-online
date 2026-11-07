@@ -193,7 +193,7 @@ def run():
                     'require $argv[1]; $p=new PDO($argv[2],"root","",[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); ensure_speech_schema($p);',
                     str(site/'speech-schema.php'),f'mysql:host=127.0.0.1;port={port};dbname={database};charset=utf8mb4'],check=True)
             upgrade('cung_002'); upgrade('cung_002')
-            assert sql('SELECT paused,speech_schema_version FROM app_settings','cung_002') == '1\t11'
+            assert sql('SELECT paused,speech_schema_version FROM app_settings','cung_002') == '1\t12'
             assert sql("SHOW COLUMNS FROM tts_audio_cache LIKE 'audio_content'",'cung_002')
             sql((ROOT/'migrate-003.sql').read_text(encoding='utf-8'), 'cung_old')
             assert sql('SELECT speech_enabled FROM app_settings', 'cung_old') == '1'
@@ -306,7 +306,7 @@ def run():
             assert admin({'csrf':csrf(html),'action':'pause'})[0] == 401
             _, html = admin({'csrf':csrf(html),'action':'login','password':password})
             assert 'name="password"' not in html and 'Original message' in html
-            assert sql('SELECT speech_schema_version FROM app_settings') == '11'
+            assert sql('SELECT speech_schema_version FROM app_settings') == '12'
             assert '&lt;script&gt;' in html and '<script>alert(1)</script>' not in html
             session_csrf = csrf(html)
             def action(action_name, **fields):
@@ -493,7 +493,7 @@ def run():
             # Upgrade an actual 004 layout without changing its ElevenLabs credentials/voice.
             sql('ALTER TABLE app_settings DROP COLUMN custom_api_url,DROP COLUMN custom_api_engine,DROP COLUMN custom_api_model,DROP COLUMN custom_voice_id; UPDATE app_settings SET speech_schema_version=4; ALTER TABLE tts_audio_cache DROP COLUMN task_id,DROP COLUMN next_poll_at;')
             assert admin(query='?view=speech')[0] == 200
-            assert sql('SELECT speech_schema_version,eleven_voice_id FROM app_settings') == '11\tFixtureVoice123'
+            assert sql('SELECT speech_schema_version,eleven_voice_id FROM app_settings') == '12\tFixtureVoice123'
             assert sql("SELECT api_key FROM tts_credentials WHERE provider='elevenlabs'") == 'fixture-eleven-key'
             subprocess.run([str(PHP),str(ROOT/'tests/custom-voice.php'),str(site)],check=True,env=fixture_env)
             custom_fields=dict(speech_fields,speech_provider='custom_api',custom_api_url='https://api.vibi.pro/v1',
