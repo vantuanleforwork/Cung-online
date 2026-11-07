@@ -210,6 +210,8 @@ if ($loggedIn) {
             }
         }
         }
+    } catch (InvalidArgumentException $e) {
+        http_response_code(400); $error = $e->getMessage();
     } catch (Throwable $e) {
         error_log('Admin list: ' . $e->getMessage()); http_response_code(500);
         $error = 'Chưa đọc được dữ liệu. Kiểm tra cấu hình và chạy đủ migration.';
@@ -223,7 +225,7 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quản trị donate · Van Tuan Le</title>
 <link rel="stylesheet" href="ui-tokens.css?v=32">
-<link rel="stylesheet" href="admin-theme.css?v=33"></head>
+<link rel="stylesheet" href="admin-theme.css?v=35"></head>
 <body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
 <?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
 <a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>
@@ -324,4 +326,5 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php endif ?></main>
 <?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
 <?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=33"></script><?php endif ?>
+<?php if ($loggedIn && $view==='revenue'): ?><script src="revenue-chart.js?v=35"></script><?php endif ?>
 </body></html>
