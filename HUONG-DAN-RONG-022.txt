@@ -1,0 +1,22 @@
+BẢN 022 — HỎA LONG ĐIỆN ẢNH, 16 GIÂY
+
+Giải nén gói Cung-online-Dragon-Cinematic-022.zip vào thư mục web hiện tại, giữ nguyên đường dẫn assets/dragon/*.png.
+Gói cập nhật overlay.html, overlay-fx.css, intro-fx.js, sfx.js và bổ sung dragon-fx.js cùng 4 ảnh PNG.
+Không cần sửa cấu hình hoặc database. Tải lại Browser Source trong OBS sau khi upload.
+
+Xem thử: overlay.html?preview=1&tier=2&motion=1
+Bấm Phát thử để trình duyệt cho phép âm thanh. Có thể thêm &sfxvol=0.5 để giảm âm lượng, hoặc &sfx=0 để tắt tiếng hiệu ứng.
+
+0–2 giây: móng vuốt lao đến, vồ màn hình, kéo vệt cào.
+2–5 giây: khói lan rộng, đầu rồng châu Á xuyên khói nhìn thẳng.
+5–7,25 giây: nhe răng, gầm trầm và lấy hơi, họng nóng sáng.
+7,25–10 giây: phun lửa về phía người xem, kèm lửa rền và tàn lửa.
+10–16 giây: chuyển qua khói, hiện thân dài cuộn lượn, quất đuôi và bay đi.
+Sau cảnh mới hiện thẻ lời gửi gắm và đọc giọng theo cấu hình đang dùng.
+
+Hình là các lớp ảnh VFX được chuyển động bằng canvas, không phải video 3D dựng sẵn. Âm thanh tổng hợp bằng WebAudio.
+Trình duyệt bật giảm chuyển động vẫn dùng chế độ mở đầu ngắn; motion=1 ở trang xem thử cho phép xem đủ cảnh.
+
+Kiểm tra: node tests/dragon.cjs
+Xuất video xem trước có tiếng: node tests/dragon.cjs --record (artifacts/dragon-preview.webm).
+Các prompt tạo hình được lưu trong assets/dragon/PROMPTS.md.

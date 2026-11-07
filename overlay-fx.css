@@ -14,13 +14,13 @@
 .tier-intro.tier-3 .intro-title strong{background-image:linear-gradient(180deg,#fff 6%,#ffe9ac 42%,#cfa8ff 100%);
   filter:drop-shadow(0 4px 12px #000b) drop-shadow(0 0 26px #b98cff99)}
 .tier-intro.tier-3 .intro-title span{color:#f0e0ff}
-.tier-intro.tier-2 .intro-title{animation:fxTitle2 var(--fx-d,4200ms) ease both}
+.tier-intro.tier-2 .intro-title{bottom:8vh;animation:fxTitle2 var(--fx-d,16000ms) ease both}
 .tier-intro.tier-3 .intro-title{animation:fxTitle3 var(--fx-d,5400ms) ease both}
 
 @keyframes fxTitle2{
-  0%,36%{opacity:0;transform:translate(-50%,24px) scale(.94);filter:blur(10px)}
-  46%{opacity:1;transform:translate(-50%,0) scale(1);filter:blur(0)}
-  88%{opacity:1;transform:translate(-50%,-4px) scale(1.015);filter:blur(0)}
+  0%,76%{opacity:0;transform:translate(-50%,24px) scale(.94);filter:blur(10px)}
+  83%{opacity:1;transform:translate(-50%,0) scale(1);filter:blur(0)}
+  94%{opacity:1;transform:translate(-50%,-4px) scale(1.015);filter:blur(0)}
   100%{opacity:0;transform:translate(-50%,-12px) scale(1.03);filter:blur(6px)}}
 @keyframes fxTitle3{
   0%,46%{opacity:0;transform:translate(-50%,24px) scale(.9);filter:blur(12px)}

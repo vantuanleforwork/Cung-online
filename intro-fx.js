@@ -113,11 +113,14 @@ function drawHead(ctx,q,ang,S,t,open,ro){
 }
 function dragonScene(W,H){
   const parts=new Particles(),rings=[],S=H*.095,N=96,L=.46,TOTAL=1.12+L;
-  let roared=false;
+  let roared=false,s1=false,s2=false;
   const P=(s,t)=>[W*(-.12+s),H*.46+H*(.17+.05*sin(s*3))*sin(s*8.5+.9-t*2.2)+H*.05*sin(s*3.1+t)];
   return {frame(ctx,t,u,dt){
     const dim=smooth(seg(u,0,.14))*(1-smooth(seg(u,.86,1)));
     backdrop(ctx,W,H,dim,'12,4,2','10,2,1');
+    const slam=x=>{const d=t-x;return d>0&&d<.45?Math.exp(-d*9):0};
+    const shk=slam(1)*14+slam(1.28)*10+sin(PI*seg(u,.36,.66))*4;
+    ctx.save();if(shk>.1)ctx.translate(rnd(-shk,shk),rnd(-shk,shk));
     const sh=TOTAL*(u+.1*sin(TAU*u)),e=.004,pts=[];
     for(let i=0;i<=N;i++){
       const s=sh-i*L/N,a=P(s-e,t),b=P(s+e,t),p=P(s,t);
@@ -168,6 +171,8 @@ function dragonScene(W,H){
     const ro=sin(PI*seg(u,.36,.66));
     drawHead(ctx,head,ang,S,t,.12+.5*ro,ro);
     const mx=head.x+(cos(ang)*1.2+sin(ang)*.1)*S,my=head.y+(sin(ang)*1.2-cos(ang)*.1)*S;
+    if(!s1&&t>=1){s1=true;rings.push({x:head.x,y:head.y,t0:t})}
+    if(!s2&&t>=1.28){s2=true;rings.push({x:head.x,y:head.y,t0:t})}
     if(!roared&&u>=.38){roared=true;rings.push({x:mx,y:my,t0:t})}
     if(ro>.05){
       const n=Math.ceil(dt*1000*ro);
@@ -192,6 +197,7 @@ function dragonScene(W,H){
       ctx.beginPath();ctx.arc(r.x,r.y,k*H*.9,0,TAU);ctx.stroke();
     }
     ctx.globalCompositeOperation='source-over';
+    ctx.restore();
   }};
 }
 
@@ -312,11 +318,14 @@ function run(tier,ms,signal,canvas){
   return new Promise((resolve,reject)=>{
     const abort=()=>new DOMException('Lease lost','AbortError');
     if(signal&&signal.aborted)return reject(abort());
-    if(ms<600){const timer=setTimeout(done,ms);const cancel=()=>{clearTimeout(timer);reject(abort())};
+    if(ms<600){canvas.style.opacity='0';canvas.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);
+      const finish=()=>{signal?.removeEventListener('abort',cancel);resolve()},timer=setTimeout(finish,ms);const cancel=()=>{clearTimeout(timer);reject(abort())};
       if(signal)signal.addEventListener('abort',cancel,{once:true});return}
     const W=global.innerWidth||1920,H=global.innerHeight||1080,dpr=min(global.devicePixelRatio||1,1.5);
     canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
-    const ctx=canvas.getContext('2d'),scene=tier===2?dragonScene(W,H):celestialScene(W,H);
+    const ctx=canvas.getContext('2d'),cinematic=tier===2&&global.CungDragon?.ready;
+    const scene=tier===2?(cinematic?global.CungDragon.scene(W,H):dragonScene(W,H)):celestialScene(W,H);
+    if(!ctx){resolve();return}
     let raf=0,finished=false,start=0,last=0;
     function done(){if(finished)return;finished=true;cleanup();resolve()}
     function cancel(){if(finished)return;finished=true;cleanup();reject(abort())}
@@ -324,7 +333,7 @@ function run(tier,ms,signal,canvas){
     if(signal)signal.addEventListener('abort',cancel,{once:true});
     function tick(now){
       if(finished)return;
-      if(!start){start=last=now}
+      if(!start){start=last=now;if(tier===2)global.CungSFX?.dragon({signal,legacy:!cinematic})}
       const t=(now-start)/1000,dt=min(.05,(now-last)/1000);last=now;
       const u=clamp(t/(ms/1000));
       ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
@@ -344,10 +353,14 @@ if(global.document&&typeof global.playTierIntro==='function'){
     const tier=Math.max(1,Math.min(3,Number(d.tier)||1)),intro=document.getElementById('tierIntro'),canvas=document.getElementById('fxCanvas');
     intro.hidden=true;intro.className='tier-intro';
     if(tier<2||!canvas)return;
+    if(tier===2&&global.CungDragon){
+      await global.CungDragon.preload();
+      if(signal?.aborted)throw new DOMException('Lease lost','AbortError');
+    }
     document.getElementById('introKicker').textContent=tier===2?'HỎA LONG KHAI LỄ':'ĐẠI LỄ TỐI THƯỢNG';
     document.getElementById('introTitle').textContent=tier===2?'RỒNG LỬA GIÁNG LÂM':'THIÊN NỮ GIÁNG LÂM';
     const reduced=!document.body.classList.contains('force-motion')&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const ms=reduced?120:(tier===2?4200:5400);
+    const ms=reduced?120:(tier===2?(global.CungDragon?.ready?global.CungDragon.duration:4200):5400);
     intro.style.setProperty('--fx-d',ms+'ms');void intro.offsetWidth;
     intro.hidden=false;intro.className='tier-intro tier-'+tier;
     try{await CungFX.run(tier,ms,signal,canvas)}
@@ -355,4 +368,3 @@ if(global.document&&typeof global.playTierIntro==='function'){
   };
 }
 })(globalThis);
-

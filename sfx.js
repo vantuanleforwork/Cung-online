@@ -7,6 +7,9 @@ const params=new URLSearchParams((global.location&&global.location.search)||'');
 const enabled=params.get('sfx')!=='0';
 const VOL=Math.max(0,Math.min(1,Number(params.get('sfxvol')||.7)));
 let ctx=null,master,dry,conv,noiseBuf,warned=false;
+const sources=new Set();
+let dragonAbort=null;
+function track(node){sources.add(node);node.addEventListener('ended',()=>sources.delete(node),{once:true});return node}
 
 function impulse(c,sec){
   const n=Math.floor(c.sampleRate*sec),b=c.createBuffer(2,n,c.sampleRate);
@@ -28,6 +31,7 @@ function ac(){
 }
 function resume(){
   const c=ac();if(!c)return;
+  master.gain.cancelScheduledValues(c.currentTime);master.gain.setValueAtTime(VOL,c.currentTime);
   if(c.state==='suspended'&&c.resume)c.resume().catch(()=>{});
 }
 function checkBlocked(){
@@ -46,13 +50,13 @@ function env(g,t0,pts){ // pts: [[giây, mức], ...] dạng mũ
   for(const [t,v] of pts)g.gain.exponentialRampToValueAtTime(Math.max(.0001,v),t0+t);
 }
 function tone(type,freq,t0,dur,vol,{attack=.004,wet=.3,out=null,detune=0}={}){
-  const o=ctx.createOscillator(),g=ctx.createGain();
+  const o=track(ctx.createOscillator()),g=ctx.createGain();
   o.type=type;o.frequency.value=freq;o.detune.value=detune;
   env(g,t0,[[attack,vol],[dur,.0001]]);
   o.connect(g);route(g,wet,out);o.start(t0);o.stop(t0+dur+.1);return o;
 }
 function noise(t0,dur,{type='bandpass',f0=1000,f1=null,q=1,pts,wet=0,out=null,hp=0}){
-  const s=ctx.createBufferSource();s.buffer=noiseBuf;s.loop=true;
+  const s=track(ctx.createBufferSource());s.buffer=noiseBuf;s.loop=true;
   const f=ctx.createBiquadFilter();f.type=type;f.Q.value=q;f.frequency.setValueAtTime(f0,t0);
   if(f1!==null)f.frequency.exponentialRampToValueAtTime(f1,t0+dur);
   const g=ctx.createGain();env(g,t0,pts);
@@ -85,42 +89,109 @@ function panner(t0,from,to,dur){
   if(!ctx.createStereoPanner)return null;
   const p=ctx.createStereoPanner();p.pan.setValueAtTime(from,t0);p.pan.linearRampToValueAtTime(to,t0+dur);p.connect(dry);return p;
 }
-function dragon(){
-  if(!enabled||!ac())return;resume();checkBlocked();
-  const t=ctx.currentTime+.03,p=panner(t,-.8,.8,4.2);
-  // cánh quạt gió khi rồng lao vào
-  noise(t,1.5,{f0:300,f1:1500,q:1.2,pts:[[.6,.28],[1.4,.0001]],out:p});
-  noise(t+2.9,1.3,{f0:1400,f1:300,q:1.2,pts:[[.3,.22],[1.2,.0001]],out:p});
-  // tiếng khè lúc mở miệng
-  noise(t+1.4,.8,{type:'bandpass',f0:5200,q:.9,hp:3000,pts:[[.08,.22],[.35,.14],[.8,.0001]],out:p});
-  // tiếng gầm: sóng răng cưa trầm + vuông, lọc thông thấp quét, rung biên độ 28Hz
-  const t1=t+1.45,dur=1.6;
-  const a=ctx.createOscillator(),b=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain(),lfo=ctx.createOscillator(),lg=ctx.createGain();
-  a.type='sawtooth';b.type='square';b.detune.value=-12;
-  a.frequency.setValueAtTime(80,t1);a.frequency.exponentialRampToValueAtTime(175,t1+.3);a.frequency.exponentialRampToValueAtTime(65,t1+dur);
-  b.frequency.setValueAtTime(40,t1);b.frequency.exponentialRampToValueAtTime(88,t1+.3);b.frequency.exponentialRampToValueAtTime(33,t1+dur);
-  f.type='lowpass';f.Q.value=3;f.frequency.setValueAtTime(400,t1);f.frequency.exponentialRampToValueAtTime(2200,t1+.3);f.frequency.exponentialRampToValueAtTime(500,t1+dur);
-  env(g,t1,[[.12,.55],[1.1,.4],[dur,.0001]]);
-  lfo.frequency.value=28;lg.gain.value=.18;lfo.connect(lg);lg.connect(g.gain);
-  a.connect(f);b.connect(f);f.connect(g);route(g,.15,p);
-  [a,b,lfo].forEach(o=>{o.start(t1);o.stop(t1+dur+.1)});
-  // lửa phun: gió nền + tiếng rền + lách tách
-  noise(t+1.55,1.5,{f0:900,f1:700,q:.7,pts:[[.2,.4],[1.0,.3],[1.5,.0001]],wet:.1,out:p});
-  noise(t+1.55,1.5,{type:'lowpass',f0:2500,f1:700,q:.5,pts:[[.2,.35],[1.0,.25],[1.5,.0001]],out:p});
-  tone('sine',55,t+1.55,1.5,.35,{wet:0,out:p});
+let curve=null;
+function shaper(){
+  const w=ctx.createWaveShaper();
+  if(!curve){const n=2048;curve=new Float32Array(n);for(let i=0;i<n;i++)curve[i]=Math.tanh((i*2/(n-1)-1)*4.5)}
+  w.curve=curve;return w;
+}
+/* vồ xuống đất: thịch trầm + thân va đập + đất đá văng */
+function thud(t0,vol,out){
+  const o=track(ctx.createOscillator()),g=ctx.createGain();o.type='sine';
+  o.frequency.setValueAtTime(150,t0);o.frequency.exponentialRampToValueAtTime(34,t0+.28);
+  env(g,t0,[[.004,vol],[.7,.0001]]);o.connect(g);route(g,.12,out);o.start(t0);o.stop(t0+.8);
+  const o2=track(ctx.createOscillator()),g2=ctx.createGain();o2.type='triangle';
+  o2.frequency.setValueAtTime(95,t0);o2.frequency.exponentialRampToValueAtTime(28,t0+.4);
+  env(g2,t0,[[.006,vol*.7],[.9,.0001]]);o2.connect(g2);route(g2,0,out);o2.start(t0);o2.stop(t0+1);
+  noise(t0,.3,{type:'lowpass',f0:900,f1:200,q:.7,pts:[[.003,vol*.9],[.3,.0001]],out});
+  for(let i=0;i<22;i++)noise(t0+.02+rnd(0,.5)*rnd(.3,1),.05,{type:'bandpass',f0:rnd(900,4200),q:2,
+    pts:[[.002,vol*rnd(.08,.3)*(1-i/30)],[rnd(.015,.05),.0001]],out});
+}
+/* móng cào đất: chuỗi xẹt sỏi ngắn tăng dần rồi tắt */
+function scrape(t0,dur,vol,out){
   for(let i=0;i<46;i++){
-    const at=t+1.6+rnd(0,1.7);
-    noise(at,.04,{type:'highpass',f0:2200,q:.5,pts:[[.002,rnd(.05,.2)],[rnd(.012,.035),.0001]],out:p});
+    const at=t0+dur*Math.pow(i/46,.8)+rnd(0,.01);
+    noise(at,.04,{f0:rnd(1200,3800),q:6,pts:[[.003,vol*(.3+.7*Math.sin(Math.PI*i/46))*rnd(.4,1)],[rnd(.02,.04),.0001]],out});
   }
-  // chiêng trầm khai lễ
-  bell(131,t+3.3,3.6,.5,{wet:.4});
+  noise(t0,dur,{f0:2600,f1:1100,q:5,pts:[[dur*.3,vol*.5],[dur,.0001]],out});
+}
+/* tiếng gầm: răng cưa + vuông méo, lọc formant (a→ô), rung biên độ, thêm tiếng rít và hơi thở */
+function roar(t0,dur,out){
+  const saw=track(ctx.createOscillator()),sub=track(ctx.createOscillator()),scr=track(ctx.createOscillator()),lfo=track(ctx.createOscillator());
+  saw.type='sawtooth';sub.type='square';scr.type='sawtooth';
+  const steps=Math.round(dur/.02);
+  saw.frequency.setValueAtTime(105,t0);sub.frequency.setValueAtTime(52,t0);scr.frequency.setValueAtTime(520,t0);
+  for(let i=1;i<=steps;i++){
+    const u=i/steps,base=u<.18?105+(u/.18)*95:200-((u-.18)/.82)*135;
+    const f=base*(1+rnd(-.07,.07)+.03*Math.sin(u*dur*31));
+    saw.frequency.linearRampToValueAtTime(f,t0+u*dur);sub.frequency.linearRampToValueAtTime(f/2,t0+u*dur);
+    scr.frequency.linearRampToValueAtTime(f*4.4,t0+u*dur);
+  }
+  const mix=ctx.createGain(),sg=ctx.createGain(),ug=ctx.createGain(),dist=shaper();
+  sg.gain.value=.6;ug.gain.value=.5;saw.connect(sg);sub.connect(ug);sg.connect(dist);ug.connect(dist);
+  const formant=(f0,f1,f2,q,gain)=>{
+    const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=q;g.gain.value=gain;
+    f.frequency.setValueAtTime(f0,t0);f.frequency.exponentialRampToValueAtTime(f1,t0+dur*.2);f.frequency.exponentialRampToValueAtTime(f2,t0+dur);
+    dist.connect(f);f.connect(g);g.connect(mix);
+  };
+  formant(450,850,600,4,1.1);formant(900,1500,1000,5,.9);
+  const body=ctx.createBiquadFilter(),bg=ctx.createGain();body.type='lowpass';body.frequency.value=520;bg.gain.value=.8;
+  dist.connect(body);body.connect(bg);bg.connect(mix);
+  const sc=ctx.createBiquadFilter(),scg=ctx.createGain();sc.type='bandpass';sc.frequency.value=1500;sc.Q.value=2;
+  env(scg,t0,[[dur*.3,.16],[dur*.8,.05],[dur,.0001]]);scr.connect(sc);sc.connect(scg);scg.connect(mix);
+  const amp=ctx.createGain(),am=ctx.createGain(),lg=ctx.createGain();
+  env(amp,t0,[[.07,.95],[dur*.35,.9],[dur*.8,.55],[dur,.0001]]);
+  am.gain.value=.75;lfo.frequency.value=38;lg.gain.value=.25;lfo.connect(lg);lg.connect(am.gain);
+  mix.connect(amp);amp.connect(am);route(am,.22,out);
+  noise(t0,dur,{f0:1800,q:.8,pts:[[.1,.32],[dur*.7,.22],[dur,.0001]],out});
+  [saw,sub,scr,lfo].forEach(o=>{o.start(t0);o.stop(t0+dur+.1)});
+}
+/* phụt lửa: nổ bùng + luồng khí lửa + rền trầm + lách tách */
+function fireBlast(t0,dur,out){
+  const o=track(ctx.createOscillator()),g=ctx.createGain();o.type='sine';
+  o.frequency.setValueAtTime(90,t0);o.frequency.exponentialRampToValueAtTime(35,t0+.35);
+  env(g,t0,[[.01,.8],[.6,.0001]]);o.connect(g);route(g,.1,out);o.start(t0);o.stop(t0+.7);
+  noise(t0,.3,{type:'lowpass',f0:1500,f1:300,q:.7,pts:[[.01,.7],[.3,.0001]],out});
+  noise(t0+.05,dur,{f0:700,f1:1300,q:.6,pts:[[.18,.55],[dur*.7,.4],[dur,.0001]],wet:.1,out});
+  noise(t0+.05,dur,{type:'lowpass',f0:3500,f1:900,q:.5,pts:[[.12,.5],[dur*.7,.3],[dur,.0001]],out});
+  noise(t0+.05,dur,{type:'highpass',f0:4000,q:.5,pts:[[.15,.2],[dur,.0001]],out});
+  for(let i=0;i<Math.floor(dur/.09);i++)
+    noise(t0+.1+i*.09,.09,{f0:500,q:.8,pts:[[.02,rnd(.12,.3)],[.09,.0001]],out});
+  tone('sine',48,t0,dur,.5,{wet:0,out});
+  for(let i=0;i<60;i++)noise(t0+rnd(.1,dur),.04,{type:'highpass',f0:2200,q:.5,pts:[[.002,rnd(.05,.22)],[rnd(.012,.035),.0001]],out});
+}
+function dragon({signal,legacy=false}={}){
+  if(!enabled||!ac())return;resume();checkBlocked();
+  const c=global.CungDragon?.cues||{impact:.78,scrape:1.05,smoke:2.05,growl:5.35,inhale:6.55,fire:7.25,fireEnd:10.05,coil:10.65,flight:12.2,tail:13.65};
+  if(signal?.aborted)return;
+  dragonAbort?.();
+  if(signal){const cancel=()=>stop();signal.addEventListener('abort',cancel,{once:true});dragonAbort=()=>{signal.removeEventListener('abort',cancel);dragonAbort=null}}
+  const t=ctx.currentTime+.015,p=panner(t,.15,0,.78);
+  if(legacy){thud(t+1,.8,p);scrape(t+.75,.3,.3,p);roar(t+1.5,1.5,p);fireBlast(t+1.78,1.5,p);return}
+  // Air displacement, screen impact and the metallic drag of four talons.
+  noise(t,.78,{type:'lowpass',f0:180,f1:2300,q:.7,pts:[[.55,.25],[.77,.08],[.78,.0001]],out:p});
+  thud(t+c.impact,.9,p);scrape(t+c.scrape,.65,.33,p);
+  tone('sine',31,t+c.impact,1.8,.42,{wet:.1,out:p});
+  // Heavy chest resonance under the fog; a close, textured exhalation.
+  noise(t+1.6,4.6,{type:'lowpass',f0:150,f1:310,q:.7,pts:[[1.1,.15],[3.2,.2],[4.6,.0001]],wet:.3,out:p});
+  noise(t+c.smoke,2.45,{f0:520,f1:1600,q:.6,pts:[[.3,.25],[1.4,.18],[2.45,.0001]],wet:.25,out:p});
+  tone('sine',42,t+2.7,3.4,.16,{attack:.6,wet:.3,out:p});
+  roar(t+c.growl,1.8,p);
+  noise(t+c.inhale,.7,{f0:320,f1:2100,q:1.3,pts:[[.55,.3],[.7,.0001]],out:p});
+  fireBlast(t+c.fire,c.fireEnd-c.fire,p);
+  // The serpentine body displaces air; tail cracks from left to right on departure.
+  const fly=panner(t+c.coil,-.55,.85,4.8);
+  noise(t+c.coil,4.8,{type:'lowpass',f0:900,f1:120,q:.7,pts:[[.7,.22],[2.2,.3],[4.8,.0001]],wet:.18,out:fly});
+  noise(t+c.tail-.25,.65,{f0:450,f1:3400,q:.6,pts:[[.24,.35],[.32,.24],[.65,.0001]],out:fly});
+  thud(t+c.tail,.27,fly);
+  bell(98,t+13.15,2.6,.15,{wet:.5,out:fly});
 }
 function celestial(){
   if(!enabled||!ac())return;resume();checkBlocked();
   const t=ctx.currentTime+.03;
   // pad dâng lên
   [220,329.6,440,554.4].forEach((f,i)=>{
-    const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;
+    const o=track(ctx.createOscillator()),g=ctx.createGain();o.type='sine';o.frequency.value=f;
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.07,t+1.6+i*.1);g.gain.exponentialRampToValueAtTime(.0001,t+5.2);
     o.connect(g);route(g,.6);o.start(t);o.stop(t+5.4);
   });
@@ -140,8 +211,10 @@ function celestial(){
 }
 function stop(){
   if(!ctx)return;
+  dragonAbort?.();
+  for(const source of sources){try{source.stop()}catch(error){}}
+  sources.clear();
   const n=ctx.currentTime;master.gain.cancelScheduledValues(n);master.gain.setValueAtTime(master.gain.value,n);master.gain.linearRampToValueAtTime(0,n+.12);
-  master.gain.setValueAtTime(VOL,n+.5);
 }
 
 const S=global.CungSFX={ting,bell:templeBell,dragon,celestial,stop,resume};
@@ -163,11 +236,13 @@ if(global.document){
     global.playTierIntro=async function(d,signal){
       const tier=Math.max(1,Math.min(3,Number(d.tier)||1));
       if(enabled){
-        if(signal)signal.addEventListener('abort',stop,{once:true});
-        if(tier===1)S.bell();else if(tier===2)S.dragon();else S.celestial();
+        if(tier!==2&&signal)signal.addEventListener('abort',stop,{once:true});
+        if(tier===1)S.bell();else if(tier===3)S.celestial();
+        // Tier 2 starts on the first canvas frame after its images have loaded.
       }
       return baseIntro.apply(this,arguments);
     };
   }
+  global.addEventListener('pagehide',stop);
 }
 })(globalThis);
