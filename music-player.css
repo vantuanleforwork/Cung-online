@@ -14,7 +14,7 @@
   background: rgb(17 30 44 / var(--music-opacity,.9));
   box-shadow: 0 8px 30px #0005;
   pointer-events: auto;
- 
+
 }
 
 .music-card header {
@@ -23,7 +23,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
- 
+
 }
 
 .music-card strong, .music-card span {
@@ -31,19 +31,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
- 
+
 }
 
 .music-card strong {
   color: #c5f467;
   font-size: 14px;
- 
+
 }
 
 .music-card span {
   color: #d8e2ef;
   font-size: 12px;
- 
+
 }
 
 .music-video {
@@ -51,14 +51,14 @@
   height: calc(100% - 58px);
   min-height: 200px;
   background: #0b1520;
- 
+
 }
 
 .music-video iframe {
   width: 100%;
   height: 100%;
   border: 0;
- 
+
 }
 
 .music-preview-video {
@@ -67,14 +67,14 @@
   color: #a6b5c6;
   border-top: 1px solid #3a5268;
   font-size: 18px;
- 
+
 }
 
 .music-editor {
   margin: 0;
   overflow: hidden;
   background: #080f17;
- 
+
 }
 
 .music-editor #obsFrame {
@@ -87,7 +87,7 @@
   background-color: #142230;
   background-image: linear-gradient(#ffffff0a 1px, transparent 1px),linear-gradient(90deg,#ffffff0a 1px,transparent 1px);
   background-size: 120px 120px;
- 
+
 }
 
 .music-editor .music-card {
@@ -96,6 +96,5 @@
   user-select: none;
   outline: 2px dashed #c5f467;
   outline-offset: 5px;
- 
-}
 
+}
