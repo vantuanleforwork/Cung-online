@@ -185,12 +185,23 @@ function voice_picker_fields(string $provider, string $label) { ?>
         <label style="margin:0">Tên người gửi<input type="text" name="custom_name" value="Khách thử nghiệm" maxlength="40"></label>
         <label style="margin:0">Lời nhắn<input type="text" name="custom_message" value="Chúc kênh livestream ngày càng phát triển thuận lợi!" maxlength="255"></label>
         <label style="margin:0">Giọng đọc test
-          <select name="custom_voice_id">
-            <option value="">Giọng mặc định</option>
+          <select name="custom_voice_id" id="customTestVoiceSelect">
+            <option value="">Giọng mặc định theo mốc</option>
+            <?php if (!empty($settings['tier1_voice_id'])): ?>
+              <option value="<?=h($settings['tier1_voice_id'])?>">Mặc định Mốc 1 (<?=h(substr($settings['tier1_voice_id'],0,12))?>…)</option>
+            <?php endif ?>
+            <?php if (!empty($settings['tier2_voice_id'])): ?>
+              <option value="<?=h($settings['tier2_voice_id'])?>">Mặc định Mốc 2 (<?=h(substr($settings['tier2_voice_id'],0,12))?>…)</option>
+            <?php endif ?>
+            <?php if (!empty($settings['tier3_voice_id'])): ?>
+              <option value="<?=h($settings['tier3_voice_id'])?>">Mặc định Mốc 3 (<?=h(substr($settings['tier3_voice_id'],0,12))?>…)</option>
+            <?php endif ?>
             <?php foreach ($customVoiceOptions ?? [] as $opt): ?>
               <option value="<?=h($opt['voice_id'])?>"><?=h($opt['name'])?> (<?=((int)$opt['tier_min']===3)?'VIP 200k':'50k'?>)</option>
             <?php endforeach ?>
+            <option value="__custom__">✏️ Dán Voice ID khác (vibi/ElevenLabs)...</option>
           </select>
+          <input type="text" name="custom_voice_id_text" id="customTestVoiceManual" placeholder="Dán Voice ID vibi (UUID) hoặc ElevenLabs..." style="display:none;margin-top:6px;width:100%" maxlength="160">
         </label>
         <button type="submit" class="btn-push-obs" style="height:38px;white-space:nowrap">Bắn test vào OBS</button>
       </div>

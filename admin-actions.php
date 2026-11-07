@@ -244,12 +244,25 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
     }
     $voiceName = null;
     $selectedVoiceId = trim($selectedVoiceId);
-    if ($selectedVoiceId !== '' && $amount >= 50000) {
-        $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? LIMIT 1');
-        $s->execute([$selectedVoiceId]);
-        $opt = $s->fetch(PDO::FETCH_ASSOC);
-        if ($opt) { $selectedVoiceId = $opt['voice_id']; $voiceName = $opt['name']; }
-        else { $selectedVoiceId = null; }
+    if ($selectedVoiceId !== '' && preg_match('/^[A-Za-z0-9_.-]{1,160}$/D', $selectedVoiceId)) {
+        try {
+            $s = $db->prepare('SELECT name, voice_id FROM custom_voice_options WHERE voice_id=? LIMIT 1');
+            $s->execute([$selectedVoiceId]);
+            $opt = $s->fetch(PDO::FETCH_ASSOC);
+            if ($opt) {
+                $voiceName = $opt['name'];
+            } else {
+                $settings = $db->query('SELECT tier1_voice_id, tier2_voice_id, tier3_voice_id, eleven_voice_id, custom_voice_id FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+                if ($selectedVoiceId === ($settings['tier1_voice_id'] ?? '')) $voiceName = 'Mặc định Mốc 1';
+                elseif ($selectedVoiceId === ($settings['tier2_voice_id'] ?? '')) $voiceName = 'Mặc định Mốc 2';
+                elseif ($selectedVoiceId === ($settings['tier3_voice_id'] ?? '')) $voiceName = 'Mặc định Mốc 3';
+                elseif ($selectedVoiceId === ($settings['custom_voice_id'] ?? '')) $voiceName = 'Custom Voice chung';
+                elseif ($selectedVoiceId === ($settings['eleven_voice_id'] ?? '')) $voiceName = 'ElevenLabs chung';
+                else $voiceName = 'Giọng test (' . (strlen($selectedVoiceId) > 10 ? substr($selectedVoiceId, 0, 8) . '…' : $selectedVoiceId) . ')';
+            }
+        } catch (Throwable $ignore) {
+            $voiceName = 'Giọng test';
+        }
     } else {
         $selectedVoiceId = null;
     }
@@ -303,6 +316,23 @@ function push_test_webhook(PDO $db, int $amount, string $name = '', string $mess
            
         $db->commit();
         
+        // Kích hoạt tạo trước giọng đọc ngay khi bấm test để OBS nhận được là phát ngay lập tức
+        try {
+            $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+            if ($settings && $settings['speech_enabled']) {
+                $testRow = [
+                    'paid_amount' => $amount,
+                    'name' => $name,
+                    'message' => $message,
+                    'selected_voice_id' => $selectedVoiceId
+                ];
+                $opts = speech_options_for_donation($settings, $testRow);
+                if (in_array($opts['provider'], ['fpt','elevenlabs','custom_api'], true)) {
+                    provider_audio($db, speech_text($testRow, $settings), $opts);
+                }
+            }
+        } catch (Throwable $ignore) {}
+
         return [
             'success' => true,
             'donation_id' => $donationId,

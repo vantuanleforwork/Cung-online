@@ -47,13 +47,44 @@ function custom_voice_fields(array $in) {
         'custom_api_model' => $model, 'custom_voice_id' => $voice];
 }
 function custom_voice_request(string $text, array $options) {
-    $engine = $options['custom_api_engine'];
-    $settings = ['speed' => (float)$options['rate']];
-    if ($engine === 'elevenlabs') $settings += ['stability' => .5, 'similarity_boost' => .75];
-    else $settings['pitch'] = 0;
-    if ($engine === 'minimax') $settings['vol'] = 1.0;
-    return ['text' => $text, 'provider' => $engine, 'model_id' => $options['custom_api_model'],
-        'language_code' => $engine === 'minimax' ? 'Vietnamese' : 'vi',
+    $voiceId = trim((string)($options['custom_voice_id'] ?? ''));
+    $engine = $options['custom_api_engine'] ?? 'elevenlabs';
+    $model = $options['custom_api_model'] ?? 'eleven_flash_v2_5';
+    $rate = (float)($options['rate'] ?? 1.0);
+
+    // Tự động nhận diện engine và tham số phù hợp với từng định dạng Voice ID trên vibi.pro:
+    // 1. Dạng UUID (36 ký tự có dấu gạch nối, vd: 66d779de-b737-4092-a0f3-781e6ca9312d) -> MiniMax / Cloned voice vibi
+    // 2. Dạng số thuần túy (vd: 226905123659939) -> MiniMax system voice
+    // 3. Dạng chứa tiền tố capcut -> CapCut
+    // 4. Dạng ID ElevenLabs (20 ký tự chữ số, vd: qLk6yIwQI3GT5JfYLzBU) -> ElevenLabs
+    $isUuid = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $voiceId);
+    $isMinimaxNumeric = (bool)preg_match('/^\d{10,25}$/', $voiceId);
+    $isCapcut = stripos($voiceId, 'capcut') !== false;
+    $isElevenlabsId = (bool)preg_match('/^[A-Za-z0-9]{18,24}$/', $voiceId);
+
+    if ($isUuid || $isMinimaxNumeric || (!$isElevenlabsId && !$isCapcut && $engine === 'minimax')) {
+        $engine = 'minimax';
+        if (!preg_match('/^speech-/i', $model)) {
+            $model = 'speech-01-turbo';
+        }
+        $languageCode = 'Vietnamese';
+        $settings = ['speed' => $rate, 'pitch' => 0, 'vol' => 1.0];
+    } elseif ($isCapcut || (!$isElevenlabsId && $engine === 'capcut')) {
+        $engine = 'capcut';
+        $model = 'capcut';
+        $languageCode = 'vi';
+        $settings = ['speed' => $rate, 'pitch' => 0];
+    } else {
+        $engine = 'elevenlabs';
+        if (!preg_match('/^eleven_/i', $model)) {
+            $model = 'eleven_flash_v2_5';
+        }
+        $languageCode = 'vi';
+        $settings = ['speed' => min(1.2, max(0.7, $rate)), 'stability' => .5, 'similarity_boost' => .75];
+    }
+
+    return ['text' => $text, 'provider' => $engine, 'model_id' => $model,
+        'language_code' => $languageCode,
         'voice_settings' => $settings, 'export_transcript' => false];
 }
 function custom_cache_key(string $text, array $options, string $key) {
@@ -118,14 +149,29 @@ function custom_audio(PDO $db, string $text, array $options, ?string $overrideKe
             $task = $data['id'] ?? '';
             if ($status !== 202 || !is_string($task) || !preg_match('/^[A-Za-z0-9_-]{1,160}$/D', $task)) throw new SpeechProviderException('API Voice chưa trả task ID hợp lệ. Kiểm tra lịch sử trên dịch vụ trước khi tạo lại.');
             $db->prepare("UPDATE tts_audio_cache SET state='pending',task_id=?,next_poll_at=NOW() WHERE cache_key=?")->execute([$task, $cache]);
+
+            // Thăm dò nhanh ngay trong request: hầu hết câu ngắn vibi.pro hoàn tất trong ~1-1.5s
+            usleep(800000); // chờ 0.8s
+            try {
+                [$st, $dt] = $http($options['custom_api_url'], '/history/' . rawurlencode($task), $apiKey, 'GET', null);
+                $quickUrl = custom_audio_result($dt);
+                if ($quickUrl !== null) {
+                    $db->prepare("UPDATE tts_audio_cache SET state='ready',audio_url=? WHERE cache_key=?")->execute([$quickUrl, $cache]);
+                    return $quickUrl;
+                }
+            } catch (Throwable $ignore) {}
+
             return null;
         }
         $s = $db->prepare('SELECT state,audio_url,task_id,(created_at<NOW()-INTERVAL 5 MINUTE) AS timed_out FROM tts_audio_cache WHERE cache_key=?'); $s->execute([$cache]); $row = $s->fetch(PDO::FETCH_ASSOC);
         if ($row['state'] === 'ready') return $row['audio_url'];
-        if ($row['state'] === 'failed') throw new SpeechProviderException('Lần tạo giọng Custom API trước đã lỗi. Kiểm tra lịch sử dịch vụ rồi xóa bộ nhớ giọng để thử lại.');
+        if ($row['state'] === 'failed') {
+            $db->prepare("DELETE FROM tts_audio_cache WHERE cache_key=? AND state='failed'")->execute([$cache]);
+            return null;
+        }
         if ($row['timed_out']) throw new SpeechProviderException('Tác vụ Custom API chờ quá 5 phút. Kiểm tra lịch sử dịch vụ trước khi thử lại.');
         if ($row['state'] !== 'pending' || !$row['task_id']) return null;
-        $s = $db->prepare("UPDATE tts_audio_cache SET next_poll_at=NOW()+INTERVAL 3 SECOND WHERE cache_key=? AND state='pending' AND next_poll_at<=NOW()"); $s->execute([$cache]);
+        $s = $db->prepare("UPDATE tts_audio_cache SET next_poll_at=NOW()+INTERVAL 1 SECOND WHERE cache_key=? AND state='pending' AND next_poll_at<=NOW()"); $s->execute([$cache]);
         if ($s->rowCount() === 0) return null;
         // Only GET history here. Repeated polling must never create a second paid task.
         [$status, $data] = $http($options['custom_api_url'], '/history/' . rawurlencode($row['task_id']), $apiKey, 'GET', null);

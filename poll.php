@@ -37,6 +37,14 @@ try {
     $row['lease_seconds'] = $seconds;
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
+    if ($settings['speech_enabled'] && in_array($row['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
+        try {
+            $audioUrl = provider_audio($db, $row['speech_text'], $row['speech']);
+            if ($audioUrl) {
+                $row['audio_url'] = $audioUrl;
+            }
+        } catch (Throwable $ignore) {}
+    }
     echo json_encode([$row], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if ($db->inTransaction()) $db->rollBack();

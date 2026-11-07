@@ -90,11 +90,12 @@ async function speak(d,signal){
     const deadline=Date.now()+(d.speech.provider==='custom_api'?180000:45000);
     while(!d.audio_url){
       if(Date.now()>deadline)throw new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
-      const {response,data}=await request('tts.php',preview?{preview:true}:{id:d.id,claim_token:d.claim_token},signal);
+      const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
+      const {response,data}=await request('tts.php',ttsPayload,signal);
       if(data.disabled)return;
       if(!response.ok)throw new Error(data.error||'Không tạo được giọng đọc.');
       d.audio_url=data.audio_url;
-      if(!d.audio_url)await sleep(2000,signal);
+      if(!d.audio_url)await sleep(600,signal);
     }
   }
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI GỬI GẮM';
@@ -104,6 +105,15 @@ async function speak(d,signal){
 async function play(d){
   const lease=preview?{signal:new AbortController().signal,close(){}}:startLease(d);
   render(d);$('stage').classList.remove('is-visible');
+
+  // Nạp trước giọng đọc chạy ngầm song song với hoạt ảnh mở đầu (intro fx) để không phải chờ đợi
+  if(!d.audio_url&&d.speech?.enabled&&d.speech.volume>0&&['fpt','elevenlabs','custom_api'].includes(d.speech.provider)){
+    const preloadPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
+    request('tts.php',preloadPayload,lease.signal).then(({response,data})=>{
+      if(response?.ok&&data?.audio_url)d.audio_url=data.audio_url;
+    }).catch(()=>{});
+  }
+
   try{
     await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
     void $('stage').offsetWidth;$('stage').classList.add('is-visible');
@@ -135,9 +145,19 @@ async function acknowledge(d){
 }
 async function getDemo(){
   let value;
+  const customVoice=params.get('voice_id')||params.get('voice')||'';
   if(!K)value={name:'Nguyễn Văn An',paid_amount:10000,tier:1,message:'Chúc kênh livestream phát triển thuận lợi, vạn sự như ý!',speech_text:'Nguyễn Văn An đã donate mười nghìn đồng. Với lời nhắn: Chúc kênh livestream phát triển thuận lợi, vạn sự như ý!',speech:{enabled:true,provider:'browser',rate:1,volume:1,display_seconds:8}};
-  else{const {response,data}=await request('overlay-settings.php');if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');value=data.demo}
-  if(preview){value.tier=selectedPreviewTier;value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier]}
+  else{
+    const reqBody={tier:selectedPreviewTier,amount:{1:10000,2:50000,3:200000}[selectedPreviewTier]||10000,voice_id:customVoice};
+    const {response,data}=await request('overlay-settings.php',reqBody);
+    if(!response.ok)throw new Error(data.error||'Không đọc được cấu hình.');
+    value=data.demo;
+  }
+  if(preview){
+    value.tier=selectedPreviewTier;
+    value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier];
+    if(customVoice)value.selected_voice_id=customVoice;
+  }
   return value;
 }
 async function test(){
@@ -151,7 +171,14 @@ async function test(){
       if(['fpt','elevenlabs','custom_api'].includes(demo.speech?.provider)){
         const deadline=Date.now()+180000;
         while(!demo.audio_url){
-          const {response,data}=await request('tts.php',{preview:true});
+          const {response,data}=await request('tts.php',{
+            preview:true,
+            tier:demo.tier,
+            amount:demo.paid_amount,
+            voice_id:demo.selected_voice_id||demo.speech?.custom_voice_id||demo.speech?.eleven_voice_id||'',
+            message:demo.message||'',
+            name:demo.name||''
+          });
           if(!response.ok)throw new Error(data.error||'Chưa tạo được giọng.');
           demo.audio_url=data.audio_url;
           if(!demo.audio_url){if(Date.now()>deadline)throw new Error('Giọng vẫn đang tạo. Kiểm tra lịch sử dịch vụ rồi bấm thử lại.');await sleep(3000)}

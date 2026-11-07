@@ -176,15 +176,23 @@ if(previewIframe&&overlayKey){
   const reloadBtn=document.getElementById('previewReloadBtn');
   let currentTier='1';
 
+  function getActiveTestVoiceId(){
+    const selectVal=customWebhookForm?.elements?.namedItem('custom_voice_id')?.value||'';
+    const manualVal=customWebhookForm?.elements?.namedItem('custom_voice_id_text')?.value||'';
+    return (selectVal==='__custom__'||manualVal.trim())?(manualVal.trim()):selectVal;
+  }
+
   function setPreview(tier,autoplay=1){
     currentTier=String(tier);
+    const vId=getActiveTestVoiceId();
+    const voiceParam=vId?`&voice_id=${encodeURIComponent(vId)}`:'';
     previewButtons.forEach(btn=>{
       btn.classList.toggle('active',btn.dataset.previewTierBtn===currentTier);
     });
     if(previewOpenTab){
-      previewOpenTab.href=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=1&motion=1`;
+      previewOpenTab.href=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=1&motion=1${voiceParam}`;
     }
-    previewIframe.src=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=${autoplay}&motion=1&_t=${Date.now()}`;
+    previewIframe.src=`overlay.html?preview=1&k=${overlayKey}&tier=${currentTier}&autoplay=${autoplay}&motion=1${voiceParam}&_t=${Date.now()}`;
   }
 
   previewButtons.forEach(btn=>{
@@ -234,9 +242,39 @@ testWebhookButtons.forEach(btn=>{
   if(typeof btn?.addEventListener!=='function'||!btn.dataset?.testWebhookAmount)return;
   btn.addEventListener('click',()=>{
     const amount=Number(btn.dataset.testWebhookAmount)||10000;
-    sendTestWebhook(amount,'','',btn);
+    const selectVal=customWebhookForm?.elements?.namedItem('custom_voice_id')?.value||'';
+    const manualVal=customWebhookForm?.elements?.namedItem('custom_voice_id_text')?.value||'';
+    const voiceId=(selectVal==='__custom__'||manualVal.trim())?(manualVal.trim()):selectVal;
+    sendTestWebhook(amount,'','',btn,voiceId);
   });
 });
+
+const testVoiceSelect = document.getElementById('customTestVoiceSelect');
+const testVoiceManual = document.getElementById('customTestVoiceManual');
+if (testVoiceSelect && testVoiceManual) {
+  testVoiceSelect.addEventListener('change', () => {
+    const isManual = testVoiceSelect.value === '__custom__';
+    testVoiceManual.style.display = isManual ? 'block' : 'none';
+    if (isManual) testVoiceManual.focus();
+    if (previewIframe && overlayKey) {
+      const activeBtn = document.querySelector('[data-preview-tier-btn].active');
+      const tier = activeBtn?.dataset?.previewTierBtn || '1';
+      const vId = (isManual ? testVoiceManual.value.trim() : testVoiceSelect.value);
+      const voiceParam = vId ? `&voice_id=${encodeURIComponent(vId)}` : '';
+      if (previewOpenTab) previewOpenTab.href = `overlay.html?preview=1&k=${overlayKey}&tier=${tier}&autoplay=1&motion=1${voiceParam}`;
+      previewIframe.src = `overlay.html?preview=1&k=${overlayKey}&tier=${tier}&autoplay=1&motion=1${voiceParam}&_t=${Date.now()}`;
+    }
+  });
+  testVoiceManual.addEventListener('blur', () => {
+    if (previewIframe && overlayKey && testVoiceManual.value.trim()) {
+      const activeBtn = document.querySelector('[data-preview-tier-btn].active');
+      const tier = activeBtn?.dataset?.previewTierBtn || '1';
+      const voiceParam = `&voice_id=${encodeURIComponent(testVoiceManual.value.trim())}`;
+      if (previewOpenTab) previewOpenTab.href = `overlay.html?preview=1&k=${overlayKey}&tier=${tier}&autoplay=1&motion=1${voiceParam}`;
+      previewIframe.src = `overlay.html?preview=1&k=${overlayKey}&tier=${tier}&autoplay=1&motion=1${voiceParam}&_t=${Date.now()}`;
+    }
+  });
+}
 
 if(customWebhookForm&&typeof customWebhookForm.addEventListener==='function'){
   customWebhookForm.addEventListener('submit',e=>{
@@ -245,7 +283,9 @@ if(customWebhookForm&&typeof customWebhookForm.addEventListener==='function'){
     const amount=Number(customWebhookForm.elements?.namedItem('custom_amount')?.value)||10000;
     const name=customWebhookForm.elements?.namedItem('custom_name')?.value||'';
     const message=customWebhookForm.elements?.namedItem('custom_message')?.value||'';
-    const voiceId=customWebhookForm.elements?.namedItem('custom_voice_id')?.value||'';
+    const selectVal=customWebhookForm.elements?.namedItem('custom_voice_id')?.value||'';
+    const manualVal=customWebhookForm.elements?.namedItem('custom_voice_id_text')?.value||'';
+    const voiceId=(selectVal==='__custom__'||manualVal.trim())?(manualVal.trim()):selectVal;
     sendTestWebhook(amount,name,message,submitBtn,voiceId);
   });
 }

@@ -7,9 +7,37 @@ try {
     $db = db();
     $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
     if (!$settings || !$settings['speech_enabled']) respond(200, ['disabled' => true]);
-    if (!in_array($settings['speech_provider'], ['fpt','elevenlabs','custom_api'], true)) respond(400, ['error' => 'Chọn Custom API Voice, ElevenLabs hoặc FPT.AI trong admin.']);
-    if (($in['preview'] ?? false) === true) $row = preview_donation();
-    else {
+    if (!in_array($settings['speech_provider'], ['fpt','elevenlabs','custom_api'], true)) {
+        $hasCustom = custom_api_key($db, $settings['custom_api_url'] ?? 'https://api.vibi.pro/v1') !== '';
+        $hasEleven = eleven_api_key($db) !== '';
+        if ($hasCustom) {
+            $settings['speech_provider'] = 'custom_api';
+        } elseif ($hasEleven) {
+            $settings['speech_provider'] = 'elevenlabs';
+        } else {
+            respond(400, ['error' => 'Chọn Custom API Voice, ElevenLabs hoặc FPT.AI trong admin.']);
+        }
+    }
+    if (($in['preview'] ?? false) === true) {
+        $row = preview_donation();
+        if (isset($in['tier']) && in_array((int)$in['tier'], [1, 2, 3], true)) {
+            $row['tier'] = (int)$in['tier'];
+            $row['paid_amount'] = [1 => 10000, 2 => 50000, 3 => 200000][$row['tier']];
+        } elseif (isset($in['amount']) && (int)$in['amount'] >= 1000) {
+            $row['paid_amount'] = (int)$in['amount'];
+            $row['tier'] = tier($row['paid_amount']);
+        }
+        $vId = trim((string)($in['voice_id'] ?? $in['selected_voice_id'] ?? ''));
+        if ($vId !== '') {
+            $row['selected_voice_id'] = $vId;
+        }
+        if (!empty($in['message'])) {
+            $row['message'] = trim((string)$in['message']);
+        }
+        if (!empty($in['name'])) {
+            $row['name'] = trim((string)$in['name']);
+        }
+    } else {
         $id = filter_var($in['id'] ?? null, FILTER_VALIDATE_INT); $token = $in['claim_token'] ?? '';
         if (!$id || !is_string($token)) respond(400, ['error' => 'Thiếu lượt phát.']);
         $s = $db->prepare("SELECT * FROM donations WHERE id=? AND claim_token=? AND status='paid' AND shown=0 AND queue_state='queued' AND claimed_until>NOW()");

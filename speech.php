@@ -79,7 +79,7 @@ function speech_options_for_donation(array $settings, array $donation) {
     $amount = (int)($donation['paid_amount'] ?? $donation['expected_amount'] ?? 10000);
     $t = tier($amount);
     $activeVoice = '';
-    if (!empty($donation['selected_voice_id']) && $amount >= 50000) {
+    if (!empty($donation['selected_voice_id'])) {
         $activeVoice = trim((string)$donation['selected_voice_id']);
     }
     if ($activeVoice === '') {
@@ -97,9 +97,50 @@ function speech_options_for_donation(array $settings, array $donation) {
     $options['custom_voice_id'] = $activeVoice;
     $options['eleven_voice_id'] = $activeVoice;
     $options['tier'] = $t;
+    if ($options['provider'] === 'browser' && !empty($activeVoice)) {
+        try {
+            $hasCustom = custom_api_key(db(), $options['custom_api_url'] ?? 'https://api.vibi.pro/v1') !== '';
+            $hasEleven = eleven_api_key(db()) !== '';
+            if ($hasCustom) {
+                $options['provider'] = 'custom_api';
+            } elseif ($hasEleven) {
+                $options['provider'] = 'elevenlabs';
+            }
+        } catch (Throwable $ignore) {}
+    }
     return $options;
 }
 function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null) {
+    $voiceId = trim((string)($options['custom_voice_id'] ?: $options['eleven_voice_id'] ?: ''));
+    $isUuid = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $voiceId);
+    $isMinimaxNumeric = (bool)preg_match('/^\d{10,25}$/', $voiceId);
+    $isElevenlabsId = (bool)preg_match('/^[A-Za-z0-9]{18,24}$/', $voiceId);
+    
+    // Nếu Voice ID là dạng UUID (vibi.pro / minimax) nhưng đang để provider elevenlabs trực tiếp:
+    if (($isUuid || $isMinimaxNumeric) && $options['provider'] === 'elevenlabs') {
+        $vibiKey = $customKey ?: custom_api_key($db, $options['custom_api_url'] ?? 'https://api.vibi.pro/v1');
+        if ($vibiKey !== '') {
+            $options['provider'] = 'custom_api';
+            $options['custom_voice_id'] = $voiceId;
+            return custom_audio($db, $text, $options, $vibiKey);
+        }
+    }
+
+    // Nếu Voice ID là dạng ElevenLabs ID nhưng provider đang để custom_api:
+    // vibi.pro hỗ trợ cả ElevenLabs ID qua endpoint /v1/text-to-speech/{voice_id} (provider=elevenlabs).
+    // Nhưng nếu custom_api không có key mà ElevenLabs trực tiếp có key:
+    if ($isElevenlabsId && $options['provider'] === 'custom_api') {
+        $vibiKey = $customKey ?: custom_api_key($db, $options['custom_api_url'] ?? 'https://api.vibi.pro/v1');
+        if ($vibiKey === '') {
+            $elKey = $elevenKey ?: eleven_api_key($db);
+            if ($elKey !== '') {
+                $options['provider'] = 'elevenlabs';
+                $options['eleven_voice_id'] = $voiceId;
+                return eleven_audio($db, $text, $options, $elKey);
+            }
+        }
+    }
+
     if ($options['provider'] === 'custom_api') {
         if (empty($options['custom_voice_id'])) throw new SpeechProviderException('Cần chọn Voice ID cho Custom API Voice trước khi tạo giọng.');
         return custom_audio($db, $text, $options, $customKey);

@@ -54,7 +54,10 @@ function eleven_audio(PDO $db, string $text, array $options, ?string $overrideKe
         $s = $db->prepare('SELECT state,(audio_content IS NOT NULL) AS has_audio FROM tts_audio_cache WHERE cache_key=?'); $s->execute([$key]);
         $row = $s->fetch(PDO::FETCH_ASSOC);
         if ($row['state'] === 'ready' && $row['has_audio']) return local_audio_url($key);
-        if ($row['state'] === 'failed') throw new SpeechProviderException('Lần tạo giọng ElevenLabs trước đã lỗi. Kiểm tra key/hạn mức và xóa bộ nhớ giọng trong admin để thử lại.');
+        if ($row['state'] === 'failed') {
+            $db->prepare("DELETE FROM tts_audio_cache WHERE cache_key=? AND state='failed'")->execute([$key]);
+            return null;
+        }
         // A killed PHP request must not leave the cache stuck forever; generation timeout is 20s.
         $s = $db->prepare("UPDATE tts_audio_cache SET state='generating',created_at=NOW() WHERE cache_key=? AND state='generating' AND created_at<NOW()-INTERVAL 2 MINUTE");
         $s->execute([$key]); if ($s->rowCount() === 0) return null;

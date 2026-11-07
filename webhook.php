@@ -22,6 +22,15 @@ function webhook_result(int $status, string $outcome, string $detail = '', ?stri
 try {
     $db = db();
     $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($h === '' && function_exists('getallheaders')) {
+        $all = getallheaders();
+        foreach ($all as $k => $v) {
+            if (strcasecmp($k, 'Authorization') === 0) {
+                $h = (string)$v;
+                break;
+            }
+        }
+    }
     if (!hash_equals('Bearer ' . PAY2S_SECRET, $h)) webhook_result(401, 'unauthorized');
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') webhook_result(405, 'wrong_method');
     $raw = file_get_contents('php://input', false, null, 0, 131073);
@@ -71,8 +80,11 @@ try {
     // Entire batch either commits or is retried. Log success is committed with payments.
     $db->beginTransaction();
     foreach ($transactions as $payment) {
+        $accIncoming = ltrim($payment['account_number'], '0');
+        $accConfig = ltrim(trim(ACCOUNT_NO), '0');
+        $isCorrectAccount = ($payment['account_number'] === trim(ACCOUNT_NO)) || ($accIncoming !== '' && $accIncoming === $accConfig);
         $decision = $payment['direction'] !== 'IN' ? 'ignored_out' :
-            ($payment['account_number'] !== trim(ACCOUNT_NO) ? 'wrong_account' :
+            (!$isCorrectAccount ? 'wrong_account' :
             ($payment['paid_amount'] < MIN_AMOUNT ? 'below_min' : 'unmatched'));
         $insert = $db->prepare('INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision)
             VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id');
@@ -81,7 +93,9 @@ try {
         if ($insert->rowCount() === 0) { $duplicates++; continue; }
         if ($decision !== 'unmatched') continue;
         $row = null;
-        if (preg_match('/' . preg_quote(PREFIX, '/') . '[A-Z0-9]{6}/', strtoupper($payment['content']), $m)) {
+        $cleanContent = preg_replace('/[\s\-_]+/', '', strtoupper($payment['content']));
+        if (preg_match('/' . preg_quote(PREFIX, '/') . '[A-Z0-9]{6}/', strtoupper($payment['content']), $m) ||
+            preg_match('/' . preg_quote(PREFIX, '/') . '[A-Z0-9]{6}/', $cleanContent, $m)) {
             $s = $db->prepare('SELECT * FROM donations WHERE code=? FOR UPDATE');
             $s->execute([$m[0]]);
             $candidate = $s->fetch(PDO::FETCH_ASSOC);
@@ -100,6 +114,19 @@ try {
     $db->prepare("UPDATE webhook_logs SET response_code=200,outcome='processed',duplicate_count=? WHERE id=?")
        ->execute([$duplicates, $logId]);
     $db->commit();
+
+    if (!empty($row)) {
+        try {
+            $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+            if ($settings && $settings['speech_enabled']) {
+                $opts = speech_options_for_donation($settings, $row);
+                if (in_array($opts['provider'], ['fpt','elevenlabs','custom_api'], true)) {
+                    provider_audio($db, speech_text($row, $settings), $opts);
+                }
+            }
+        } catch (Throwable $ignore) {}
+    }
+
     respond(200, ['success' => true]);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

@@ -75,19 +75,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
             } elseif ($action === 'preview_voice') {
                 $settings = speech_settings_input($_POST);
                 if ($settings['speech_provider'] === 'elevenlabs' && empty($settings['eleven_voice_id'])) {
-                    throw new InvalidArgumentException('Nhập hoặc chọn Voice ID ElevenLabs trước khi nghe thử.');
+                    if (!empty($settings['tier1_voice_id'])) $settings['eleven_voice_id'] = $settings['tier1_voice_id'];
+                    else throw new InvalidArgumentException('Nhập hoặc chọn Voice ID ElevenLabs trước khi nghe thử.');
                 }
                 if ($settings['speech_provider'] === 'custom_api' && empty($settings['custom_voice_id'])) {
-                    throw new InvalidArgumentException('Nhập hoặc chọn Voice ID cho Custom API Voice trước khi nghe thử.');
+                    if (!empty($settings['tier1_voice_id'])) $settings['custom_voice_id'] = $settings['tier1_voice_id'];
+                    else throw new InvalidArgumentException('Nhập hoặc chọn Voice ID cho Custom API Voice trước khi nghe thử.');
                 }
                 $demo = preview_donation();
-                $demo['speech'] = speech_options($settings);
+                if (!empty($_POST['tier']) && in_array((int)$_POST['tier'], [1, 2, 3], true)) {
+                    $demo['tier'] = (int)$_POST['tier'];
+                    $demo['paid_amount'] = [1 => 10000, 2 => 50000, 3 => 200000][$demo['tier']];
+                }
+                if (!empty($_POST['voice_id'])) {
+                    $demo['selected_voice_id'] = trim((string)$_POST['voice_id']);
+                }
+                $demo['speech'] = speech_options_for_donation($settings, $demo);
                 $demo['speech_text'] = speech_text($demo, $settings);
                 session_write_close();
-                if ($settings['speech_enabled'] && (float)$settings['speech_volume'] > 0 && in_array($settings['speech_provider'], ['fpt','elevenlabs','custom_api'], true)) {
+                if ($settings['speech_enabled'] && (float)$settings['speech_volume'] > 0 && in_array($demo['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
                     $demo['audio_url'] = provider_audio(db(), $demo['speech_text'], $demo['speech'],
-                        $settings['speech_provider'] === 'elevenlabs' ? (posted_eleven_key($_POST) ?: null) : null,
-                        $settings['speech_provider'] === 'custom_api' ? (posted_custom_key($_POST) ?: null) : null);
+                        $demo['speech']['provider'] === 'elevenlabs' ? (posted_eleven_key($_POST) ?: null) : null,
+                        $demo['speech']['provider'] === 'custom_api' ? (posted_custom_key($_POST) ?: null) : null);
                 }
                 respond(200, ['demo' => $demo]);
             } elseif ($action === 'test_webhook_obs') {

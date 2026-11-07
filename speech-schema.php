@@ -7,6 +7,13 @@ function ensure_speech_schema(PDO $db) {
     static $done = false;
     if ($done) return;
     try {
+        $donationCols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
+        if (!in_array('selected_voice_id', $donationCols, true)) {
+            $db->exec('ALTER TABLE donations ADD COLUMN selected_voice_id VARCHAR(160) NULL DEFAULT NULL');
+        }
+        if (!in_array('voice_name', $donationCols, true)) {
+            $db->exec('ALTER TABLE donations ADD COLUMN voice_name VARCHAR(80) NULL DEFAULT NULL');
+        }
         if ((int)$db->query('SELECT speech_schema_version FROM app_settings WHERE id=1')->fetchColumn() >= 7) { $done = true; return; }
     } catch (PDOException $e) {
         if ((int)($e->errorInfo[1] ?? 0) !== 1054) throw $e;

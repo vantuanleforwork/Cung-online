@@ -1,108 +1,273 @@
 <!doctype html>
 <html lang="vi">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dâng hương online</title>
+<title>Donate cho Van Tuan Le · Tiếp thêm động lực livestream</title>
 <style>
-:root{--lac:#793c2d;--ivory:#fcf9f2;--gold:#b88951;--ink:#332b23}
+:root{--lac:#8a2e20;--lac-dark:#702316;--ivory:#fffdfa;--gold:#c2944b;--gold-dark:#99702e;--ink:#28201a;--muted:#7d6f5d;--border:#e5dcce;--bg:#f6f2ea}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:grid;place-items:center;padding:48px 24px;background:radial-gradient(ellipse at 15% 25%,#eadfc6aa,transparent 55%),#f2eee5;color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;line-height:1.6}
-.site-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);align-items:center;gap:64px;max-width:1000px;width:100%}.intro{padding:24px 0}.brand{display:flex;gap:12px;align-items:center;letter-spacing:2.5px;font-size:11px;font-weight:600;color:#75644a}.brand-icon{display:grid;place-items:center;width:44px;height:44px;border:1px solid #bda378;border-radius:50%;font-size:24px;color:#937144}.intro h2{font:400 48px/1.25 Georgia,"Times New Roman",serif;letter-spacing:-1.7px;margin:40px 0 20px}.intro h2 em{font-weight:400;color:var(--lac)}.intro p{color:#807363;font-size:15px;max-width:330px}.intro-art{width:168px;height:140px;margin:32px 0 20px;opacity:.85}.intro-note{border-top:1px solid #d9cebb;padding-top:20px!important;font-size:12px!important;letter-spacing:.3px}
-main{width:100%;background:var(--ivory);border:1px solid #e2d8c7;border-radius:24px;padding:32px 34px;box-shadow:0 18px 65px #6652350b,0 2px 8px #66523505}h1{margin:4px 0 8px;font:400 29px/1.3 Georgia,"Times New Roman",serif;letter-spacing:-.5px}.section-kicker{margin:0;color:#a58b65;font-size:10px;font-weight:600;letter-spacing:2px}.sub{margin:0 0 18px;font-size:13px;color:#8b7c69}.field-label{display:flex;align-items:center;justify-content:space-between;gap:12px}label{display:block;margin:22px 0 8px;font-size:12px;font-weight:600;color:#62523f}label .step{color:#b8a487;font-size:10px;margin-right:9px;font-weight:400}input,textarea{width:100%;padding:13px 15px;border:1px solid #e1d8c9;border-radius:10px;background:#fffdf8;color:var(--ink);font:inherit;font-size:14px;transition:border-color .2s,box-shadow .2s}input::placeholder,textarea::placeholder{color:#b3a691}input:focus-visible,textarea:focus-visible{outline:none;border-color:#b29360;box-shadow:0 0 0 3px #b89a6120}button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}textarea{min-height:118px;resize:vertical;line-height:1.7}.amount-field{position:relative}.amount-field input{font:400 32px/1.2 Georgia,"Times New Roman",serif;padding:16px 64px 16px 16px;letter-spacing:-.5px}.amount-field span{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:1.5px;color:#9e8766}input[type=number]{appearance:textfield;-moz-appearance:textfield}input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.row{display:flex;justify-content:space-between;gap:12px;margin-top:8px;font-size:11px;color:#99866a}.q{display:flex;gap:8px;margin-top:10px}.q button{flex:1;padding:9px 0;border:1px solid #e1d5c1;border-radius:8px;background:transparent;color:#806c50;font:600 12px "Segoe UI",Arial,sans-serif;cursor:pointer;transition:background .2s,border-color .2s}.q button:hover{background:#eee6d5}.q button[aria-pressed=true]{background:#eee3cd;border-color:#bfa478;color:#634923}.go{width:100%;margin-top:24px;padding:15px;border:1px solid #713727;border-radius:10px;background:var(--lac);color:#fff9ef;font:600 14px "Segoe UI",Arial,sans-serif;letter-spacing:.3px;cursor:pointer;box-shadow:0 4px 12px #793c2d18}.go:hover{background:#683223}.go:disabled{opacity:.55;cursor:wait}.privacy-note{font-size:10px;color:#a09481;text-align:center;margin:12px 0 0}.privacy-note span{color:#b29465;margin-right:5px}#err{min-height:1.2em;margin-top:8px;color:#a3150b;font-size:12px}#res{display:none;text-align:center}#res img{width:100%;max-width:330px;border-radius:14px;background:#fff;border:1px solid #e8dfd1;margin:20px 0 8px}#res .sub{line-height:1.8}#res p{font-size:13px}#paymentStatus{border:1px solid #d8dec8;background:#eef1e6;color:#586a44;padding:14px;border-radius:10px;font-size:13px!important}code{display:inline-block;margin:8px 0;padding:6px 16px;background:#eee5d3;border-radius:6px;font-size:19px;font-weight:700;letter-spacing:.1em;color:#7b6037}#newOrder{border:1px solid #d3c4aa;border-radius:8px;background:transparent;padding:10px 18px;color:#786448;cursor:pointer;font:12px "Segoe UI",Arial,sans-serif}
-.account{padding:14px 16px;border:1px solid #e4d8c4;border-radius:12px;margin-bottom:22px;background:#fffdf8}.account-button,.account button{display:inline-block;border:1px solid #713727;border-radius:8px;background:#793c2d;color:#fff;padding:9px 14px;text-decoration:none;cursor:pointer}.account-head{display:flex;align-items:center;gap:12px}.account-head img{width:44px;height:44px;border-radius:50%;object-fit:cover}.account-head .sub{margin:0}.level{margin-left:auto;color:#795d36;font-weight:700}.level-progress{margin:14px 0 4px}.level-progress-copy{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#795d36;font-size:11px;font-weight:600}.level-progress-track{height:7px;margin-top:7px;overflow:hidden;border-radius:999px;background:#e9dfce;box-shadow:inset 0 1px 2px #6f54301a}.level-progress-bar{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8d5539,#c59a59);transition:width .45s ease}.level-progress-note{margin:6px 0 0;color:#8b7c69;font-size:10px}.account details{margin-top:10px}.account summary{cursor:pointer;color:#795d36}.account form{margin-top:8px}.account small{display:block;color:#8b7c69}.account .logout{margin-top:10px;background:transparent;color:#793c2d}.account #profileError{display:block;color:#a3150b}
-@media(max-width:760px){body{padding:24px 16px}.site-shell{grid-template-columns:1fr;gap:24px;max-width:480px}.intro{padding:8px 8px 0}.intro h2{font-size:34px;letter-spacing:-.8px;margin:22px 0 12px}.intro h2 br{display:none}.intro p{max-width:none;font-size:13px;margin-bottom:0}.intro-art,.intro-note{display:none}.brand-icon{width:34px;height:34px;font-size:20px}.brand{font-size:9px;letter-spacing:2px}main{padding:26px 24px;border-radius:20px}h1{font-size:26px}.amount-field input{font-size:30px}}
-.intro h2,h1{font-family:"Times New Roman",serif}
-</style>
-<style>#amountError{min-height:1.2em;margin-top:8px;color:#a3150b;font-size:12px}</style>
-<style>
-.amount-preview{margin-top:4px;color:#8b7c69;font-size:11px}.amount-preview strong{color:#795d36;font-weight:700}
-.history{margin-top:28px;padding-top:22px;border-top:1px solid #e2d8c7}.history-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.history h2{margin:0;font:400 21px/1.3 Georgia,"Times New Roman",serif}.history-sub{margin:4px 0 12px;color:#8b7c69;font-size:11px}.history-list{display:grid;gap:8px}.history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e7ddce;border-radius:10px;background:#fffdf8}.history-main{min-width:0}.history-amount{display:block;color:#795d36;font:600 15px/1.3 "Segoe UI",Arial,sans-serif}.history-date{display:block;color:#9b8c79;font-size:10px}.history-side{display:flex;align-items:center;gap:8px;flex-shrink:0}.history-status{padding:4px 7px;border-radius:999px;background:#eee7da;color:#786448;font-size:10px;white-space:nowrap}.history-code{color:#9b8c79;font-size:10px}.history-more{display:block;margin:12px auto 0;padding:9px 16px;border:1px solid #d3c4aa;border-radius:8px;background:transparent;color:#786448;cursor:pointer;font:12px "Segoe UI",Arial,sans-serif}.history-more:disabled{opacity:.55;cursor:wait}.history-empty{margin:10px 0 0;color:#9b8c79;font-size:12px;text-align:center}
-.voice-select-box{margin-top:20px;padding:14px 16px;border:1px solid #e1d8c9;border-radius:12px;background:#fffdf8}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:40px 20px;background:radial-gradient(ellipse at 18% 22%,#ede3cb 0%,transparent 60%),radial-gradient(ellipse at 85% 80%,#e8dec4 0%,transparent 55%),var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6}
+.site-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.18fr);align-items:start;gap:56px;max-width:1040px;width:100%}
+.intro{padding:16px 0;position:sticky;top:40px}
+.brand{display:inline-flex;gap:10px;align-items:center;letter-spacing:2px;font-size:11px;font-weight:700;color:var(--lac);text-transform:uppercase;background:#f0e6d2;padding:6px 14px;border-radius:999px;border:1px solid #dfd1b8}
+.brand-icon{color:var(--gold-dark);font-size:13px}
+.intro h1{font:700 42px/1.25 Georgia,"Times New Roman",serif;letter-spacing:-1.2px;margin:28px 0 16px;color:#1e1712}
+.intro h1 em{font-style:normal;color:var(--lac);background:linear-gradient(135deg,var(--lac),#b3402e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.intro p{color:var(--muted);font-size:15px;line-height:1.7;margin:0 0 24px}
+.intro-features{display:grid;gap:12px;margin:24px 0}
+.feature-item{display:flex;gap:12px;align-items:flex-start;background:#fffaf0;border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.feature-icon{font-size:18px;line-height:1;margin-top:2px}
+.feature-copy strong{display:block;font-size:13px;color:var(--ink)}
+.feature-copy span{font-size:12px;color:var(--muted);line-height:1.4}
+.intro-note{border-top:1px solid var(--border);padding-top:18px;font-size:12px;color:var(--muted);margin-top:20px}
+
+main{width:100%;background:var(--ivory);border:1px solid var(--border);border-radius:24px;padding:32px 34px;box-shadow:0 20px 60px #4d3a240d,0 4px 12px #4d3a2405}
+.card-header{margin-bottom:20px}
+.section-kicker{margin:0 0 4px;color:var(--lac);font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase}
+.card-header h2{margin:0 0 6px;font:700 27px/1.3 Georgia,"Times New Roman",serif;color:#1e1712;letter-spacing:-.4px}
+.sub{margin:0;font-size:13px;color:var(--muted)}
+
+.account{padding:14px 16px;border:1px solid var(--border);border-radius:14px;margin-bottom:24px;background:#fffdf9}
+.account-button,.account button{display:inline-block;border:1px solid var(--lac);border-radius:8px;background:var(--lac);color:#fff;padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:background .15s}
+.account-button:hover,.account button:hover{background:var(--lac-dark)}
+.account-head{display:flex;align-items:center;gap:12px}
+.account-head img{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.account-head .sub{margin:0;font-size:12px}
+.level{margin-left:auto;color:var(--gold-dark);font-weight:800;font-size:14px;background:#fbf3e4;padding:4px 10px;border-radius:999px;border:1px solid #ebd8b5}
+.level-progress{margin:14px 0 4px}
+.level-progress-copy{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--gold-dark);font-size:11.5px;font-weight:700}
+.level-progress-track{height:7px;margin-top:7px;overflow:hidden;border-radius:999px;background:#e9dfce;box-shadow:inset 0 1px 2px #4a341a14}
+.level-progress-bar{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--lac),var(--gold));transition:width .45s ease}
+.level-progress-note{margin:6px 0 0;color:var(--muted);font-size:11px}
+.account details{margin-top:10px}
+.account summary{cursor:pointer;color:var(--gold-dark);font-weight:600;font-size:12.5px}
+.account form{margin-top:10px}
+.account small{display:block;color:var(--muted);margin-top:3px}
+.account .logout{margin-top:10px;background:transparent;color:var(--lac);border-color:#e4d1c4;font-size:12px}
+.account #profileError{display:block;color:#b3261e;font-size:12px;margin-top:6px}
+
+label{display:block;margin:20px 0 8px;font-size:12.5px;font-weight:700;color:#44372c}
+label .step{display:inline-block;background:#f0e5d4;color:var(--lac);font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;margin-right:8px;letter-spacing:.5px}
+input,textarea,select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:14px;transition:border-color .15s,box-shadow .15s}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px #c2944b25}
+textarea{min-height:105px;resize:vertical;line-height:1.6}
+.amount-field{position:relative}
+.amount-field input{font:700 30px/1.2 Georgia,"Times New Roman",serif;padding:14px 64px 14px 16px;color:#1e1712}
+.amount-field span{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+.amount-preview{margin-top:5px;color:var(--muted);font-size:12px}
+.amount-preview strong{color:var(--lac);font-weight:700}
+#amountError{min-height:1.2em;margin-top:4px;color:#b3261e;font-size:12px}
+.q{display:flex;gap:8px;margin-top:10px}
+.q button{flex:1;padding:10px 0;border:1px solid #dfd5c4;border-radius:9px;background:#fdfcf9;color:#5a4a39;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer;transition:all .15s}
+.q button:hover{background:#f3ecdf;border-color:#cfbeaa}
+.q button[aria-pressed=true]{background:#ede3cb;border-color:var(--gold);color:var(--lac)}
+.row{display:flex;justify-content:space-between;gap:12px;margin-top:6px;font-size:11.5px;color:var(--muted)}
+
+.voice-select-box{margin-top:20px;padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:#fffdf9}
 .voice-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.voice-head label{margin:0;font-size:12px;font-weight:600;color:#62523f}
-.voice-badge{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700}
+.voice-head label{margin:0;font-size:12px;font-weight:700;color:#44372c}
+.voice-badge{padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
 .voice-badge.locked{background:#eee6d7;color:#8a7962}
 .voice-badge.unlocked{background:#e8f0fe;color:#1a73e8}
 .voice-badge.vip{background:#f3e8fd;color:#784db5}
-.voice-select{width:100%;padding:11px 13px;border:1px solid #e1d8c9;border-radius:8px;background:#fff;font:inherit;font-size:13.5px}
+.voice-select{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:8px;background:#fff;font:inherit;font-size:13.5px}
 .voice-select:disabled{background:#f6f1e7;color:#9b8c78;cursor:not-allowed}
-.voice-hint{margin:6px 0 0;font-size:11px;color:#8c7b66}
+.voice-hint{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
+
+.go{width:100%;margin-top:24px;padding:16px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--lac),#9c3422);color:#fff;font:700 15px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:.3px;cursor:pointer;box-shadow:0 8px 24px #8a2e2025;transition:transform .1s,box-shadow .15s,opacity .15s}
+.go:hover{background:linear-gradient(135deg,var(--lac-dark),#85291b);box-shadow:0 10px 28px #8a2e2035}
+.go:active{transform:translateY(1px)}
+.go:disabled{opacity:.55;cursor:wait;box-shadow:none}
+.privacy-note{font-size:11px;color:var(--muted);text-align:center;margin:12px 0 0}
+.privacy-note span{color:var(--gold);margin-right:4px}
+#err{min-height:1.2em;margin-top:8px;color:#b3261e;font-size:12px;text-align:center}
+
+#res{display:none;text-align:center;padding:10px 0}
+#res h2{font:700 25px/1.3 Georgia,"Times New Roman",serif;margin:0 0 8px;color:#1e1712}
+#res img{width:100%;max-width:310px;border-radius:16px;background:#fff;border:1px solid var(--border);margin:16px 0 10px;box-shadow:0 12px 36px #00000010}
+#res code{display:inline-block;margin:6px 0;padding:8px 20px;background:#f5edd9;border-radius:8px;font-size:20px;font-weight:800;letter-spacing:.12em;color:var(--lac);border:1px dashed #d5be9b}
+#paymentStatus{border:1px solid #d4e2c8;background:#f2f7ec;color:#456635;padding:14px;border-radius:10px;font-size:13.5px;font-weight:600;margin:16px 0}
+#newOrder{border:1px solid var(--border);border-radius:9px;background:#fff;padding:11px 22px;color:#5a4a39;cursor:pointer;font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin-top:14px}
+#newOrder:hover{background:#f8f3ea}
+
+.history{margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+.history-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.history-head h3{margin:0;font:700 20px/1.3 Georgia,"Times New Roman",serif;color:#1e1712}
+.history-tabs{display:flex;gap:6px}
+.history-tab{padding:5px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s}
+.history-tab.active{background:var(--lac);color:#fff;border-color:var(--lac)}
+.history-list{display:grid;gap:10px}
+.history-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fffdfa;transition:background .15s}
+.history-item:hover{background:#fff}
+.history-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#f0e3cc;color:var(--lac);display:grid;place-items:center;font-weight:700;font-size:15px;border:1px solid #e2d1b7}
+.history-body{flex:1;min-width:0}
+.history-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.history-name{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-amount{font-size:14px;font-weight:800;color:var(--lac);white-space:nowrap}
+.history-message{margin:4px 0 6px;font-size:12.5px;color:#4c3e32;line-height:1.45;background:#fcf8f0;padding:6px 10px;border-radius:7px;border-left:2px solid var(--gold);word-break:break-word}
+.history-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.history-status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:#eef6e8;color:#3b6d26}
+.history-empty{margin:14px 0;color:var(--muted);font-size:12.5px;text-align:center;padding:20px;border:1px dashed var(--border);border-radius:12px}
+.history-more{display:block;margin:14px auto 0;padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);cursor:pointer;font-size:12px;font-weight:600}
+.history-more:hover{background:#f8f3ea}
+
+@media(max-width:760px){
+  body{padding:20px 14px}
+  .site-shell{grid-template-columns:1fr;gap:24px;max-width:480px}
+  .intro{position:static;padding:0}
+  .intro h1{font-size:32px;margin:18px 0 10px}
+  .intro-features{display:none}
+  main{padding:24px 20px;border-radius:20px}
+  .card-header h2{font-size:24px}
+  .amount-field input{font-size:26px}
+}
 </style>
+</head>
+<body>
+
 <div class="site-shell">
-<aside class="intro"><div class="brand"><span class="brand-icon" aria-hidden="true">✦</span>DÂNG HƯƠNG ONLINE</div>
-<h2>Gửi một lời nguyện,<br> trao chút <em>lòng thành.</em></h2>
-<p>Một nén hương, một lời gửi gắm. Dành những điều bình an cho người bạn thương.</p>
-<svg class="intro-art" viewBox="0 0 168 140" fill="none" aria-hidden="true"><circle cx="84" cy="72" r="57" stroke="#c1ac862e"/><circle cx="84" cy="72" r="45" stroke="#c1ac862e"/><path d="M75 89V45M85 89V30M95 89V45" stroke="#a08050" stroke-width="2" stroke-linecap="round"/><path d="M75 34C62 23 85 20 75 9M95 34C108 21 87 19 96 6" stroke="#b7a78a" stroke-width="1.5" stroke-linecap="round"/><path d="M55 92H113L105 116H63L55 92Z" fill="#bc9b6720" stroke="#a88b5a" stroke-width="1.5"/><ellipse cx="84" cy="92" rx="29" ry="6" fill="#e0d2b8" stroke="#a88b5a"/><path d="M65 105H103M69 119L66 125M99 119L102 125" stroke="#a88b5a" stroke-width="1.5"/></svg>
-<p class="intro-note">Lời nhắn của bạn sẽ xuất hiện cùng lễ dâng trên livestream.</p></aside>
-<main>
-  <section class="account" id="account">
-    <div id="signedOut"><strong>Đăng nhập để tạo lượt donate</strong><p class="sub">Tài khoản Google giúp lưu tên, avatar và cấp donate của bạn.</p><a class="account-button" href="google-auth.php?action=login">Tiếp tục với Google</a></div>
-    <div id="signedIn" hidden>
-      <div class="account-head"><img id="profileAvatar" alt="" referrerpolicy="no-referrer"><div><strong id="profileName"></strong><br><span id="profileEmail" class="sub"></span></div><span id="profileLevel" class="level"></span></div>
-      <div class="level-progress" aria-label="Tiến trình cấp donate">
-        <div class="level-progress-copy"><span id="profileProgressText">Tiến trình lên cấp tiếp theo</span><span id="profileProgressAmount"></span></div>
-        <div id="profileProgressTrack" class="level-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="profileProgressBar" class="level-progress-bar"></span></div>
-        <p id="profileProgressNote" class="level-progress-note"></p>
+  <aside class="intro">
+    <div class="brand"><span class="brand-icon">✦</span>DONATE · VAN TUAN LE</div>
+    <h1>Ủng hộ livestream<br><em>Van Tuan Le</em></h1>
+    <p>Mỗi lượt donate và lời nhắn là nguồn động lực quý giá tiếp thêm năng lượng cho Van Tuan Le trên mỗi buổi livestream!</p>
+
+    <div class="intro-features">
+      <div class="feature-item">
+        <span class="feature-icon">✨</span>
+        <div class="feature-copy">
+          <strong>Thông báo trực tiếp trên live</strong>
+          <span>Lời nhắn của bạn hiển thị ngay trên màn hình OBS livestream</span>
+        </div>
       </div>
-      <details><summary>Chỉnh sửa hồ sơ</summary><form id="profileForm" enctype="multipart/form-data">
-        <label>Tên hiển thị <input name="display_name" id="profileNameInput" maxlength="40" required></label>
-        <label>Ảnh đại diện <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG hoặc WebP · tối đa 2 MB. Để trống để giữ ảnh hiện tại.</small></label>
-        <label><input type="checkbox" name="use_google_avatar" value="1" style="width:auto"> Dùng lại ảnh Google</label>
-        <button type="submit">Lưu hồ sơ</button><span id="profileError" role="alert"></span>
-      </form></details>
-      <form action="google-auth.php?action=logout" method="post"><input type="hidden" name="csrf" id="logoutCsrf"><button class="logout" type="submit">Đăng xuất</button></form>
-    </div>
-  </section>
-  <div id="f">
-    <p class="section-kicker">MỘT CHÚT TÂM THÀNH</p><h1>Viết lời gửi gắm</h1>
-    <p class="sub">Chọn lễ dâng và gửi lời nguyện của bạn.</p>
-    <label for="amt"><span class="step">01</span>Số tiền dâng lễ</label>
-    <div class="amount-field"><input id="amt" type="number" min="10000" max="50000000" step="1000" value="10000" inputmode="numeric" aria-describedby="amountError amountPreview"><span>VNĐ</span></div>
-    <div id="amountError" role="alert" aria-live="polite"></div>
-    <div id="amountPreview" class="amount-preview" aria-live="polite">Hiển thị: <strong id="amountPreviewValue">10,000đ</strong></div>
-    <div class="q">
-      <button type="button" data-v="10000">10,000đ</button>
-      <button type="button" data-v="50000">50,000đ</button>
-      <button type="button" data-v="200000">200,000đ</button>
-    </div>
-    <label for="msg"><span class="step">02</span>Lời nhắn của bạn</label>
-    <textarea id="msg" maxlength="100" placeholder="Viết lời nhắn gửi đến streamer…" aria-describedby="hint cnt"></textarea>
-    <div class="row"><span id="hint">Dưới 50k: thông báo chuẩn</span><span id="cnt">0/100</span></div>
-    <div class="voice-select-box">
-      <div class="voice-head">
-        <label for="voiceSelect"><span class="step">03</span>Chọn giọng đọc</label>
-        <span id="voiceBadge" class="voice-badge locked">Mặc định</span>
+      <div class="feature-item">
+        <span class="feature-icon">🎙️</span>
+        <div class="feature-copy">
+          <strong>Giọng đọc AI thông minh</strong>
+          <span>Từ 50.000đ mở khóa tự chọn các chất giọng đọc AI đặc biệt</span>
+        </div>
       </div>
-      <select id="voiceSelect" class="voice-select" disabled>
-        <option value="">Giọng đọc mặc định của kênh</option>
-      </select>
-      <p id="voiceHint" class="voice-hint">Mốc dưới 50k dùng giọng mặc định. Donate từ 50.000đ để tự chọn giọng đọc!</p>
+      <div class="feature-item">
+        <span class="feature-icon">🐉</span>
+        <div class="feature-copy">
+          <strong>Hiệu ứng đồ họa độc quyền</strong>
+          <span>Hiệu ứng Hỏa Long giáng lâm và Thiên Nữ đại chiêu theo từng mốc</span>
+        </div>
+      </div>
     </div>
-    <button class="go" id="go" type="button" disabled>Tiếp tục · Tạo mã QR &nbsp; →</button>
-    <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn có thể xuất hiện trên livestream.</p>
-    <div id="err" role="alert"></div>
-  </div>
-  <section id="history" class="history" hidden>
-    <div class="history-head"><h2>Lịch sử donate</h2><span class="history-sub">5 lượt gần nhất</span></div>
-    <div id="historyList" class="history-list"></div>
-    <p id="historyEmpty" class="history-empty" hidden>Chưa có lượt donate nào.</p>
-    <button type="button" id="historyMore" class="history-more" hidden>Xem thêm</button>
-  </section>
-  <div id="res">
-    <h1>Quét mã để chuyển khoản</h1>
-    <img id="qr" alt="Mã QR chuyển khoản">
-    <p>Giữ nguyên số tiền và nội dung chuyển khoản:<br><code id="code"></code></p>
-    <p id="paymentStatus" role="status" aria-live="polite">Đang kiểm tra thanh toán…</p>
-    <p class="sub">Mỗi lần chuyển cần từ 10.000đ. Lễ tính theo tiền thực nhận và hiển thị sau khi được duyệt, đến lượt phát.</p>
-    <p class="sub">Nếu chuyển sai nội dung, hãy giữ biên lai và mã đơn để được hỗ trợ đối soát.</p>
-    <button type="button" id="newOrder">Tạo lượt khác</button>
-  </div>
-</main>
+
+    <p class="intro-note">✦ Thông báo và giọng đọc AI sẽ tự động kích hoạt ngay sau khi chuyển khoản thành công.</p>
+  </aside>
+
+  <main>
+    <section class="account" id="account">
+      <div id="signedOut">
+        <strong>Đăng nhập Google để lưu tên &amp; cấp ủng hộ</strong>
+        <p class="sub">Lưu tên, avatar và tích lũy cấp độ người ủng hộ trên kênh của Van Tuan Le.</p>
+        <a class="account-button" href="google-auth.php?action=login">Tiếp tục với Google</a>
+      </div>
+      <div id="signedIn" hidden>
+        <div class="account-head">
+          <img id="profileAvatar" alt="" referrerpolicy="no-referrer">
+          <div><strong id="profileName"></strong><br><span id="profileEmail" class="sub"></span></div>
+          <span id="profileLevel" class="level">Lv0</span>
+        </div>
+        <div class="level-progress" aria-label="Tiến trình cấp donate">
+          <div class="level-progress-copy"><span id="profileProgressText">Tiến trình lên cấp tiếp theo</span><span id="profileProgressAmount"></span></div>
+          <div id="profileProgressTrack" class="level-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="profileProgressBar" class="level-progress-bar"></span></div>
+          <p id="profileProgressNote" class="level-progress-note"></p>
+        </div>
+        <details>
+          <summary>Chỉnh sửa hồ sơ</summary>
+          <form id="profileForm" enctype="multipart/form-data">
+            <label>Tên hiển thị <input name="display_name" id="profileNameInput" maxlength="40" required></label>
+            <label>Ảnh đại diện <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG hoặc WebP · tối đa 2 MB. Để trống để giữ ảnh hiện tại.</small></label>
+            <label><input type="checkbox" name="use_google_avatar" value="1" style="width:auto"> Dùng lại ảnh Google</label>
+            <button type="submit">Lưu hồ sơ</button><span id="profileError" role="alert"></span>
+          </form>
+        </details>
+        <form action="google-auth.php?action=logout" method="post"><input type="hidden" name="csrf" id="logoutCsrf"><button class="logout" type="submit">Đăng xuất</button></form>
+      </div>
+    </section>
+
+    <div id="f">
+      <div class="card-header">
+        <p class="section-kicker">ỦNG HỘ LIVESTREAM</p>
+        <h2>Gửi donate cho Van Tuan Le</h2>
+        <p class="sub">Nhập số tiền và viết lời nhắn gửi đến buổi livestream.</p>
+      </div>
+
+      <label for="amt"><span class="step">01</span>Số tiền ủng hộ (VNĐ)</label>
+      <div class="amount-field">
+        <input id="amt" type="number" min="10000" max="50000000" step="1000" value="50000" inputmode="numeric" aria-describedby="amountError amountPreview">
+        <span>VNĐ</span>
+      </div>
+      <div id="amountError" role="alert" aria-live="polite"></div>
+      <div id="amountPreview" class="amount-preview" aria-live="polite">Số tiền: <strong id="amountPreviewValue">50,000đ</strong></div>
+      <div class="q">
+        <button type="button" data-v="10000">10,000đ</button>
+        <button type="button" data-v="50000" aria-pressed="true">50,000đ</button>
+        <button type="button" data-v="200000">200,000đ</button>
+      </div>
+
+      <label for="msg"><span class="step">02</span>Lời nhắn gửi Van Tuan Le</label>
+      <textarea id="msg" maxlength="225" placeholder="Viết lời nhắn gửi đến Van Tuan Le trên livestream…" aria-describedby="hint cnt"></textarea>
+      <div class="row"><span id="hint">Từ 50k: Mở khóa Hỏa Long &amp; tự chọn giọng đọc</span><span id="cnt">0/225</span></div>
+
+      <div class="voice-select-box">
+        <div class="voice-head">
+          <label for="voiceSelect"><span class="step">03</span>Chọn giọng đọc AI</label>
+          <span id="voiceBadge" class="voice-badge unlocked">✦ Mở khóa 50k</span>
+        </div>
+        <select id="voiceSelect" class="voice-select">
+          <option value="">Giọng đọc mặc định của mốc 50,000đ</option>
+        </select>
+        <p id="voiceHint" class="voice-hint">✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.</p>
+      </div>
+
+      <button class="go" id="go" type="button">Ủng hộ ngay · Quét mã QR &nbsp; →</button>
+      <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
+      <div id="err" role="alert"></div>
+    </div>
+
+    <div id="res">
+      <h2>Quét mã để ủng hộ Van Tuan Le</h2>
+      <p class="sub">Mở ứng dụng ngân hàng bất kỳ để quét mã QR chuyển khoản:</p>
+      <img id="qr" alt="Mã QR chuyển khoản ủng hộ Van Tuan Le">
+      <p style="font-size:13px;color:var(--muted);margin:8px 0 4px">Giữ nguyên số tiền và nội dung chuyển khoản:</p>
+      <code id="code"></code>
+      <p id="paymentStatus" role="status" aria-live="polite">Đang chờ nhận tiền chuyển khoản…</p>
+      <p class="sub">Sau khi ngân hàng nhận tiền, màn hình livestream sẽ tự động phát thông báo và giọng đọc AI!</p>
+      <button type="button" id="newOrder">Tạo lượt donate khác</button>
+    </div>
+
+    <!-- Lịch sử các phiên donate thành công gần nhất -->
+    <section id="history" class="history">
+      <div class="history-head">
+        <h3>Lịch sử donate</h3>
+        <div class="history-tabs" id="historyTabs">
+          <button type="button" class="history-tab active" data-scope="all">🔥 Gần nhất</button>
+          <button type="button" class="history-tab" data-scope="me" id="tabMe" hidden>👤 Của tôi</button>
+        </div>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <p id="historyEmpty" class="history-empty" hidden>Chưa có lượt donate thành công nào.</p>
+      <button type="button" id="historyMore" class="history-more" hidden>Xem thêm</button>
+    </section>
+  </main>
 </div>
+
 <script>
 const $=i=>document.getElementById(i);
-let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false,historyOffset=0,historyLoading=false;
-function remember(value){try{if(value)localStorage.setItem('cung_order',JSON.stringify(value));else localStorage.removeItem('cung_order')}catch(e){}}
+let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
+let historyOffset=0,historyLoading=false,currentScope='all';
+
+// Xóa triệt để bộ nhớ đệm đơn hàng cũ để luôn hiển thị form donate mặc định khi vào hoặc tải lại trang
+try{
+  localStorage.removeItem('vtl_order');
+  localStorage.removeItem('cung_order');
+}catch(e){}
+
 async function refreshStatus(generation){
   if(!order||generation!==statusGeneration)return;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
@@ -114,25 +279,36 @@ async function refreshStatus(generation){
     if(generation!==statusGeneration)return;
     if(!r.ok)throw new Error(d.error||'Chưa kiểm tra được trạng thái.');
     const money=Number(d.paid_amount||0).toLocaleString('vi-VN')+'đ';
-    const labels={pending:'Đang chờ nhận tiền.',review:'Đã nhận '+money+'. Lời nhắn đang chờ duyệt.',
-      queued:'Đã nhận '+money+'. Đang chờ phát; có '+d.ahead+' lượt phía trước.',
-      playing:'Lễ của bạn đang được phát trên live.',shown:'Lễ của bạn đã hiển thị trên live.',
-      skipped:'Đã nhận '+money+'. Lượt này không hiển thị trên live. Vui lòng liên hệ người tổ chức nếu cần hỗ trợ.'};
+    const labels={
+      pending:'Đang chờ nhận tiền chuyển khoản…',
+      review:'Đã nhận '+money+'. Lời nhắn đang chờ duyệt.',
+      queued:'Đã nhận '+money+'. Đang chờ phát trên live; có '+d.ahead+' lượt phía trước.',
+      playing:'Donate của bạn đang được phát trên livestream!',
+      shown:'Donate của bạn đã hiển thị trên livestream!',
+      skipped:'Đã nhận '+money+'. Lượt này không hiển thị trên live. Vui lòng liên hệ nếu cần hỗ trợ.'
+    };
     $('paymentStatus').textContent=labels[d.state]||'Đang cập nhật trạng thái…';
     if(d.paused&&['review','queued'].includes(d.state))$('paymentStatus').textContent+=' Hàng đợi đang tạm dừng.';
     finished=['shown','skipped'].includes(d.state);
+    if(finished){
+      // Tải lại lịch sử phiên donate thành công ngay khi thanh toán xong
+      loadHistory(true);
+    }
   }catch(e){if(generation===statusGeneration)$('paymentStatus').textContent='Chưa kết nối được để kiểm tra thanh toán; sẽ tự thử lại. Bạn không cần chuyển lại.'}
-  finally{clearTimeout(timer);if(!finished&&generation===statusGeneration)statusTimer=setTimeout(()=>refreshStatus(generation),5000)}
+  finally{clearTimeout(timer);if(!finished&&generation===statusGeneration)statusTimer=setTimeout(()=>refreshStatus(generation),4000)}
 }
+
 function showOrder(value){
-  order=value;remember(value);clearTimeout(statusTimer);const generation=++statusGeneration;
+  order=value;clearTimeout(statusTimer);const generation=++statusGeneration;
   $('f').style.display='none';$('res').style.display='block';
   $('qr').src=value.qr;$('code').textContent=value.code;refreshStatus(generation);
 }
-$('newOrder').onclick=()=>{order=null;remember(null);statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block'};
+$('newOrder').onclick=()=>{order=null;statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block';upd();};
+
 const lim=a=>a>=50000?225:100;
 const hint=a=>a>=200000?'Từ 200k: Mở khóa Thiên Nữ & toàn bộ giọng VIP':a>=50000?'Từ 50k: Mở khóa Hỏa Long & tự chọn giọng đọc':'Dưới 50k: Giọng đọc mặc định';
-const money=a=>Number(a).toLocaleString('en-US')+'đ';
+const money=a=>Number(a).toLocaleString('vi-VN')+'đ';
+
 let availableVoices=null;
 function syncVoiceOptions(a){
   const sel=$('voiceSelect'),badge=$('voiceBadge'),h=$('voiceHint');
@@ -147,7 +323,7 @@ function syncVoiceOptions(a){
   }
   sel.disabled=false;
   badge.className='voice-badge '+(tier===3?'vip':'unlocked');
-  badge.textContent=tier===3?'⭐ Mở khóa VIP 200k':'✦ Mở khóa mốc 50k';
+  badge.textContent=tier===3?'⭐ Mở khóa VIP 200k':'✦ Mở khóa 50k';
   h.textContent=tier===3?'👑 Đã mở khóa toàn bộ giọng đọc VIP đặc biệt!':'✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.';
   const list=tier===3?(availableVoices?.tier3?.voices||[]):(availableVoices?.tier2?.voices||[]);
   const current=sel.value;
@@ -158,47 +334,93 @@ function syncVoiceOptions(a){
   }
   if(current&&Array.from(sel.options).some(o=>o.value===current))sel.value=current;
 }
+
 async function loadVoices(){
   try{
     const r=await fetch('voices.php',{cache:'no-store'}),d=await r.json();
     availableVoices=d;
-    syncVoiceOptions(Number($('amt').value)||10000);
+    syncVoiceOptions(Number($('amt').value)||50000);
   }catch(e){}
 }
+
 function historyDate(value){
   const date=new Date(String(value||'').replace(' ','T'));
-  return Number.isNaN(date.getTime())?String(value||''):date.toLocaleString('vi-VN',{dateStyle:'short',timeStyle:'short'});
+  return Number.isNaN(date.getTime())?String(value||''):date.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
 }
+
 function renderHistory(items,reset){
   const list=$('historyList');
   if(reset)list.replaceChildren();
   for(const item of items){
     const row=document.createElement('div');row.className='history-item';
-    const main=document.createElement('div');main.className='history-main';
-    const amount=document.createElement('strong');amount.className='history-amount';amount.textContent=money(item.amount);
+    
+    // Avatar
+    let avatarEl;
+    if(item.avatar){
+      avatarEl=document.createElement('img');avatarEl.className='history-avatar';
+      avatarEl.src=item.avatar;avatarEl.alt=item.name;avatarEl.referrerPolicy='no-referrer';
+    } else {
+      avatarEl=document.createElement('div');avatarEl.className='history-avatar';
+      avatarEl.textContent=(item.name||'U').charAt(0).toUpperCase();
+    }
+    
+    const body=document.createElement('div');body.className='history-body';
+    
+    const top=document.createElement('div');top.className='history-top';
+    const name=document.createElement('strong');name.className='history-name';name.textContent=item.name;
+    const amount=document.createElement('span');amount.className='history-amount';amount.textContent=money(item.amount);
+    top.append(name,amount);
+    body.append(top);
+    
+    if(item.message){
+      const msg=document.createElement('div');msg.className='history-message';msg.textContent=item.message;
+      body.append(msg);
+    }
+    
+    const meta=document.createElement('div');meta.className='history-meta';
     const date=document.createElement('span');date.className='history-date';date.textContent=historyDate(item.created_at);
-    main.append(amount,date);
-    const side=document.createElement('div');side.className='history-side';
-    const status=document.createElement('span');status.className='history-status';status.textContent=item.status||'Đang cập nhật';
-    side.append(status);
-    if(item.code){const code=document.createElement('small');code.className='history-code';code.textContent=item.code;side.append(code)}
-    row.append(main,side);list.append(row);
+    const status=document.createElement('span');status.className='history-status';status.textContent=item.status||'Thành công';
+    meta.append(date,status);
+    body.append(meta);
+    
+    row.append(avatarEl,body);
+    list.append(row);
   }
   $('historyEmpty').hidden=list.children.length>0;
 }
+
 async function loadHistory(reset=false){
   if(historyLoading)return;
   if(reset)historyOffset=0;
   historyLoading=true;$('historyMore').disabled=true;
+  const pageSize = reset ? 5 : 10;
   try{
-    const r=await fetch('donation-history.php?limit=5&offset='+historyOffset,{cache:'no-store'}),d=await r.json();
+    const url='donation-history.php?limit='+pageSize+'&offset='+historyOffset+(currentScope==='me'?'&scope=me':'');
+    const r=await fetch(url,{cache:'no-store'}),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Chưa tải được lịch sử donate.');
-    if(!d.logged_in){$('history').hidden=true;return}
-    const items=Array.isArray(d.items)?d.items:[];renderHistory(items,reset);historyOffset+=items.length;
-    $('history').hidden=false;$('historyMore').hidden=!d.has_more;
-  }catch(e){if(reset){$('historyList').replaceChildren();$('historyEmpty').hidden=false;$('history').hidden=false}$('historyMore').hidden=true}
-  finally{historyLoading=false;$('historyMore').disabled=false}
+    const items=Array.isArray(d.items)?d.items:[];
+    renderHistory(items,reset);
+    historyOffset+=items.length;
+    $('historyMore').hidden=!d.has_more;
+    $('historyMore').textContent='Xem thêm 10 donate';
+  }catch(e){
+    if(reset){$('historyList').replaceChildren();$('historyEmpty').hidden=false}
+    $('historyMore').hidden=true;
+  }finally{
+    historyLoading=false;$('historyMore').disabled=false;
+  }
 }
+
+// Chuyển tab Lịch sử Gần nhất / Của tôi
+document.querySelectorAll('.history-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.history-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentScope=tab.dataset.scope||'all';
+    loadHistory(true);
+  });
+});
+
 function renderProfile(user){
   profile=user;$('profileName').textContent=user.name;$('profileNameInput').value=user.name;
   $('profileEmail').textContent=user.email;$('profileLevel').textContent='Lv'+user.level;
@@ -210,8 +432,9 @@ function renderProfile(user){
   $('profileProgressText').textContent='Tiến trình lên Lv'+(level+1);
   $('profileProgressAmount').textContent=money(levelPaid)+' / '+money(levelSize);
   $('profileProgressBar').style.width=percent+'%';$('profileProgressTrack').setAttribute('aria-valuenow',String(percent));
-  $('profileProgressNote').textContent='Còn '+money(remaining)+' để lên cấp tiếp theo · Tổng đã dâng '+money(total);
+  $('profileProgressNote').textContent='Còn '+money(remaining)+' để lên cấp tiếp theo · Tổng đã ủng hộ '+money(total);
 }
+
 function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=10000&&a<=50000000;
@@ -225,24 +448,41 @@ function upd(){
   syncVoiceOptions(a);
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
+
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
 $('historyMore').onclick=()=>loadHistory(false);
 $('amt').oninput=$('msg').oninput=upd;
+
 async function loadProfile(){
   try{
-    const r=await fetch('profile.php',{cache:'no-store'}),d=await r.json();csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
-    const allowed=!!d.logged_in;loggedIn=allowed;$('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
+    const r=await fetch('profile.php',{cache:'no-store'});
+    const text=await r.text();
+    let d;
+    try{ d=JSON.parse(text); }catch(pe){ return; }
+    csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
+    const allowed=!!d.logged_in;loggedIn=allowed;
+    $('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
+    $('tabMe').hidden=!allowed;
     upd();
-    if(!allowed){$('history').hidden=true;return}
-    loadHistory(true);
-    renderProfile(d.user);
-  }catch(e){loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.'}
+    if(allowed){
+      renderProfile(d.user);
+    }
+  }catch(e){
+    loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.';
+  }
 }
+
 $('profileForm').onsubmit=async e=>{
   e.preventDefault();$('profileError').textContent='';const form=e.currentTarget;const fd=new FormData(form);fd.set('csrf',csrfToken);
-  try{const r=await fetch('profile.php',{method:'POST',body:fd,cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Không lưu được hồ sơ.');form.reset();await loadProfile()}
-  catch(err){$('profileError').textContent=err.message}
+  try{
+    const r=await fetch('profile.php',{method:'POST',body:fd,cache:'no-store'});
+    const text=await r.text();
+    let d;
+    try{ d=JSON.parse(text); }catch(pe){ throw new Error('Không thể lưu hồ sơ lúc này.'); }
+    if(!r.ok)throw new Error(d.error||'Không lưu được hồ sơ.');form.reset();await loadProfile();
+  }catch(err){$('profileError').textContent=err.message}
 };
+
 $('go').onclick=async()=>{
   const amount=Number($('amt').value);
   if(!loggedIn||!Number.isInteger(amount)||amount<10000||amount>50000000){upd();return}
@@ -250,17 +490,24 @@ $('go').onclick=async()=>{
   $('go').disabled=true;
   try{
     const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,voice_id:$('voiceSelect')?.value||''})});
-    const d=await r.json();
+    const text=await r.text();
+    let d;
+    try{
+      d=JSON.parse(text);
+    }catch(pe){
+      if(r.status===401)throw new Error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại Google.');
+      if(r.status===403)throw new Error('Phiên làm việc đã hết hạn, vui lòng tải lại trang (F5).');
+      throw new Error('Máy chủ đang bận, vui lòng thử lại sau giây lát.');
+    }
     if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
-    showOrder(d);loadHistory(true);
-  }catch(e){$('err').textContent='Mất kết nối, hãy thử lại.'}finally{upd()}
+    showOrder(d);
+  }catch(e){$('err').textContent=e.message||'Mất kết nối, hãy thử lại.'}finally{upd()}
 };
+
 upd();
 loadProfile();
 loadVoices();
-try{
-  const saved=JSON.parse(localStorage.getItem('cung_order'));
-  if(saved&&typeof saved.status_token==='string'&&/^[a-f0-9]{64}$/.test(saved.status_token)&&
-    typeof saved.code==='string'&&typeof saved.qr==='string'&&saved.qr.startsWith('https://img.vietqr.io/image/'))showOrder(saved);
-}catch(e){}
+loadHistory(true);
 </script>
+</body>
+</html>
