@@ -7,13 +7,6 @@
 .intro { min-width: 0; }
 .intro h1 { font-size: clamp(38px, 4.3vw, 60px); line-height: 1.12; letter-spacing: -2.8px; margin: 22px 0; font-weight: 750; }
 .intro h1 em { font-style: normal; color: var(--accent); }
-.intro-features { display: grid; gap: 12px; margin: 32px 0; }
-.feature-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #111f2e; border: 1px solid var(--border); border-radius: var(--radius-md); }
-.feature-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; color: var(--accent); background: #2b3b25; border-radius: 10px; }
-.feature-icon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.feature-item strong { font-size: 16px; font-weight: 650; line-height: 1.4; }
-.feature-item:nth-child(2) .feature-icon { background: #153b46; color: #8de4ef; }
-.feature-item:nth-child(3) .feature-icon { background: #423429; color: #ffcb96; }
 .donation-column { display: grid; gap: 24px; min-width: 0; }
 main { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 30px; box-shadow: 0 14px 36px #0003; border-top: 3px solid var(--accent); }
 .card-header { border-bottom: 1px solid var(--border); padding-bottom: 22px; margin-bottom: 26px; }
@@ -102,7 +95,6 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 20px; gap: 32px; }
   .intro, .donation-column, main { width: 100%; }
   .intro h1 { font-size: 42px; letter-spacing: -2px; }
-    .intro-features { display: grid; margin: 24px 0; }
   .intro .account { margin-top: 24px; }
   main, .history { padding: 22px 18px; }
   .intro .account, .donate-site .leaderboard { padding: 20px; }
@@ -118,7 +110,12 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .workspace-tabs button { flex: 0 0 auto; background: var(--field); color: var(--muted); }
 .workspace-tabs button[aria-selected=true] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
 .settings-workspace { margin-top: 36px; max-width: 1100px; }
+.music-queue { margin-top: var(--space-6); }
+.music-queue h2 { margin: 0 0 var(--space-2); font: 700 24px/1.4 var(--font-ui); }
 .music-queue-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.music-queue-list:empty { margin: 0; }
+.music-title-link { color: var(--accent); text-decoration: none; font-weight: 650; }
+.music-title-link:hover { color: var(--accent-hover); }
 .music-queue-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
 .music-queue-row > div { min-width: 0; overflow-wrap: anywhere; }
 .music-queue-row small { display: block; color: var(--muted); margin-top: 6px; }

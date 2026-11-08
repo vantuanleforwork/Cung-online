@@ -21,7 +21,7 @@ try {
     $donorFilter = $personal ? 'AND d.user_id = :uid' : '';
     $s = $db->prepare("SELECT d.id, d.created_at, d.code, d.paid_amount, d.expected_amount, d.name, d.message,
                d.shown, d.queue_state, d.user_id, d.donation_kind, d.required_amount,
-               q.id AS music_id, q.title AS music_title,
+               q.id AS music_id, q.title AS music_title, COALESCE(q.video_id,d.youtube_id) AS music_video_id,
                (q.title_retry_at IS NULL OR q.title_retry_at<=NOW()) AS music_title_due,
                COALESCE(NULLIF(u.custom_avatar_path,''), NULLIF(u.google_avatar_url,''), NULLIF(d.donor_avatar,'')) AS donor_avatar
         FROM donations d
@@ -79,6 +79,7 @@ try {
             'message' => (string)($row['message'] ?? ''),
             'kind' => $row['donation_kind'],
             'music_title' => (string)($row['music_title'] ?? ''),
+            'music_video_id' => $row['donation_kind'] === 'music' ? (string)($row['music_video_id'] ?? '') : '',
             'roulette_name' => (string)($spin['name'] ?? ''),
             'roulette_result' => $winner,
             'avatar' => (string)($row['donor_avatar'] ?? ''),

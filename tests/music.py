@@ -212,6 +212,7 @@ def run():
                     return {item['code']:item for item in request('donation-history.php?limit=50&scope=me')[1]['items']}
                 history = personal_history()
                 assert history[one['code']]['music_title'] == 'Fixture metadata dQw4w9WgXcQ'
+                assert history[one['code']]['music_video_id'] == 'dQw4w9WgXcQ'
                 assert history[two['code']]['message'] == 'Music request'
                 assert history[order['code']]['roulette_name'] == 'Fixture wheel'
                 assert history[order['code']]['roulette_result'] == ''

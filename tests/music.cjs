@@ -41,12 +41,17 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  await send('Page.navigate',{url:base+'/index.html'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungDonate?.ready'))break;await wait(50)}
  assert(await evaluate('CungDonate.ready'));
- await evaluate('renderHistory([{name:"Test",amount:10000,kind:"music",music_title:"Tên bài",message:"Chào live"},{name:"Test",amount:10000,kind:"roulette",roulette_name:"Thử thách",roulette_result:"Ô A"}],true)');
+ for(let i=0;i<100;i++){if(await evaluate('!!document.querySelector("#musicQueueList a")'))break;await wait(50)}
+ assert(await evaluate('document.querySelector(".intro > .leaderboard + #musicQueueSection")?.offsetWidth > 0 && CungDonate.kind==="message"'));
+ await evaluate('renderHistory([{name:"Test",amount:10000,kind:"music",music_title:"Tên bài",music_video_id:"dQw4w9WgXcQ",message:"Chào live"},{name:"Test",amount:10000,kind:"roulette",roulette_name:"Thử thách",roulette_result:"Ô A"}],true)');
  assert.deepEqual(await evaluate('[...document.querySelectorAll(".history-message")].map(x=>x.textContent)'),[
   'Order nhạc: Tên bài · Với lời nhắn: Chào live','Đã donate vòng quay Thử thách và nhận được Ô A'
  ]);
+ assert.equal(await evaluate('document.querySelector("#historyList .music-title-link").href'),'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+ assert(await evaluate('(()=>{const history=getComputedStyle(document.querySelector("#historyList .music-title-link")),queue=getComputedStyle(document.querySelector("#musicQueueList a"));return history.color===queue.color&&history.textDecorationLine==="none"&&queue.textDecorationLine==="none"})()'));
  await evaluate('document.querySelector("[data-donation-kind=music]").click()');await wait(100);
  assert.equal(await evaluate('document.getElementById("musicLinkField").hidden'),false);
+ assert(await evaluate('document.getElementById("musicQueueSection").offsetWidth > 0'));
  assert.equal(await evaluate('document.getElementById("amt").min'),'60000');
  assert.equal(await evaluate('CungDonate.videoID("https://youtu.be/dQw4w9WgXcQ?si=abc")'),'dQw4w9WgXcQ');
  assert.equal(await evaluate('(()=>{try{CungDonate.videoID("https://www.youtube.com.evil.test/watch?v=dQw4w9WgXcQ");return false}catch{return true}})()'),true);

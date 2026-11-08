@@ -17,10 +17,20 @@
     if (!/^[A-Za-z0-9_-]{11}$/.test(id)) throw new Error('Link YouTube phải trỏ đến một video cụ thể.');
     return id;
   };
+  state.musicLink = (id, title) => {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id || '')) return document.createTextNode(title);
+    const link = document.createElement('a');
+    link.className = 'music-title-link';
+    link.href = 'https://www.youtube.com/watch?v='+id;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = title;
+    return link;
+  };
   const buttons = [...document.querySelectorAll('[data-donation-kind]')];
   const field = document.getElementById('musicLinkField');
-  const queue = document.getElementById('musicQueueSection');
   let loading = false;
+  let queueItems = '';
   function refreshForm() {
     buttons.forEach(button => {
       const active = button.dataset.donationKind === state.kind;
@@ -30,7 +40,7 @@
     document.getElementById('donationFields').setAttribute('aria-labelledby','donation-tab-'+state.kind);
     const music = state.kind === 'music';
     const roulette = state.kind === 'roulette';
-    field.hidden = !music; queue.hidden = !music;
+    field.hidden = !music;
     document.querySelector('.voice-select-box').hidden = music || roulette;
     const rouletteField = document.getElementById('rouletteField');
     if (rouletteField) rouletteField.hidden = !roulette;
@@ -46,7 +56,6 @@
   buttons.forEach(button => button.addEventListener('click', () => {
     state.kind = button.dataset.donationKind;
     refreshForm();
-    if (state.kind === 'music') loadQueue();
   }));
   buttons.forEach(button => button.addEventListener('keydown', event => {
     let target;
@@ -61,25 +70,33 @@
   }));
   wheelSelect?.addEventListener('change', refreshForm);
   async function loadQueue() {
-    if (loading || state.kind !== 'music' || document.hidden) return;
+    if (loading || document.hidden) return;
     loading = true;
     const status = document.getElementById('musicQueueStatus');
     try {
       const response = await fetch('music-queue.php',{cache:'no-store'});
       if (!response.ok) throw new Error('Chưa tải được hàng đợi nhạc.');
       const data = await response.json();
-      const list = document.getElementById('musicQueueList'); list.replaceChildren();
-      for (const song of data.items) {
-        const row = document.createElement('li'); row.className = 'music-queue-row';
-        const text = document.createElement('div');
-        const link = document.createElement('a'); link.href = 'https://www.youtube.com/watch?v='+song.video_id;
-        link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = song.title || 'Đang lấy tên bài…';
-        const person = document.createElement('small'); person.textContent = song.donation_id === null ? 'Thêm bởi quản trị viên' : song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
-        text.append(link,person);
-        const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : 'Chờ phát';
-        row.append(text,badge); list.append(row);
+      const items = JSON.stringify(data.items);
+      if (items !== queueItems) {
+        const list = document.getElementById('musicQueueList');
+        const rows = data.items.map(song => {
+          const row = document.createElement('li'); row.className = 'music-queue-row';
+          const text = document.createElement('div');
+          const link = state.musicLink(song.video_id, song.title || 'Đang lấy tên bài…');
+          const person = document.createElement('small'); person.textContent = song.donation_id === null ? 'Thêm bởi quản trị viên' : song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
+          text.append(link,person);
+          const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : 'Chờ phát';
+          row.append(text,badge);
+          return row;
+        });
+        list.replaceChildren(...rows);
+        queueItems = items;
       }
-      status.textContent = data.paused ? 'Hàng đợi đang tạm dừng.' : data.items.length ? 'Thứ tự '+(data.order === 'amount' ? 'ưu tiên số tiền donate' : 'thanh toán trước phát trước') : 'Chưa có bài nhạc. Bài sẽ xuất hiện sau khi thanh toán thành công.';
+      const message = !data.items.length ? 'Hiện không có bài nhạc nào được order. Hãy order để được phát nhạc ngay!' :
+        data.paused ? 'Hàng đợi đang tạm dừng.' :
+          'Thứ tự '+(data.order === 'amount' ? 'ưu tiên số tiền donate' : 'thanh toán trước phát trước');
+      if (status.textContent !== message) status.textContent = message;
     } catch (error) { status.textContent = error.message; }
     finally { loading = false; }
   }
@@ -98,6 +115,8 @@
     document.getElementById('amt').value = state.settings.tier2_min;
     refreshForm();
   }).catch(error => { document.getElementById('err').textContent = error.message; });
+  loadQueue();
   setInterval(loadQueue,10000);
+  document.addEventListener('visibilitychange',loadQueue);
   window.addEventListener('donation:paid',loadQueue);
 })();
