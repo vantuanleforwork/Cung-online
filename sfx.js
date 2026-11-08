@@ -228,19 +228,49 @@ function rouletteClick(landing){
   tone('triangle',pitch,at,.045,landing?.18:.11,{attack:.001,wet:.05});
   noise(at,.038,{f0:landing?2100:3700,q:1.6,pts:[[.001,landing?.22:.14],[.034,.0001]]});
 }
-const S=global.CungSFX={ting,bell:templeBell,dragon,celestial,stop,resume,rouletteStart,rouletteClick};
+function uploadedAlert(url,signal){
+  return new Promise(resolve=>{
+    const audio=new Audio(url);
+    audio.volume=VOL;
+    let timer,playing=false,finished=false;
+    const done=()=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort',done);
+      audio.onplaying=audio.onended=audio.onerror=null;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      resolve(playing);
+    };
+    audio.onplaying=()=>{
+      if(playing)return;
+      playing=true;
+      clearTimeout(timer);
+      timer=setTimeout(done,10000);
+    };
+    audio.onended=audio.onerror=done;
+    signal.addEventListener('abort',done,{once:true});
+    timer=setTimeout(done,3000);
+    audio.play().catch(done);
+  });
+}
+async function donateAlert(url,useTing,signal){
+  if(!enabled||signal.aborted)return;
+  const custom=typeof url==='string'&&/^uploads\/donate-sound\.mp3\?v=[a-f0-9]{16}$/.test(url);
+  if(custom&&await uploadedAlert(url,signal))return;
+  if(signal.aborted)return;
+  if(custom||useTing){
+    ting();
+    await sleep(1350,signal);
+  }else resume();
+}
+const S=global.CungSFX={ting,bell:templeBell,dragon,celestial,stop,resume,rouletteStart,rouletteClick,donateAlert};
 if(typeof module!=='undefined')module.exports=S;
 
 if(global.document){
   ['pointerdown','click','keydown'].forEach(e=>global.document.addEventListener(e,resume,{passive:true}));
-  /* Dragon starts immediately on its eight-second clock; other tiers keep the bell lead-in. */
-  if(typeof global.play==='function'){
-    const basePlay=global.play;
-    global.play=async function(d){
-      if(enabled&&!d.roulette){if(Number(d.tier)>=2)S.resume();else{S.ting();await new Promise(r=>setTimeout(r,850))}}
-      return basePlay.apply(this,arguments);
-    };
-  }
   /* Âm thanh riêng cho từng bậc: 1 chuông chùa, 2 rồng, 3 thiên nữ. */
   if(typeof global.playTierIntro==='function'){
     const baseIntro=global.playTierIntro;

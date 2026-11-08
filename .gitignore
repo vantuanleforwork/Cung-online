@@ -3,6 +3,7 @@
 /.env.*
 !/\.env.example
 /artifacts/*.png
+/uploads/donate-sound.mp3
 
 __pycache__/
 *.py[cod]

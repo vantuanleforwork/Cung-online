@@ -44,6 +44,7 @@ try {
     $row['claim_token'] = $token;
     $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;
+    $row['donate_sound_url'] = donate_sound_url();
     if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
         $row['roulette'] = roulette_spin($db, (int)$row['id']);
     }

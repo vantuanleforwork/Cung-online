@@ -91,6 +91,25 @@ def run():
                     try:
                         with opener.open(req) as response:return response.status,json.loads(response.read().decode('utf-8-sig'))
                     except urllib.error.HTTPError as error:return error.code,json.loads(error.read().decode('utf-8-sig'))
+                def upload_sound(content, token=csrf):
+                    boundary = 'fixture-donate-sound'
+                    body = (f'--{boundary}\r\nContent-Disposition: form-data; name="action"\r\n\r\nupload_donate_sound\r\n'
+                            f'--{boundary}\r\nContent-Disposition: form-data; name="csrf"\r\n\r\n{token}\r\n'
+                            f'--{boundary}\r\nContent-Disposition: form-data; name="donate_sound"; filename="alert.mp3"\r\n'
+                            'Content-Type: audio/mpeg\r\n\r\n').encode() + content + f'\r\n--{boundary}--\r\n'.encode()
+                    req = urllib.request.Request(base+'/admin.php?view=donate',data=body,
+                        headers={'Content-Type':f'multipart/form-data; boundary={boundary}'})
+                    try:
+                        with opener.open(req,timeout=15) as response: return response.status
+                    except urllib.error.HTTPError as error: return error.code
+                mp3 = (bytes.fromhex('fffb9064') + bytes(413))*8
+                assert upload_sound(mp3, 'bad') == 403
+                assert upload_sound(b'not audio') == 409
+                assert upload_sound(mp3) == 200
+                sound_url = request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url']
+                assert sound_url.startswith('uploads/donate-sound.mp3?v=')
+                with opener.open(base+'/'+sound_url) as uploaded:
+                    assert uploaded.read() == mp3
                 values=dict(message_min=20000,tier2_min=75000,tier3_min=300000,music_min=60000,music_seconds=30,music_volume=40,music_opacity=80,music_x=48,music_y=740,music_width=360,music_height=160,music_order='time',music_enabled='1')
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**values))[0]==200
                 idle_values=values|dict(music_idle_enabled='1',music_idle_message='Order nhạc <b>theo yêu cầu</b> 🎵')
@@ -184,7 +203,7 @@ def run():
                 assert request('music-title.php?k=wrong',dict(id=1))[0]==403
                 # Inspect real browser UI and preview without calling external YouTube.
                 cookie=next(c.value for c in jar if c.name=='cung_admin')
-                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,text=True,creationflags=FLAGS,timeout=75)
+                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,encoding='utf-8',creationflags=FLAGS,timeout=75)
                 assert browser.returncode==0,browser.stdout+browser.stderr
 
                 wheel = dict(action='save_roulette', csrf=csrf, name='Fixture wheel', minimum=25000, active='on')
@@ -206,6 +225,7 @@ def run():
                 sql("UPDATE app_settings SET paused=0,speech_enabled=1,speech_provider='fpt'")
                 alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert alert['roulette'] == dict(name='Fixture wheel', options=['A','B'], winner=1), alert
+                assert alert['donate_sound_url'] == sound_url
                 assert alert['speech_text'].endswith('mua vòng quay Fixture wheel và nhận được B.'), alert
                 assert 'audio_url' not in alert and 'roulette_result_speech' not in alert
                 def personal_history():
@@ -231,6 +251,8 @@ def run():
                 assert sql('SELECT COUNT(*) FROM payment_transactions') == payment_count
                 test_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert test_alert['name'] == 'Test OBS' and test_alert['roulette'] == dict(name='Renamed', options=['C'], winner=0)
+                assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
+                assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
                 print(browser.stdout.strip())
                 print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:

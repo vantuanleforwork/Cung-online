@@ -77,7 +77,9 @@ function render(d){
   $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('vi-VN');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
   if(d.roulette){
-    $('donorMessage').textContent='Đã mua vòng quay '+d.roulette.name;
+    const winner=d.roulette.options[d.roulette.winner];
+    $('donorMessage').textContent='Đã mua vòng quay '+d.roulette.name+
+      (winner?' và nhận được '+winner:'')+(d.message?'\n'+d.message:'');
   }else if(d.donation_kind==='music'){
     const order=d.music_title?'Đã order bài '+d.music_title:'Đã order nhạc YouTube';
     $('donorMessage').textContent=order+(d.message?'\n'+d.message:'');
@@ -108,17 +110,18 @@ async function prepareSpeech(d,signal){
   }
   return true;
 }
-async function speak(d,signal){
+async function speak(d,signal,ready){
   if(!d.speech?.enabled||d.speech.volume===0)return;
   $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
-  if(!await prepareSpeech(d,signal))return;
+  if(!await (ready ?? prepareSpeech(d,signal)))return;
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
   try{await CungSpeech.read(d,{signal})}
   finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI NHẮN'}
 }
 async function play(d){
   const lease=preview?{signal:new AbortController().signal,close(){}}:startLease(d);
-  render(d);$('stage').classList.remove('is-visible');
+  $('stage').classList.remove('is-visible');
+  if(!d.roulette)render(d);
 
   // Nạp trước giọng đọc chạy ngầm song song với hoạt ảnh mở đầu (intro fx) để không phải chờ đợi
   if(!d.roulette&&!d.audio_url&&d.speech?.enabled&&d.speech.volume>0&&apiSpeech(d)){
@@ -129,25 +132,26 @@ async function play(d){
   }
 
   try{
+    await globalThis.CungSFX?.donateAlert?.(d.donate_sound_url,!!d.roulette||donationTier(d)===1,lease.signal);
+    let ready;
     if(d.roulette){
-      const ready=prepareSpeech(d,lease.signal).catch(error=>{
+      ready=prepareSpeech(d,lease.signal).catch(error=>{
         if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc donate.');
         return false;
       });
-      await globalThis.CungRoulette.play(d.roulette,lease.signal,async()=>{
-        try{if(await ready)await CungSpeech.read(d,{signal:lease.signal})}
-        catch(error){if(!lease.signal.aborted)noticeError(error,'Không phát được giọng đọc donate.')}
-      });
+      await globalThis.CungRoulette.play(d.roulette,lease.signal);
     }else{
       await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
-      void $('stage').offsetWidth;$('stage').classList.add('is-visible');
-      await sleep(700,lease.signal);
-      const reading=speak({...d},lease.signal).catch(error=>{
-        if(lease.signal.aborted)throw error;
-        noticeError(error,'Không phát được giọng đọc.');
-      });
-      await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     }
+    if(lease.signal.aborted)return false;
+    if(d.roulette)render(d);
+    void $('stage').offsetWidth;$('stage').classList.add('is-visible');
+    await sleep(700,lease.signal);
+    const reading=speak(d,lease.signal,ready).catch(error=>{
+      if(lease.signal.aborted)throw error;
+      noticeError(error,'Không phát được giọng đọc.');
+    });
+    await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
     return true;

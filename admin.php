@@ -108,6 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
+            } elseif ($action === 'upload_donate_sound' || $action === 'reset_donate_sound') {
+                if ($action === 'upload_donate_sound') save_donate_sound($_FILES['donate_sound'] ?? []);
+                else reset_donate_sound();
+                $_SESSION['flash'] = $action === 'upload_donate_sound' ? 'Đã lưu âm thanh donate.' : 'Đã đặt lại tiếng báo donate mặc định.';
+                redirect_admin('donate');
             } elseif ($action === 'test_roulette_obs') {
                 roulette_queue_test(db(), $_POST);
                 $_SESSION['flash'] = 'Đã gửi lượt quay thử vào hàng đợi OBS. Nếu đang tạm dừng, bấm Tiếp tục phát.';

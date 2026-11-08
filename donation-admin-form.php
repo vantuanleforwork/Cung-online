@@ -1,6 +1,7 @@
 <?php
 if (empty($loggedIn)) { http_response_code(403); exit; }
 $donate = donation_settings($db);
+$donateSound = donate_sound_url();
 ?>
 <section data-tabs="donate" class="settings-workspace">
   <h2>Cài đặt donate</h2>
@@ -44,4 +45,20 @@ $donate = donation_settings($db);
     </section>
     <button type="submit">Lưu cài đặt donate</button>
   </form>
+  <section class="speech-panel" aria-labelledby="donateSoundTitle">
+    <h3 id="donateSoundTitle">Âm thanh donate</h3>
+    <p class="muted">Tệp MP3 tối đa 2 MB. OBS phát tối đa 10 giây đầu làm tiếng báo donate.</p>
+    <?php if ($donateSound): ?>
+      <audio controls preload="none" src="<?=h($donateSound)?>" aria-label="Nghe thử âm thanh donate đã lưu"></audio>
+    <?php else: ?>
+      <p class="muted">Đang dùng âm thanh mặc định.</p>
+    <?php endif ?>
+    <form method="post" enctype="multipart/form-data">
+      <?php csrf_field() ?>
+      <input type="hidden" name="action" value="upload_donate_sound">
+      <label>Chọn tệp MP3 <input type="file" name="donate_sound" accept=".mp3,audio/mpeg" required></label>
+      <button type="submit">Lưu âm thanh</button>
+    </form>
+    <?php if ($donateSound) action_form('reset_donate_sound', [], 'Dùng lại âm thanh mặc định'); ?>
+  </section>
 </section>
