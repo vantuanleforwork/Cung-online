@@ -121,9 +121,10 @@ function music_untitled_id(PDO $db): int {
         WHERE q.state IN ('waiting','playing') AND q.title='' AND (q.title_retry_at IS NULL OR q.title_retry_at<=NOW())
         AND " . music_playable_sql() . " ORDER BY (q.state='playing') DESC,q.id LIMIT 1")->fetchColumn();
 }
-function refresh_music_title(PDO $db, int $id): ?string {
+function refresh_music_title(PDO $db, int $id, bool $fromHistory = false): ?string {
+    $eligible = $fromHistory ? "d.status='paid' AND d.is_test=0" : music_playable_sql();
     $query = $db->prepare("SELECT q.video_id,q.title FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
-        WHERE q.id=? AND " . music_playable_sql());
+        WHERE q.id=? AND " . $eligible);
     $query->execute([$id]);
     $song = $query->fetch(PDO::FETCH_ASSOC);
     if (!$song) return null;

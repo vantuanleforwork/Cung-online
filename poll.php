@@ -46,6 +46,7 @@ try {
     $row['lease_seconds'] = $seconds;
     if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
         $row['roulette'] = roulette_spin($db, (int)$row['id']);
+        $row['roulette_result_speech'] = roulette_result_speech($row['roulette']);
     }
     unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);

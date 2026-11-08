@@ -67,7 +67,7 @@ globalThis.CungRoulette = (() => {
     context.fill();
   }
 
-  async function play(spin, signal) {
+  async function play(spin, signal, onReveal) {
     const overlay = document.getElementById('rouletteOverlay');
     const context = overlay.querySelector('canvas').getContext('2d');
     const result = overlay.querySelector('.roulette-result');
@@ -108,7 +108,7 @@ globalThis.CungRoulette = (() => {
       if (context) draw(context, items.length, spin.winner, 5200, true);
       items[spin.winner].classList.add('is-winner');
       result.textContent = 'Ô trúng · ' + spin.options[spin.winner];
-      await sleep(4200, signal);
+      await Promise.all([sleep(4200, signal), onReveal?.()]);
     } finally {
       cancelAnimationFrame(frame);
       overlay.hidden = true;

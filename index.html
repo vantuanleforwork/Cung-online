@@ -290,8 +290,13 @@ function renderHistory(items,reset){
     top.append(name,amount);
     body.append(top);
     
-    if(item.message){
-      const msg=document.createElement('div');msg.className='history-message';msg.textContent=item.message;
+    let description='';
+    if(item.kind==='music') description='Order nhạc: '+(item.music_title||'Bài nhạc YouTube');
+    if(item.kind==='roulette') description='Đã donate vòng quay'+(item.roulette_name?' '+item.roulette_name:'')+
+      (item.roulette_result?' và nhận được '+item.roulette_result:'');
+    if(description||item.message){
+      const msg=document.createElement('div');msg.className='history-message';
+      msg.textContent=description+(item.message?(description?' · Với lời nhắn: ':'')+item.message:'');
       body.append(msg);
     }
     

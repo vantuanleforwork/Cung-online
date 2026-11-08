@@ -41,6 +41,10 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  await send('Page.navigate',{url:base+'/index.html'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungDonate?.ready'))break;await wait(50)}
  assert(await evaluate('CungDonate.ready'));
+ await evaluate('renderHistory([{name:"Test",amount:10000,kind:"music",music_title:"Tên bài",message:"Chào live"},{name:"Test",amount:10000,kind:"roulette",roulette_name:"Thử thách",roulette_result:"Ô A"}],true)');
+ assert.deepEqual(await evaluate('[...document.querySelectorAll(".history-message")].map(x=>x.textContent)'),[
+  'Order nhạc: Tên bài · Với lời nhắn: Chào live','Đã donate vòng quay Thử thách và nhận được Ô A'
+ ]);
  await evaluate('document.querySelector("[data-donation-kind=music]").click()');await wait(100);
  assert.equal(await evaluate('document.getElementById("musicLinkField").hidden'),false);
  assert.equal(await evaluate('document.getElementById("amt").min'),'60000');
@@ -99,5 +103,12 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.equal(await evaluate('document.getElementById("musicCard").hidden'),true);
  assert(await saveIdle(false));await wait(2300);
  assert.equal(await evaluate('document.getElementById("musicCard").hidden'),true);
+ await send('Page.navigate',{url:base+'/overlay.html?preview=1&roulette=1&motion=1'});
+ for(let i=0;i<100;i++){if(await evaluate('!!window.CungSpeech && typeof CungRoulette!=="undefined" && !document.getElementById("previewTools").hidden'))break;await wait(50)}
+ await evaluate('(()=>{window.reads=[];CungSpeech.read=async d=>reads.push({text:d.speech_text,reveal:document.querySelector(".roulette-result").textContent,hidden:document.getElementById("rouletteOverlay").hidden});document.getElementById("previewPlay").click()})()');
+ for(let i=0;i<125;i++){if(await evaluate('reads.length===2'))break;await wait(80)}
+ assert.equal(await evaluate('reads.length'),2,await evaluate('document.getElementById("notice").textContent'));
+ assert.equal(await evaluate('reads[0].hidden'),true);
+ assert.deepEqual(await evaluate('reads[1]'),{text:'Ô trúng là Thêm một thử thách.',reveal:'Ô trúng · Thêm một thử thách',hidden:false});
  assert.deepEqual(errors,[]);completed=true;console.log('PASS: real admin music settings tab, live idle preview, mobile layout, idle-to-manual playback transition, music alerts and index validation');await send('Browser.close').catch(()=>{});
 })().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{clearTimeout(watchdog);ws?.close();child?.kill();setTimeout(()=>{try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}},500).unref()});

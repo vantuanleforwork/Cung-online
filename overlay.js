@@ -86,21 +86,27 @@ function render(d){
   globalThis.CungLayout?.apply(d.speech?.overlay);
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
-async function speak(d,signal){
-  if(!d.speech?.enabled||d.speech.volume===0)return;
-  $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
+async function prepareSpeech(d,signal,result=false){
+  if(!d.speech?.enabled||d.speech.volume===0)return false;
   if(['fpt','elevenlabs','custom_api'].includes(d.speech.provider)){
-    const deadline=Date.now()+(d.speech.provider==='custom_api'?180000:45000);
+    const deadline=Date.now()+(result?30000:d.speech.provider==='custom_api'?180000:45000);
     while(!d.audio_url){
       if(Date.now()>deadline)throw new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
       const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
+      if(result)ttsPayload.roulette_result=true;
       const {response,data}=await request('tts.php',ttsPayload,signal);
-      if(data.disabled)return;
+      if(data.disabled)return false;
       if(!response.ok)throw new Error(data.error||'Không tạo được giọng đọc.');
       d.audio_url=data.audio_url;
       if(!d.audio_url)await sleep(600,signal);
     }
   }
+  return true;
+}
+async function speak(d,signal){
+  if(!d.speech?.enabled||d.speech.volume===0)return;
+  $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
+  if(!await prepareSpeech(d,signal))return;
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
   try{await CungSpeech.read(d,{signal})}
   finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI NHẮN'}
@@ -128,7 +134,14 @@ async function play(d){
     if(d.roulette){
       await reading;
       $('stage').classList.remove('is-visible');
-      await globalThis.CungRoulette.play(d.roulette,lease.signal);
+      const outcome={...d,speech_text:d.roulette_result_speech,audio_url:null};
+      const ready=outcome.speech_text
+        ? prepareSpeech(outcome,lease.signal,true).catch(error=>{if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc ô trúng.');return false})
+        : Promise.resolve(false);
+      await globalThis.CungRoulette.play(d.roulette,lease.signal,async()=>{
+        try{if(await ready)await CungSpeech.read(outcome,{signal:lease.signal})}
+        catch(error){if(!lease.signal.aborted)noticeError(error,'Không đọc được ô trúng.')}
+      });
     }else await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
@@ -167,6 +180,7 @@ async function getDemo(){
     if(params.get('roulette')==='1'){
       value.roulette={name:'Vòng quay thử',options:['Chọn bài nhạc','Lời chúc trên live','Thêm một thử thách','Gửi lời nhắn'],winner:2};
       value.speech_text='Nguyễn Văn An đã donate mười nghìn đồng mua vòng quay thử.';
+      value.roulette_result_speech='Ô trúng là Thêm một thử thách.';
     }
   }
   return value;

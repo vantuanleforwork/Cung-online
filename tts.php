@@ -47,7 +47,13 @@ try {
             $row['roulette'] = roulette_spin($db, (int)$row['id']);
         }
     }
-    $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row));
+    $text = speech_text($row, $settings);
+    if (($in['roulette_result'] ?? false) === true) {
+        $text = ($in['preview'] ?? false) === true ? 'Ô trúng là Thêm một thử thách.' :
+            roulette_result_speech($row['roulette'] ?? null);
+        if ($text === '') respond(400, ['error'=>'Lượt này chưa có kết quả vòng quay.']);
+    }
+    $url = provider_audio($db, $text, speech_options_for_donation($settings, $row));
     respond($url === null ? 202 : 200, ['audio_url' => $url]);
 } catch (Throwable $e) {
     error_log('TTS: ' . $e->getMessage());

@@ -53,6 +53,10 @@ def run():
                 music_source=(site/'music.php').read_text(encoding='utf-8')
                 music_source=music_source.replace('function youtube_song_title(string $videoId): string {', "function youtube_song_title(string $videoId): string {\n    return $videoId === 'FWYrRSWabIs' ? '' : 'Fixture metadata ' . $videoId;")
                 (site/'music.php').write_text(music_source,encoding='utf-8')
+                speech_source=(site/'speech.php').read_text(encoding='utf-8')
+                provider_signature='function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null) {'
+                (site/'speech.php').write_text(speech_source.replace(provider_signature,
+                    provider_signature + '\n    return "/fixture-audio?text=" . rawurlencode($text);'), encoding='utf-8')
 
                 password='layout-fixture-password'
                 password_hash=subprocess.check_output([str(PHP),'-r','echo password_hash($argv[1], PASSWORD_DEFAULT);',password],text=True,creationflags=FLAGS)
@@ -203,7 +207,22 @@ def run():
                 alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert alert['roulette'] == dict(name='Fixture wheel', options=['A','B'], winner=1), alert
                 assert alert['speech_text'].endswith('mua vòng quay Fixture wheel.'), alert
+                assert alert['roulette_result_speech'] == 'Ô trúng là B.'
+                def personal_history():
+                    return {item['code']:item for item in request('donation-history.php?limit=50&scope=me')[1]['items']}
+                history = personal_history()
+                assert history[one['code']]['music_title'] == 'Fixture metadata dQw4w9WgXcQ'
+                assert history[two['code']]['message'] == 'Music request'
+                assert history[order['code']]['roulette_name'] == 'Fixture wheel'
+                assert history[order['code']]['roulette_result'] == ''
+                sql("UPDATE app_settings SET speech_enabled=1,speech_provider='fpt'")
+                payload = dict(id=alert['id'], claim_token=alert['claim_token'], roulette_result=True)
+                audio_status, audio = request('tts.php?k=layout-fixture-key', payload)
+                assert audio_status == 200 and urllib.parse.unquote(audio['audio_url']).endswith('Ô trúng là B.'), audio
+                assert request('tts.php?k=layout-fixture-key',payload | dict(claim_token='invalid'))[0] == 409
+                sql('UPDATE app_settings SET speech_enabled=0')
                 assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0] == 200
+                assert personal_history()[order['code']]['roulette_result'] == 'B'
                 payment_count = sql('SELECT COUNT(*) FROM payment_transactions')
                 test_action = dict(action='test_roulette_obs', id=wheel_id, csrf=csrf)
                 assert admin(test_action | dict(csrf='bad'))[0] == 403

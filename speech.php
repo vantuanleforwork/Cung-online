@@ -35,6 +35,11 @@ function money_words(int $amount) {
     return implode(' ', $parts) . ' đồng';
 }
 
+function roulette_result_speech(?array $spin): string {
+    $winner = $spin['options'][$spin['winner']] ?? '';
+    return $winner === '' ? '' : 'Ô trúng là ' . $winner . '.';
+}
+
 function speech_text(array $donation, array $settings) {
     $amount = (int)$donation['paid_amount'];
     $message = trim((string)($donation['message'] ?? ''));
