@@ -69,7 +69,7 @@ def run():
                 jar=http.cookiejar.CookieJar()
                 opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
                 def admin(fields=None):
-                    request=urllib.request.Request(base+'/admin.php?view=speech',data=urllib.parse.urlencode(fields).encode() if fields else None)
+                    request=urllib.request.Request(base+'/admin.php?view=speech',data=urllib.parse.urlencode(fields,doseq=True).encode() if fields else None)
                     try:
                         with opener.open(request,timeout=15) as response: return response.status,response.read().decode('utf-8')
                     except urllib.error.HTTPError as e: return e.code,e.read().decode('utf-8')
@@ -184,12 +184,12 @@ def run():
                 assert browser.returncode==0,browser.stdout+browser.stderr
 
                 wheel = dict(action='save_roulette', csrf=csrf, name='Fixture wheel', minimum=25000, active='on')
-                assert admin(dict(wheel, options='A | 30\nB | 30'))[0] == 409
-                assert admin(dict(wheel, options='A\nB'))[0] == 200
-                assert [x['weight'] for x in json.loads(sql('SELECT options_json FROM roulette_wheels'))] == [5000, 5000]
+                assert admin(wheel | {'option_label[]':['A','B'], 'option_frequency[]':[0,0]})[0] == 409
+                assert admin(wheel | {'option_label[]':['A','B'], 'option_frequency[]':[1,1]})[0] == 200
+                assert [x['frequency'] for x in json.loads(sql('SELECT options_json FROM roulette_wheels'))] == [1, 1]
                 wheel_id = int(sql('SELECT id FROM roulette_wheels'))
                 assert int(request('donation-settings.php')[1]['wheels'][0]['minimum']) == 25000
-                assert admin(dict(wheel, id=wheel_id, options='A | 0\nB | 100'))[0] == 200
+                assert admin(dict(wheel, id=wheel_id) | {'option_label[]':['A','B'], 'option_frequency[]':[0,3]})[0] == 200
                 def spin(amount):
                     return request('create.php', dict(amount=amount, kind='roulette', wheel_id=wheel_id),
                                    {'X-CSRF-Token':donor_csrf})
@@ -198,11 +198,20 @@ def run():
                 assert status == 200 and 'code' in order and 'roulette' not in order, order
                 sql("UPDATE donations SET shown=1 WHERE status='paid'")
                 assert pay(order, 'roulette-fixture', 25000)[0] == 200
-                assert admin(dict(wheel, id=wheel_id, name='Renamed', options='C'))[0] == 200
+                assert admin(dict(wheel, id=wheel_id, name='Renamed') | {'option_label[]':'C', 'option_frequency[]':1})[0] == 200
                 sql('UPDATE app_settings SET paused=0')
                 alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert alert['roulette'] == dict(name='Fixture wheel', options=['A','B'], winner=1), alert
                 assert alert['speech_text'].endswith('mua vòng quay Fixture wheel.'), alert
+                assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0] == 200
+                payment_count = sql('SELECT COUNT(*) FROM payment_transactions')
+                test_action = dict(action='test_roulette_obs', id=wheel_id, csrf=csrf)
+                assert admin(test_action | dict(csrf='bad'))[0] == 403
+                assert admin(test_action)[0] == 200
+                assert sql("SELECT COUNT(*) FROM donations WHERE is_test=1 AND donation_kind='roulette' AND user_id IS NULL") == '1'
+                assert sql('SELECT COUNT(*) FROM payment_transactions') == payment_count
+                test_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
+                assert test_alert['name'] == 'Test OBS' and test_alert['roulette'] == dict(name='Renamed', options=['C'], winner=0)
                 print(browser.stdout.strip())
                 print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:

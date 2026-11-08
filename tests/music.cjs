@@ -13,6 +13,14 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
  await send('Runtime.enable');await send('Page.enable');await send('Network.enable');
  await send('Network.setCookie',{name:'cung_admin',value:cookie,url:base,httpOnly:true,sameSite:'Strict'});
+ await send('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:false});
+ await send('Page.navigate',{url:base+'/admin.php?view=roulette'});
+ for(let i=0;i<100;i++){if(await evaluate('!!document.querySelector("[data-roulette-add]:enabled")'))break;await wait(50)}
+ await evaluate('document.querySelector("[data-roulette-add]").click()');
+ assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-roulette-percent]")].map(x=>x.textContent)'),['50%','50%']);
+ assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+ await evaluate('document.querySelectorAll("[data-roulette-remove]")[1].click()');
+ assert.equal(await evaluate('document.querySelector("[data-roulette-percent]").textContent'),'100%');
  await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
  await send('Page.navigate',{url:base+'/admin.php?view=donate'});
  for(let i=0;i<100;i++){if(await evaluate('document.querySelector("[data-tab=message]")?.getAttribute("aria-selected")==="true"'))break;await wait(50)}
