@@ -110,10 +110,23 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.equal(await evaluate('document.getElementById("musicCard").hidden'),true);
  await send('Page.navigate',{url:base+'/overlay.html?preview=1&roulette=1&motion=1'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungSpeech && typeof CungRoulette!=="undefined" && !document.getElementById("previewTools").hidden'))break;await wait(50)}
- await evaluate('(()=>{window.reads=[];CungSpeech.read=async d=>reads.push({text:d.speech_text,reveal:document.querySelector(".roulette-result").textContent,hidden:document.getElementById("rouletteOverlay").hidden});document.getElementById("previewPlay").click()})()');
- for(let i=0;i<125;i++){if(await evaluate('reads.length===2'))break;await wait(80)}
- assert.equal(await evaluate('reads.length'),2,await evaluate('document.getElementById("notice").textContent'));
- assert.equal(await evaluate('reads[0].hidden'),true);
- assert.deepEqual(await evaluate('reads[1]'),{text:'Ô trúng là Thêm một thử thách.',reveal:'Ô trúng · Thêm một thử thách',hidden:false});
+ await evaluate(`(async()=>{
+   window.reads=[];window.rouletteClicks=0;window.ttsRequests=[];
+   CungSFX.rouletteClick=()=>rouletteClicks++;
+   CungSpeech.read=async d=>reads.push({text:d.speech_text,reveal:document.querySelector(".roulette-result").textContent,audio:d.audio_url});
+   const fetchOriginal=window.fetch;
+   window.fetch=(url,opts)=>{
+     if(!url.startsWith("tts.php"))return fetchOriginal(url,opts);
+     ttsRequests.push({payload:JSON.parse(opts.body),reveal:document.querySelector(".roulette-result").textContent});
+     return Promise.resolve(new Response('{"audio_url":"/fixture-audio"}'));
+   };
+   const donation=await getDemo();donation.speech.provider="fpt";
+   void window.play(donation);
+ })()`);
+ for(let i=0;i<125;i++){if(await evaluate('reads.length===1'))break;await wait(80)}
+ assert.equal(await evaluate('reads.length'),1,await evaluate('document.getElementById("notice").textContent'));
+ assert(await evaluate('rouletteClicks > 4'));
+ assert(await evaluate('ttsRequests.length===1&&ttsRequests[0].payload.roulette_preview===true&&!ttsRequests[0].reveal.includes("Ô trúng")'));
+ assert(await evaluate('reads[0].text.includes("và nhận được Thêm một thử thách")&&reads[0].reveal==="Ô trúng · Thêm một thử thách"&&reads[0].audio==="/fixture-audio"'));
  assert.deepEqual(errors,[]);completed=true;console.log('PASS: real admin music settings tab, live idle preview, mobile layout, idle-to-manual playback transition, music alerts and index validation');await send('Browser.close').catch(()=>{});
 })().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{clearTimeout(watchdog);ws?.close();child?.kill();setTimeout(()=>{try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}},500).unref()});

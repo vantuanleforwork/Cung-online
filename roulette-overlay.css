@@ -11,30 +11,34 @@
 .roulette-overlay[hidden] { display: none; }
 .roulette-board {
   --wheel-ink: #090f19;
-  --wheel-panel: #141f30;
+  --wheel-panel: #151f2a;
   --wheel-accent: #d5f66e;
+  --wheel-brass: #b59c6e;
   --wheel-space: clamp(16px, 3vw, 38px);
   width: min(100%, 1100px);
   padding: var(--wheel-space);
-  border: 1px solid #4a5d71;
-  border-radius: 24px;
-  background: var(--wheel-ink);
+  border: 1px solid #6b604b;
+  border-radius: 28px;
+  background: radial-gradient(ellipse at 22% 36%, #1b3340, transparent 60%), var(--wheel-ink);
   color: #f4f8ff;
-  box-shadow: 0 24px 80px #03060bcc;
+  box-shadow: 0 26px 88px #03060bd9, inset 0 0 0 5px #0b121c, inset 0 0 0 6px #7a6b4b4d;
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   align-items: center;
   gap: var(--wheel-space);
   box-sizing: border-box;
 }
-.roulette-dial canvas { display: block; width: 100%; height: auto; }
-.roulette-caption { color: var(--wheel-accent); font-size: .8rem; letter-spacing: .14em; font-weight: 750; }
+.roulette-dial canvas { display: block; width: 100%; height: auto; filter: drop-shadow(0 16px 12px #02070cb3); }
+.roulette-caption { color: #e5cfa5; font-size: .76rem; letter-spacing: .2em; font-weight: 750; }
 .roulette-copy { min-width: 0; overflow-wrap: anywhere; }
 .roulette-copy h2 { font-size: clamp(22px, 4vw, 48px); line-height: 1.08; margin: .2em 0 .55em; }
-.roulette-copy ol { padding-inline-start: 1.4em; columns: 2; margin: 0; }
-.roulette-copy li { break-inside: avoid; padding: .15em 0; }
+.roulette-copy ol { padding-inline-start: 1.5em; columns: 2; margin: 0; color: #e1e9f1; }
+.roulette-copy li { break-inside: avoid; padding: .24em .2em; }
+.roulette-copy li::marker { color: #c6ab79; font-weight: 750; }
 .roulette-copy li.is-winner { color: var(--wheel-accent); font-weight: 800; }
-.roulette-result { background: var(--wheel-panel); border-radius: 12px; padding: .55em .8em; color: var(--wheel-accent); font-size: clamp(16px, 2.4vw, 32px); font-weight: 750; margin-bottom: 0; }
+.roulette-copy li.is-winner::marker { color: var(--wheel-accent); }
+.roulette-result { background: var(--wheel-panel); border: 1px solid #4e4c40; border-inline-start: 4px solid var(--wheel-brass); border-radius: 12px; padding: .55em .8em; color: #e5cfa5; font-size: clamp(16px, 2.4vw, 32px); font-weight: 750; margin-bottom: 0; }
+.roulette-result.is-revealed { border-color: #778f42; border-inline-start-color: var(--wheel-accent); color: var(--wheel-accent); }
 @media (max-width: 640px) {
   .roulette-board { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .roulette-dial { width: min(100%, 42vh); margin-inline: auto; }

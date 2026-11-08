@@ -86,14 +86,19 @@ function render(d){
   globalThis.CungLayout?.apply(d.speech?.overlay);
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
-async function prepareSpeech(d,signal,result=false){
+const apiSpeech=d=>['fpt','elevenlabs','custom_api'].includes(d.speech?.provider);
+async function prepareSpeech(d,signal){
   if(!d.speech?.enabled||d.speech.volume===0)return false;
-  if(['fpt','elevenlabs','custom_api'].includes(d.speech.provider)){
-    const deadline=Date.now()+(result?30000:d.speech.provider==='custom_api'?180000:45000);
+  if(d.roulette&&!apiSpeech(d)){
+    if(preview)return false;
+    throw new Error('Chọn giọng đọc qua API trong quản trị để đọc lượt quay trên OBS.');
+  }
+  if(apiSpeech(d)){
+    const deadline=Date.now()+(d.speech.provider==='custom_api'?180000:45000);
     while(!d.audio_url){
       if(Date.now()>deadline)throw new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
       const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
-      if(result)ttsPayload.roulette_result=true;
+      if(preview&&d.roulette)ttsPayload.roulette_preview=true;
       const {response,data}=await request('tts.php',ttsPayload,signal);
       if(data.disabled)return false;
       if(!response.ok)throw new Error(data.error||'Không tạo được giọng đọc.');
@@ -116,7 +121,7 @@ async function play(d){
   render(d);$('stage').classList.remove('is-visible');
 
   // Nạp trước giọng đọc chạy ngầm song song với hoạt ảnh mở đầu (intro fx) để không phải chờ đợi
-  if(!d.audio_url&&d.speech?.enabled&&d.speech.volume>0&&['fpt','elevenlabs','custom_api'].includes(d.speech.provider)){
+  if(!d.roulette&&!d.audio_url&&d.speech?.enabled&&d.speech.volume>0&&apiSpeech(d)){
     const preloadPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
     request('tts.php',preloadPayload,lease.signal).then(({response,data})=>{
       if(response?.ok&&data?.audio_url)d.audio_url=data.audio_url;
@@ -124,25 +129,25 @@ async function play(d){
   }
 
   try{
-    if(!d.roulette)await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
-    void $('stage').offsetWidth;$('stage').classList.add('is-visible');
-    await sleep(700,lease.signal);
-    const reading=speak({...d},lease.signal).catch(error=>{
-      if(lease.signal.aborted)throw error;
-      noticeError(error,'Không phát được giọng đọc.');
-    });
     if(d.roulette){
-      await reading;
-      $('stage').classList.remove('is-visible');
-      const outcome={...d,speech_text:d.roulette_result_speech,audio_url:null};
-      const ready=outcome.speech_text
-        ? prepareSpeech(outcome,lease.signal,true).catch(error=>{if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc ô trúng.');return false})
-        : Promise.resolve(false);
-      await globalThis.CungRoulette.play(d.roulette,lease.signal,async()=>{
-        try{if(await ready)await CungSpeech.read(outcome,{signal:lease.signal})}
-        catch(error){if(!lease.signal.aborted)noticeError(error,'Không đọc được ô trúng.')}
+      const ready=prepareSpeech(d,lease.signal).catch(error=>{
+        if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc donate.');
+        return false;
       });
-    }else await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
+      await globalThis.CungRoulette.play(d.roulette,lease.signal,async()=>{
+        try{if(await ready)await CungSpeech.read(d,{signal:lease.signal})}
+        catch(error){if(!lease.signal.aborted)noticeError(error,'Không phát được giọng đọc donate.')}
+      });
+    }else{
+      await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
+      void $('stage').offsetWidth;$('stage').classList.add('is-visible');
+      await sleep(700,lease.signal);
+      const reading=speak({...d},lease.signal).catch(error=>{
+        if(lease.signal.aborted)throw error;
+        noticeError(error,'Không phát được giọng đọc.');
+      });
+      await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
+    }
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
     return true;
@@ -178,9 +183,10 @@ async function getDemo(){
     if(!K)value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier];
     if(customVoice)value.selected_voice_id=customVoice;
     if(params.get('roulette')==='1'){
-      value.roulette={name:'Vòng quay thử',options:['Chọn bài nhạc','Lời chúc trên live','Thêm một thử thách','Gửi lời nhắn'],winner:2};
-      value.speech_text='Nguyễn Văn An đã donate mười nghìn đồng mua vòng quay thử.';
-      value.roulette_result_speech='Ô trúng là Thêm một thử thách.';
+      value.roulette={name:'Thử thách mẫu',options:['Chọn bài nhạc','Lời chúc trên live','Thêm một thử thách','Gửi lời nhắn'],winner:2};
+      const amount=Number(value.paid_amount).toLocaleString('vi-VN');
+      value.speech_text=value.name+' đã donate '+amount+' đồng mua vòng quay '+value.roulette.name+
+        ' và nhận được '+value.roulette.options[value.roulette.winner]+'.'+(value.message?' Với lời nhắn: '+value.message:'');
     }
   }
   return value;

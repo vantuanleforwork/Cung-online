@@ -216,7 +216,19 @@ function stop(){
   const n=ctx.currentTime;master.gain.cancelScheduledValues(n);master.gain.setValueAtTime(master.gain.value,n);master.gain.linearRampToValueAtTime(0,n+.12);
 }
 
-const S=global.CungSFX={ting,bell:templeBell,dragon,celestial,stop,resume};
+function rouletteStart(){
+  if(!enabled)return;
+  resume();
+  checkBlocked();
+}
+function rouletteClick(landing){
+  if(!enabled||ctx?.state!=='running')return;
+  const at=ctx.currentTime+.006;
+  const pitch=landing?780:rnd(1200,1650);
+  tone('triangle',pitch,at,.045,landing?.18:.11,{attack:.001,wet:.05});
+  noise(at,.038,{f0:landing?2100:3700,q:1.6,pts:[[.001,landing?.22:.14],[.034,.0001]]});
+}
+const S=global.CungSFX={ting,bell:templeBell,dragon,celestial,stop,resume,rouletteStart,rouletteClick};
 if(typeof module!=='undefined')module.exports=S;
 
 if(global.document){
@@ -225,7 +237,7 @@ if(global.document){
   if(typeof global.play==='function'){
     const basePlay=global.play;
     global.play=async function(d){
-      if(enabled){if(Number(d.tier)>=2)S.resume();else{S.ting();await new Promise(r=>setTimeout(r,850))}}
+      if(enabled&&!d.roulette){if(Number(d.tier)>=2)S.resume();else{S.ting();await new Promise(r=>setTimeout(r,850))}}
       return basePlay.apply(this,arguments);
     };
   }

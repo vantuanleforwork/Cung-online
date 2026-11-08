@@ -37,6 +37,9 @@ try {
         if (!empty($in['name'])) {
             $row['name'] = trim((string)$in['name']);
         }
+        if (($in['roulette_preview'] ?? false) === true) {
+            $row['roulette'] = ['name'=>'Thử thách mẫu', 'options'=>['Thêm một thử thách'], 'winner'=>0];
+        }
     } else {
         $id = filter_var($in['id'] ?? null, FILTER_VALIDATE_INT); $token = $in['claim_token'] ?? '';
         if (!$id || !is_string($token)) respond(400, ['error' => 'Thiếu lượt phát.']);
@@ -47,13 +50,7 @@ try {
             $row['roulette'] = roulette_spin($db, (int)$row['id']);
         }
     }
-    $text = speech_text($row, $settings);
-    if (($in['roulette_result'] ?? false) === true) {
-        $text = ($in['preview'] ?? false) === true ? 'Ô trúng là Thêm một thử thách.' :
-            roulette_result_speech($row['roulette'] ?? null);
-        if ($text === '') respond(400, ['error'=>'Lượt này chưa có kết quả vòng quay.']);
-    }
-    $url = provider_audio($db, $text, speech_options_for_donation($settings, $row));
+    $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row));
     respond($url === null ? 202 : 200, ['audio_url' => $url]);
 } catch (Throwable $e) {
     error_log('TTS: ' . $e->getMessage());

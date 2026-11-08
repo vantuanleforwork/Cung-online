@@ -4,65 +4,114 @@ globalThis.CungRoulette = (() => {
   const ease = value => 1 - (1 - value) ** 3;
   const mix = (from, to, progress) => from + (to - from) * progress;
 
-  function draw(context, count, winner, elapsed, finished) {
+  const spinDuration = 6800;
+  const center = {x:320, y:188, tilt:.70};
+
+  function motion(count, winner, elapsed) {
     const step = turn / count;
     const final = (winner + .5) * step;
     const fake = count > 1 ? final - step : final;
-    const progress = Math.min(elapsed / 5200, 1);
-    const wheel = -turn * .85 * ease(progress);
-    const approach = Math.min(elapsed / 4100, 1);
-    const bounce = Math.max(0, (elapsed - 4400) / 800);
-    const angle = wheel + (elapsed < 4400
-      ? mix(fake - turn * 5, fake, ease(approach))
-      : mix(fake, final, ease(Math.min(1, bounce))));
-    const radius = elapsed < 4400 ? mix(232, 172, ease(approach)) : 172;
-    const lift = bounce > 0 && bounce < 1 ? 32 * Math.sin(Math.PI * bounce) : 0;
+    const wheel = -turn * 1.12 * ease(elapsed / spinDuration);
+    const approach = Math.min(elapsed / 5550, 1);
+    const settle = Math.max(0, Math.min(1, (elapsed - 5900) / 900));
+    const relative = settle > 0 ? mix(fake, final, ease(settle)) : mix(fake - turn * 6, fake, ease(approach));
+    const radius = mix(234, 179, ease(Math.max(0, (approach - .52) / .48)));
+    const lift = settle > 0 && settle < 1
+      ? 23 * Math.sin(Math.PI * settle)
+      : 5 * Math.abs(Math.sin(relative * count / 2)) * approach;
+    return {step, wheel, relative, radius, lift: elapsed === spinDuration ? 0 : lift};
+  }
+
+  function gradient(context, y, radius, colors) {
+    const paint = context.createLinearGradient(0, y - radius, 0, y + radius);
+    colors.forEach(([at, color]) => paint.addColorStop(at, color));
+    return paint;
+  }
+
+  function draw(context, count, winner, position, finished) {
+    const {step, wheel, relative, radius, lift} = position;
     context.clearRect(0, 0, 640, 420);
     context.save();
-    context.translate(320, 196);
-    context.scale(1, .68);
+    context.translate(center.x, center.y);
+    context.scale(1, center.tilt);
     function disc(y, size, color) {
       context.beginPath();
       context.arc(0, y, size, 0, turn);
       context.fillStyle = color;
       context.fill();
     }
-    disc(26, 259, '#080b13');
-    disc(0, 259, '#60778d');
-    disc(0, 251, '#0d1828');
+    const rim = gradient(context, 0, 261, [[0,'#f8e4b0'],[.19,'#93774d'],[.49,'#393e44'],[.78,'#c6ac77'],[1,'#59442e']]);
+    const track = gradient(context, 0, 243, [[0,'#32495a'],[.38,'#101a26'],[.7,'#1d3041'],[1,'#080e18']]);
+    disc(31, 263, gradient(context, 31, 263, [[0,'#232832'],[.52,'#3d3128'],[.89,'#171419'],[1,'#08090e']]));
+    disc(0, 263, rim);
+    disc(0, 257, '#111a23');
+    disc(0, 252, rim);
+    disc(0, 243, track);
+    disc(0, 219, '#9e855d');
+    disc(0, 215, '#111722');
+    const pocketColors = [
+      gradient(context, 0, 212, [[0,'#496078'],[.50,'#24394c'],[1,'#102030']]),
+      gradient(context, 0, 212, [[0,'#65434d'],[.50,'#402d3b'],[1,'#2b1e2c']])
+    ];
+    const winningPaint = gradient(context, 0, 212, [[0,'#eaffab'],[.52,'#c9f46b'],[1,'#a4d645']]);
     for (let index = 0; index < count; index++) {
       const start = wheel + step * index;
+      const middle = start + step / 2;
+      const winning = finished && index === winner;
       context.beginPath();
-      context.moveTo(0, 0);
-      context.arc(0, 0, 213, start, start + step);
+      context.arc(0, 0, 212, start, start + step);
+      context.arc(0, 0, 133, start + step, start, true);
       context.closePath();
-      context.fillStyle = finished && index === winner ? '#d5f66e' : index % 2 ? '#2e5472' : '#192d43';
+      context.fillStyle = winning ? winningPaint : pocketColors[index % 2];
       context.fill();
-      context.strokeStyle = '#8296aa';
+      context.strokeStyle = '#111923';
+      context.lineWidth = 2;
       context.stroke();
-      context.fillStyle = finished && index === winner ? '#090f19' : '#ffffff';
-      context.font = 'bold 23px system-ui';
+      context.beginPath();
+      context.moveTo(136 * Math.cos(start), 136 * Math.sin(start));
+      context.lineTo(209 * Math.cos(start), 209 * Math.sin(start));
+      context.strokeStyle = '#b49a70';
+      context.lineWidth = 2.5;
+      context.stroke();
+      context.fillStyle = winning ? '#101923' : '#f5f2e6';
+      context.font = '700 23px system-ui';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-      context.fillText(index + 1, 192 * Math.cos(start + step / 2), 192 * Math.sin(start + step / 2));
+      context.fillText(index + 1, 195 * Math.cos(middle), 195 * Math.sin(middle));
     }
-    disc(0, 131, '#0f1d2b');
-    disc(0, 112, '#243b52');
-    disc(0, 82, '#142438');
-    disc(0, 27, '#adc955');
+    disc(0, 133, rim);
+    const bowl = context.createRadialGradient(-30, -30, 12, 0, 0, 129);
+    bowl.addColorStop(0,'#52616c');
+    bowl.addColorStop(.5,'#2b3c4a');
+    bowl.addColorStop(1,'#101b27');
+    disc(0, 129, bowl);
+    disc(0, 63, rim);
+    disc(0, 58, '#1a2632');
+    context.rotate(wheel);
+    context.fillStyle = rim;
+    for (let spoke = 0; spoke < 3; spoke++) {
+      context.rotate(turn / 3);
+      context.fillRect(0, -3, 57, 6);
+    }
+    disc(7, 28, '#302820');
+    disc(0, 28, rim);
+    disc(0, 20, gradient(context, 0, 20, [[0,'#fff2c8'],[.55,'#c6a66b'],[1,'#6a5033']]));
     context.restore();
-    const x = 320 + radius * Math.cos(angle);
-    const y = 196 + radius * Math.sin(angle) * .68;
+    const angle = wheel + relative;
+    const x = center.x + radius * Math.cos(angle);
+    const y = center.y + radius * Math.sin(angle) * center.tilt;
+    const size = 13 + 2 * Math.sin(angle);
     context.beginPath();
-    context.ellipse(x + 4, y + 4, 16, 8, 0, 0, turn);
-    context.fillStyle = '#03060b99';
+    context.ellipse(x + 4, y + 3, size + 2, 6, 0, 0, turn);
+    context.fillStyle = '#03060b9c';
     context.fill();
-    const ball = context.createRadialGradient(x - 5, y - lift - 7, 1, x, y - lift, 16);
+    const ball = context.createRadialGradient(x - 5, y - lift - 8, 1, x, y - lift - 2, size);
     ball.addColorStop(0, '#ffffff');
-    ball.addColorStop(.5, '#e7efff');
-    ball.addColorStop(1, '#577089');
+    ball.addColorStop(.38, '#f1f5f8');
+    ball.addColorStop(.72, '#adbec8');
+    ball.addColorStop(1, '#4f6475');
     context.beginPath();
-    context.arc(x, y - lift - 3, 15, 0, turn);
+    context.arc(x, y - lift - 2, size, 0, turn);
     context.fillStyle = ball;
     context.fill();
   }
@@ -79,22 +128,32 @@ globalThis.CungRoulette = (() => {
     overlay.querySelector('h2').textContent = spin.name;
     overlay.querySelector('ol').replaceChildren(...items);
     result.textContent = 'Đang quay…';
+    result.classList.remove('is-revealed');
     overlay.hidden = false;
     let frame;
     try {
       const reduced = !document.body.classList.contains('force-motion') && matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (context && !reduced) {
+        globalThis.CungSFX?.rouletteStart?.();
         await new Promise(resolve => {
           const start = performance.now();
+          let previousPocket, lastClick = -Infinity;
           function stop() {
             cancelAnimationFrame(frame);
             signal.removeEventListener('abort', stop);
             resolve();
           }
           function tick(now) {
-            const elapsed = Math.min(now - start, 5200);
-            draw(context, items.length, spin.winner, elapsed, false);
-            if (elapsed < 5200) frame = requestAnimationFrame(tick);
+            const elapsed = Math.max(0, Math.min(now - start, spinDuration));
+            const position = motion(items.length, spin.winner, elapsed);
+            const pocket = Math.floor(position.relative / position.step);
+            if (previousPocket !== undefined && previousPocket !== pocket && elapsed - lastClick >= 30) {
+              globalThis.CungSFX?.rouletteClick?.(elapsed > 5900);
+              lastClick = elapsed;
+            }
+            previousPocket = pocket;
+            draw(context, items.length, spin.winner, position, false);
+            if (elapsed < spinDuration) frame = requestAnimationFrame(tick);
             else stop();
           }
           if (signal.aborted) stop();
@@ -105,9 +164,10 @@ globalThis.CungRoulette = (() => {
         });
       }
       if (signal.aborted) return;
-      if (context) draw(context, items.length, spin.winner, 5200, true);
+      if (context) draw(context, items.length, spin.winner, motion(items.length, spin.winner, spinDuration), true);
       items[spin.winner].classList.add('is-winner');
       result.textContent = 'Ô trúng · ' + spin.options[spin.winner];
+      result.classList.add('is-revealed');
       await Promise.all([sleep(4200, signal), onReveal?.()]);
     } finally {
       cancelAnimationFrame(frame);

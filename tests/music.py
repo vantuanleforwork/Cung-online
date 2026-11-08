@@ -203,11 +203,11 @@ def run():
                 sql("UPDATE donations SET shown=1 WHERE status='paid'")
                 assert pay(order, 'roulette-fixture', 25000)[0] == 200
                 assert admin(dict(wheel, id=wheel_id, name='Renamed') | {'option_label[]':'C', 'option_frequency[]':1})[0] == 200
-                sql('UPDATE app_settings SET paused=0')
+                sql("UPDATE app_settings SET paused=0,speech_enabled=1,speech_provider='fpt'")
                 alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert alert['roulette'] == dict(name='Fixture wheel', options=['A','B'], winner=1), alert
-                assert alert['speech_text'].endswith('mua vòng quay Fixture wheel.'), alert
-                assert alert['roulette_result_speech'] == 'Ô trúng là B.'
+                assert alert['speech_text'].endswith('mua vòng quay Fixture wheel và nhận được B.'), alert
+                assert 'audio_url' not in alert and 'roulette_result_speech' not in alert
                 def personal_history():
                     return {item['code']:item for item in request('donation-history.php?limit=50&scope=me')[1]['items']}
                 history = personal_history()
@@ -216,10 +216,9 @@ def run():
                 assert history[two['code']]['message'] == 'Music request'
                 assert history[order['code']]['roulette_name'] == 'Fixture wheel'
                 assert history[order['code']]['roulette_result'] == ''
-                sql("UPDATE app_settings SET speech_enabled=1,speech_provider='fpt'")
-                payload = dict(id=alert['id'], claim_token=alert['claim_token'], roulette_result=True)
+                payload = dict(id=alert['id'], claim_token=alert['claim_token'])
                 audio_status, audio = request('tts.php?k=layout-fixture-key', payload)
-                assert audio_status == 200 and urllib.parse.unquote(audio['audio_url']).endswith('Ô trúng là B.'), audio
+                assert audio_status == 200 and urllib.parse.unquote(audio['audio_url']).endswith(alert['speech_text']), audio
                 assert request('tts.php?k=layout-fixture-key',payload | dict(claim_token='invalid'))[0] == 409
                 sql('UPDATE app_settings SET speech_enabled=0')
                 assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0] == 200

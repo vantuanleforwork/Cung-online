@@ -35,11 +35,6 @@ function money_words(int $amount) {
     return implode(' ', $parts) . ' đồng';
 }
 
-function roulette_result_speech(?array $spin): string {
-    $winner = $spin['options'][$spin['winner']] ?? '';
-    return $winner === '' ? '' : 'Ô trúng là ' . $winner . '.';
-}
-
 function speech_text(array $donation, array $settings) {
     $amount = (int)$donation['paid_amount'];
     $message = trim((string)($donation['message'] ?? ''));
@@ -47,10 +42,14 @@ function speech_text(array $donation, array $settings) {
     $amountFormatted = number_format($amount, 0, ',', '.') . ' đồng';
     $amountNum = number_format($amount, 0, ',', '.');
     $amountWords = money_words($amount);
-    if (!empty($donation['roulette']['name'])) {
-        return "$name đã donate $amountWords mua vòng quay " . $donation['roulette']['name'] . '.';
-    }
     $messageClause = $message === '' ? '' : 'Với lời nhắn: ' . $message;
+    if (!empty($donation['roulette']['name'])) {
+        $spin = $donation['roulette'];
+        $winner = $spin['options'][$spin['winner']] ?? '';
+        $text = "$name đã donate $amountWords mua vòng quay " . $spin['name'];
+        if ($winner !== '') $text .= ' và nhận được ' . $winner;
+        return trim($text . '. ' . $messageClause);
+    }
 
     $replace = [
         '{user}' => $name,

@@ -46,12 +46,11 @@ try {
     $row['lease_seconds'] = $seconds;
     if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
         $row['roulette'] = roulette_spin($db, (int)$row['id']);
-        $row['roulette_result_speech'] = roulette_result_speech($row['roulette']);
     }
     unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
-    if ($settings['speech_enabled'] && in_array($row['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
+    if (empty($row['roulette']) && $settings['speech_enabled'] && in_array($row['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
         try {
             $audioUrl = provider_audio($db, $row['speech_text'], $row['speech']);
             if ($audioUrl) {
