@@ -76,7 +76,9 @@ function render(d){
   $('donorLevel').textContent='Lv'+Math.max(0,Number(d.donor_level)||0);
   $('donationAmount').textContent=Number(d.paid_amount).toLocaleString('vi-VN');
   $('donationAmount').style.fontSize=String(d.paid_amount).length>10?'32px':'';
-  if(d.donation_kind==='music'){
+  if(d.roulette){
+    $('donorMessage').textContent='Đã mua vòng quay '+d.roulette.name;
+  }else if(d.donation_kind==='music'){
     const order=d.music_title?'Đã order bài '+d.music_title:'Đã order nhạc YouTube';
     $('donorMessage').textContent=order+(d.message?'\n'+d.message:'');
   }else $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
@@ -116,14 +118,18 @@ async function play(d){
   }
 
   try{
-    await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
+    if(!d.roulette)await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
     void $('stage').offsetWidth;$('stage').classList.add('is-visible');
     await sleep(700,lease.signal);
     const reading=speak({...d},lease.signal).catch(error=>{
       if(lease.signal.aborted)throw error;
       noticeError(error,'Không phát được giọng đọc.');
     });
-    await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
+    if(d.roulette){
+      await reading;
+      $('stage').classList.remove('is-visible');
+      await globalThis.CungRoulette.play(d.roulette,lease.signal);
+    }else await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
     return true;
@@ -158,6 +164,10 @@ async function getDemo(){
     value.tier=selectedPreviewTier;
     if(!K)value.paid_amount={1:10000,2:50000,3:200000}[selectedPreviewTier];
     if(customVoice)value.selected_voice_id=customVoice;
+    if(params.get('roulette')==='1'){
+      value.roulette={name:'Vòng quay thử',options:['Chọn bài nhạc','Lời chúc trên live','Thêm một thử thách','Gửi lời nhắn'],winner:2};
+      value.speech_text='Nguyễn Văn An đã donate mười nghìn đồng mua vòng quay thử.';
+    }
   }
   return value;
 }

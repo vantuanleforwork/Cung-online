@@ -43,6 +43,9 @@ try {
         $s = $db->prepare("SELECT * FROM donations WHERE id=? AND claim_token=? AND status='paid' AND shown=0 AND queue_state='queued' AND claimed_until>NOW()");
         $s->execute([$id, $token]); $row = $s->fetch(PDO::FETCH_ASSOC);
         if (!$row) respond(409, ['error' => 'Lượt phát đã hết hạn.']);
+        if ($row['donation_kind'] === 'roulette' && (int)$row['paid_amount'] >= (int)$row['required_amount']) {
+            $row['roulette'] = roulette_spin($db, (int)$row['id']);
+        }
     }
     $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row));
     respond($url === null ? 202 : 200, ['audio_url' => $url]);

@@ -1,0 +1,42 @@
+.roulette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4vw, 64px);
+  pointer-events: none;
+  font-family: system-ui, sans-serif;
+}
+.roulette-overlay[hidden] { display: none; }
+.roulette-board {
+  --wheel-ink: #090f19;
+  --wheel-panel: #141f30;
+  --wheel-accent: #d5f66e;
+  --wheel-space: clamp(16px, 3vw, 38px);
+  width: min(100%, 1100px);
+  padding: var(--wheel-space);
+  border: 1px solid #4a5d71;
+  border-radius: 24px;
+  background: var(--wheel-ink);
+  color: #f4f8ff;
+  box-shadow: 0 24px 80px #03060bcc;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--wheel-space);
+  box-sizing: border-box;
+}
+.roulette-dial canvas { display: block; width: 100%; height: auto; }
+.roulette-caption { color: var(--wheel-accent); font-size: .8rem; letter-spacing: .14em; font-weight: 750; }
+.roulette-copy { min-width: 0; overflow-wrap: anywhere; }
+.roulette-copy h2 { font-size: clamp(22px, 4vw, 48px); line-height: 1.08; margin: .2em 0 .55em; }
+.roulette-copy ol { padding-inline-start: 1.4em; columns: 2; margin: 0; }
+.roulette-copy li { break-inside: avoid; padding: .15em 0; }
+.roulette-copy li.is-winner { color: var(--wheel-accent); font-weight: 800; }
+.roulette-result { background: var(--wheel-panel); border-radius: 12px; padding: .55em .8em; color: var(--wheel-accent); font-size: clamp(16px, 2.4vw, 32px); font-weight: 750; margin-bottom: 0; }
+@media (max-width: 640px) {
+  .roulette-board { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .roulette-dial { width: min(100%, 42vh); margin-inline: auto; }
+  .roulette-copy ol { font-size: .8rem; }
+}

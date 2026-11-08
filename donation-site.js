@@ -2,7 +2,10 @@
 (function () {
   'use strict';
   const state = window.CungDonate = {ready:false,kind:'message',settings:{message_min:10000,tier2_min:50000,tier3_min:200000,music_min:50000,music_enabled:true,music_seconds:180}};
-  state.minimum = () => Number(state.settings[state.kind === 'music' ? 'music_min' : 'message_min']);
+  const wheelSelect = document.getElementById('rouletteWheel');
+  const selectedWheel = () => (state.settings.wheels || []).find(wheel => String(wheel.id) === wheelSelect?.value);
+  state.minimum = () => Number(state.kind === 'roulette' ? selectedWheel()?.minimum ?? 50000001 :
+    state.settings[state.kind === 'music' ? 'music_min' : 'message_min']);
   state.videoID = link => {
     let url;
     try { url = new URL(link.trim()); } catch { throw new Error('Chỉ nhận link YouTube.'); }
@@ -26,8 +29,16 @@
     });
     document.getElementById('donationFields').setAttribute('aria-labelledby','donation-tab-'+state.kind);
     const music = state.kind === 'music';
+    const roulette = state.kind === 'roulette';
     field.hidden = !music; queue.hidden = !music;
-    document.querySelector('.voice-select-box').hidden = music;
+    document.querySelector('.voice-select-box').hidden = music || roulette;
+    const rouletteField = document.getElementById('rouletteField');
+    if (rouletteField) rouletteField.hidden = !roulette;
+    if (roulette) {
+      document.getElementById('rouletteRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ mỗi lượt';
+      const amount = document.getElementById('amt');
+      if (Number(amount.value) < state.minimum()) amount.value = state.minimum();
+    }
     document.getElementById('amt').min = state.minimum();
     document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài'+(!state.settings.music_enabled?' · Hiện tạm dừng nhận nhạc.':'');
     if (window.upd) window.upd();
@@ -37,15 +48,18 @@
     refreshForm();
     if (state.kind === 'music') loadQueue();
   }));
-  buttons.forEach((button,index) => button.addEventListener('keydown', event => {
+  buttons.forEach(button => button.addEventListener('keydown', event => {
     let target;
-    if (event.key === 'ArrowRight') target = buttons[(index+1)%buttons.length];
-    if (event.key === 'ArrowLeft') target = buttons[(index+buttons.length-1)%buttons.length];
-    if (event.key === 'Home') target = buttons[0];
-    if (event.key === 'End') target = buttons[buttons.length-1];
+    const visible = buttons.filter(item => !item.hidden);
+    const current = visible.indexOf(button);
+    if (event.key === 'ArrowRight') target = visible[(current+1)%visible.length];
+    if (event.key === 'ArrowLeft') target = visible[(current+visible.length-1)%visible.length];
+    if (event.key === 'Home') target = visible[0];
+    if (event.key === 'End') target = visible[visible.length-1];
     if (!target) return;
     event.preventDefault(); target.click(); target.focus();
   }));
+  wheelSelect?.addEventListener('change', refreshForm);
   async function loadQueue() {
     if (loading || state.kind !== 'music' || document.hidden) return;
     loading = true;
@@ -73,6 +87,10 @@
   fetch('donation-settings.php',{cache:'no-store'}).then(async response => {
     if (!response.ok) throw new Error('Chưa tải được mức donate. Vui lòng tải lại trang hoặc liên hệ quản trị.');
     state.settings = await response.json(); state.ready = true;
+    const wheels = state.settings.wheels || [];
+    if (wheelSelect) wheelSelect.replaceChildren(...wheels.map(wheel => new Option(wheel.name, wheel.id)));
+    const wheelTab = document.getElementById('donation-tab-roulette');
+    if (wheelTab) wheelTab.hidden = wheels.length === 0;
     const quick = document.querySelectorAll('.q button');
     [state.settings.message_min,state.settings.tier2_min,state.settings.tier3_min].forEach((value,index) => {
       quick[index].dataset.v = value; quick[index].textContent = Number(value).toLocaleString('vi-VN')+'đ';

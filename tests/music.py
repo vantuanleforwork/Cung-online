@@ -182,6 +182,27 @@ def run():
                 cookie=next(c.value for c in jar if c.name=='cung_admin')
                 browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,text=True,creationflags=FLAGS,timeout=75)
                 assert browser.returncode==0,browser.stdout+browser.stderr
+
+                wheel = dict(action='save_roulette', csrf=csrf, name='Fixture wheel', minimum=25000, active='on')
+                assert admin(dict(wheel, options='A | 30\nB | 30'))[0] == 409
+                assert admin(dict(wheel, options='A\nB'))[0] == 200
+                assert [x['weight'] for x in json.loads(sql('SELECT options_json FROM roulette_wheels'))] == [5000, 5000]
+                wheel_id = int(sql('SELECT id FROM roulette_wheels'))
+                assert int(request('donation-settings.php')[1]['wheels'][0]['minimum']) == 25000
+                assert admin(dict(wheel, id=wheel_id, options='A | 0\nB | 100'))[0] == 200
+                def spin(amount):
+                    return request('create.php', dict(amount=amount, kind='roulette', wheel_id=wheel_id),
+                                   {'X-CSRF-Token':donor_csrf})
+                assert spin(24999)[0] == 400
+                status, order = spin(25000)
+                assert status == 200 and 'code' in order and 'roulette' not in order, order
+                sql("UPDATE donations SET shown=1 WHERE status='paid'")
+                assert pay(order, 'roulette-fixture', 25000)[0] == 200
+                assert admin(dict(wheel, id=wheel_id, name='Renamed', options='C'))[0] == 200
+                sql('UPDATE app_settings SET paused=0')
+                alert = request('poll.php?k=layout-fixture-key', {})[1][0]
+                assert alert['roulette'] == dict(name='Fixture wheel', options=['A','B'], winner=1), alert
+                assert alert['speech_text'].endswith('mua vòng quay Fixture wheel.'), alert
                 print(browser.stdout.strip())
                 print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:

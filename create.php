@@ -48,8 +48,20 @@ try {
     ensure_speech_schema($db);
     $donateSettings = donation_settings($db);
     $kind = $in['kind'] ?? 'message';
-    if (!is_string($kind) || !in_array($kind, ['message','music'], true)) fail(400, 'Loại donate không hợp lệ.');
+    if (!is_string($kind) || !in_array($kind, ['message','music','roulette'], true)) fail(400, 'Loại donate không hợp lệ.');
     $minimum = (int)$donateSettings[$kind === 'music' ? 'music_min' : 'message_min'];
+    $spin = null;
+    if ($kind === 'roulette') {
+        $wheelId = filter_var($in['wheel_id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$wheelId) fail(400, 'Hãy chọn một vòng quay.');
+        ensure_roulette_schema($db);
+        $wheelQuery = $db->prepare('SELECT * FROM roulette_wheels WHERE id=? AND active=1');
+        $wheelQuery->execute([$wheelId]);
+        $wheel = $wheelQuery->fetch(PDO::FETCH_ASSOC);
+        if (!$wheel) fail(400, 'Vòng quay này đã đóng. Hãy tải lại trang.');
+        $minimum = (int)$wheel['minimum'];
+        $spin = roulette_snapshot($wheel);
+    }
     if ($amount < $minimum) fail(400, 'Số tiền tối thiểu là ' . number_format($minimum,0,',','.') . 'đ.');
     $youtubeId = null;
     if ($kind === 'music') {
@@ -112,6 +124,10 @@ try {
             }
             $donationId = (int)$db->lastInsertId();
             $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$donationId]);
+            if ($spin !== null) {
+                $db->prepare('INSERT INTO roulette_spins(donation_id,snapshot) VALUES(?,?)')
+                   ->execute([$donationId,json_encode($spin, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+            }
             $db->commit();
             break;
         } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); if ($t === 4 || (int)($e->errorInfo[1] ?? 0) !== 1062) throw $e; }

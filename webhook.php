@@ -121,7 +121,7 @@ try {
        ->execute([$duplicates, $logId]);
     $db->commit();
 
-    if (!empty($row)) {
+    if (!empty($row) && $row['donation_kind'] !== 'roulette') {
         try {
             $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
             if ($settings && $settings['speech_enabled']) {

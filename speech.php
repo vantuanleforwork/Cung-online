@@ -42,6 +42,9 @@ function speech_text(array $donation, array $settings) {
     $amountFormatted = number_format($amount, 0, ',', '.') . ' đồng';
     $amountNum = number_format($amount, 0, ',', '.');
     $amountWords = money_words($amount);
+    if (!empty($donation['roulette']['name'])) {
+        return "$name đã donate $amountWords mua vòng quay " . $donation['roulette']['name'] . '.';
+    }
     $messageClause = $message === '' ? '' : 'Với lời nhắn: ' . $message;
 
     $replace = [

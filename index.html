@@ -91,6 +91,7 @@ if (location.pathname.endsWith('/index.html')) {
       <div class="workspace-tabs donation-kind-tabs" role="tablist" aria-label="Loại donate">
         <button type="button" role="tab" id="donation-tab-message" data-donation-kind="message" aria-controls="donationFields" aria-selected="true">Lời nhắn</button>
         <button type="button" role="tab" id="donation-tab-music" data-donation-kind="music" aria-controls="donationFields" aria-selected="false">Phát nhạc</button>
+        <button type="button" role="tab" id="donation-tab-roulette" data-donation-kind="roulette" aria-controls="donationFields" aria-selected="false" hidden>Vòng quay</button>
       </div>
       <div id="donationFields" role="tabpanel" aria-labelledby="donation-tab-message">
       <div class="card-header">
@@ -118,6 +119,11 @@ if (location.pathname.endsWith('/index.html')) {
         <label for="musicUrl">Link nhạc YouTube</label>
         <input id="musicUrl" type="url" maxlength="2048" placeholder="https://www.youtube.com/watch?v=… hoặc https://youtu.be/…" aria-describedby="musicRule">
         <p id="musicRule" class="voice-hint"></p>
+      </div>
+      <div id="rouletteField" hidden>
+        <label for="rouletteWheel">Chọn vòng quay</label>
+        <select id="rouletteWheel" aria-describedby="rouletteRule"></select>
+        <p id="rouletteRule" class="voice-hint"></p>
       </div>
       <div class="voice-select-box">
         <div class="voice-head">
@@ -166,7 +172,7 @@ if (location.pathname.endsWith('/index.html')) {
   </div>
 </div>
 
-<script src="donation-site.js?v=36"></script>
+<script src="donation-site.js?v=37"></script>
 <script>
 const $=i=>document.getElementById(i);
 let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
@@ -356,7 +362,7 @@ function upd(){
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
-  $('hint').textContent=hint(a);
+  $('hint').textContent=CungDonate.kind==='roulette'?'OBS sẽ quay sau khi xác nhận chuyển khoản.':hint(a);
   syncVoiceOptions(a);
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
@@ -402,7 +408,7 @@ $('go').onclick=async()=>{
   $('go').disabled=true;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,music_url:$('musicUrl').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{

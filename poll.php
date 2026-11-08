@@ -20,6 +20,7 @@ try {
     $hasVoiceCols = in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true);
     $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
     $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,{$voiceSelect}
+        (d.paid_amount >= d.required_amount) AS spin_eligible,
         (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
         COALESCE((SELECT SUM(x.paid_amount) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid' AND x.is_test=0),0) AS donor_total,
@@ -43,6 +44,10 @@ try {
     $row['claim_token'] = $token;
     $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;
+    if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
+        $row['roulette'] = roulette_spin($db, (int)$row['id']);
+    }
+    unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
     if ($settings['speech_enabled'] && in_array($row['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
