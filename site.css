@@ -33,6 +33,12 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .voice-badge.locked { color: var(--muted); }
 .voice-badge.vip { color: #d5c5ff; }
 .voice-hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+.roulette-odds { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--field); }
+.roulette-odds h2 { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
+.roulette-odds dl { margin: 0; }
+.roulette-odds dl > div { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--border); }
+.roulette-odds dt { min-width: 0; overflow-wrap: anywhere; }
+.roulette-odds dd { margin: 0; color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
 .go, .account-button { background: var(--accent); color: var(--bg); border: 1px solid var(--accent); font-weight: 750; }
 .go { width: 100%; margin-top: 28px; padding: 16px; font-size: 16px; }
 .go:hover:not(:disabled), .account-button:hover { background: var(--accent-hover); border-color: var(--accent-hover); }

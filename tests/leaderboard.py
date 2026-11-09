@@ -55,6 +55,12 @@ def run():
                     config,count=re.subn(r'(?m)^const\s+'+key+r'\s*=.*$',lambda m:f'const {key} = {value};',config)
                     assert count==1,key
                 (site/'config.php').write_text(config,encoding='utf-8')
+                subprocess.run([str(PHP),'-r',
+                    'require $argv[1]; ensure_roulette_schema(db());',str(site/'common.php')],check=True,creationflags=FLAGS)
+                sql("""INSERT INTO roulette_wheels(name,minimum,options_json,active) VALUES
+                    ('Equal wheel',10000,'[{"label":"A","frequency":1},{"label":"B","frequency":1}]',1),
+                    ('Weighted wheel',20000,'[{"label":"C","frequency":1},{"label":"D","frequency":3}]',1),
+                    ('Closed wheel',20000,'[{"label":"E","frequency":1}]',0)""")
                 env=dict(os.environ)
                 for key in ['FPT_TTS_API_KEY','ELEVENLABS_API_KEY','CUSTOM_API_KEY']: env.pop(key,None)
                 base=f'http://127.0.0.1:{webport}'
@@ -78,7 +84,7 @@ def run():
                 assert set(total[0])=={'rank','name','avatar','amount'}
                 try: board('invalid');assert False
                 except urllib.error.HTTPError as e:assert e.code==400
-                browser=subprocess.run(['node',str(ROOT/'tests/leaderboard.cjs'),base],capture_output=True,text=True,creationflags=FLAGS,timeout=45)
+                browser=subprocess.run(['node',str(ROOT/'tests/leaderboard.cjs'),base],capture_output=True,encoding='utf-8',creationflags=FLAGS,timeout=45)
                 assert browser.returncode==0,browser.stdout+browser.stderr
                 print(browser.stdout.strip())
                 sql('DELETE FROM payment_transactions; DELETE FROM donations')

@@ -3,6 +3,9 @@
   'use strict';
   const state = window.CungDonate = {ready:false,kind:'message',settings:{message_min:10000,tier2_min:50000,tier3_min:200000,music_min:50000,music_enabled:true,music_seconds:180}};
   const wheelSelect = document.getElementById('rouletteWheel');
+  const odds = document.getElementById('rouletteOdds');
+  const oddsList = document.getElementById('rouletteOddsList');
+  const percent = new Intl.NumberFormat('vi-VN', {style:'percent',maximumFractionDigits:2});
   const selectedWheel = () => (state.settings.wheels || []).find(wheel => String(wheel.id) === wheelSelect?.value);
   state.minimum = () => Number(state.kind === 'roulette' ? selectedWheel()?.minimum ?? 50000001 :
     state.settings[state.kind === 'music' ? 'music_min' : 'message_min']);
@@ -40,6 +43,17 @@
     document.getElementById('donationFields').setAttribute('aria-labelledby','donation-tab-'+state.kind);
     const music = state.kind === 'music';
     const roulette = state.kind === 'roulette';
+    const options = roulette ? selectedWheel()?.options || [] : [];
+    odds.hidden = !options.length;
+    oddsList.replaceChildren(...options.map(option => {
+      const row = document.createElement('div');
+      const label = document.createElement('dt');
+      const chance = document.createElement('dd');
+      label.textContent = option.label;
+      chance.textContent = option.chance > 0 && option.chance < .00005 ? '<0,01%' : percent.format(option.chance);
+      row.append(label,chance);
+      return row;
+    }));
     field.hidden = !music;
     document.querySelector('.voice-select-box').hidden = music || roulette;
     const rouletteField = document.getElementById('rouletteField');

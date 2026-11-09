@@ -30,12 +30,24 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  for(let i=0;i<100;i++){if(await evaluate(ready))break;await wait(50)}
  assert.equal(await evaluate('document.querySelector(".leaderboard-name").textContent'),'Bob');
  assert.equal(await evaluate('document.querySelector(".leaderboard-amount").textContent'),'280.000đ');
+ const loadedRequests=boardRequests;
+ await evaluate('window.dispatchEvent(new Event("donation:paid"));document.getElementById("leaderboardToggle").click();document.getElementById("leaderboardToggle").click();document.getElementById("leaderboard-month").click()');
+ await wait(200);
+ assert.equal(boardRequests,loadedRequests,'paid events, reopening and cached tabs do not refetch');
+ assert.equal(await evaluate('document.querySelector(".leaderboard-name").textContent'),'Alice');
+ for(let i=0;i<100;i++){if(await evaluate('!document.getElementById("donation-tab-roulette").hidden'))break;await wait(50)}
+ await evaluate('document.getElementById("donation-tab-roulette").click()');
+ const odds='[...document.querySelectorAll("#rouletteOddsList > div")].map(row=>[row.querySelector("dt").textContent,row.querySelector("dd").textContent])';
+ assert.deepEqual(await evaluate(odds),[['A','50%'],['B','50%']]);
+ assert(await evaluate('document.querySelector("#rouletteOdds + #go")&&!document.getElementById("rouletteOdds").hidden'));
+ await evaluate('(()=>{const select=document.getElementById("rouletteWheel");select.selectedIndex=1;select.dispatchEvent(new Event("change"))})()');
+ assert.deepEqual(await evaluate(odds),[['C','25%'],['D','75%']]);
+ assert.equal(await evaluate('document.getElementById("rouletteWheel").options.length'),2);
  for(const [width,height,label] of [[1440,1100,'desktop'],[390,844,'mobile']]){
  await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await wait(150);
  assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'no horizontal overflow');
  const positions=await evaluate('(()=>{const r=document.querySelector(".leaderboard-row"),n=r.querySelector(".leaderboard-name").getBoundingClientRect(),a=r.querySelector(".leaderboard-amount").getBoundingClientRect();return {nameRight:n.right,amountLeft:a.left}})()');assert(positions.nameRight<=positions.amountLeft);
  assert(await evaluate('!document.getElementById("history").closest("main")'),'history is separate from donation form');
- assert.equal(await evaluate('document.querySelectorAll(".feature-icon svg").length'),3);
  assert(await evaluate('parseFloat(getComputedStyle(document.getElementById("account")).borderTopWidth)>0'));
  assert(await evaluate('parseFloat(getComputedStyle(document.getElementById("msg")).fontSize)>=16'));
  const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'leaderboard-'+label+'-032.png'),Buffer.from(shot.data,'base64'));

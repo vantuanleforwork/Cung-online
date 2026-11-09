@@ -7,13 +7,13 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=34">
+<link rel="stylesheet" href="site.css?v=35">
 <script>
 if (location.pathname.endsWith('/index.html')) {
   history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
 }
 </script>
-<script src="leaderboard.js?v=29" defer></script>
+<script src="leaderboard.js?v=30" defer></script>
 </head>
 <body class="donate-site">
 <header class="site-header"><a class="site-wordmark" href="./" aria-label="Van Tuan Le, trang chủ"><span class="monogram">VT</span> VAN TUAN LE</a><span class="header-caption">CREATOR SUPPORT</span></header>
@@ -126,6 +126,10 @@ if (location.pathname.endsWith('/index.html')) {
         <p id="voiceHint" class="voice-hint">✨ Bạn có thể chọn 1 trong các giọng đọc dưới đây hoặc để mặc định.</p>
       </div>
 
+      <section id="rouletteOdds" class="roulette-odds" hidden aria-labelledby="rouletteOddsTitle">
+        <h2 id="rouletteOddsTitle">Các ô và tỉ lệ trúng</h2>
+        <dl id="rouletteOddsList" aria-live="polite"></dl>
+      </section>
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
       <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
       <div id="err" role="alert"></div>
@@ -161,7 +165,7 @@ if (location.pathname.endsWith('/index.html')) {
   </div>
 </div>
 
-<script src="donation-site.js?v=38"></script>
+<script src="donation-site.js?v=39"></script>
 <script>
 const $=i=>document.getElementById(i);
 let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;

@@ -7,7 +7,8 @@
   const toggle = document.getElementById('leaderboardToggle');
   let expanded = false;
   let period = 'day';
-  let request;
+  let renderedPeriod;
+  const requests = new Map();
 
   function avatarFor(item) {
     const avatar = document.createElement('span');
@@ -54,10 +55,20 @@
     }
   }
 
-  async function load(next = period) {
-    request?.abort();
+  async function fetchPeriod(next) {
     const controller = new AbortController();
-    request = controller;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('leaderboard.php?period=' + next, { cache: 'no-store', signal: controller.signal });
+      if (!response.ok) throw new Error('Không tải được bảng xếp hạng.');
+      const data = await response.json();
+      return data.items;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function load(next = period) {
     period = next;
     tabs.forEach(tab => {
       const active = tab.dataset.period === period;
@@ -65,23 +76,27 @@
       tab.tabIndex = active ? 0 : -1;
     });
     panel.setAttribute('aria-labelledby', 'leaderboard-' + period);
-    if (!expanded) return;
+    if (!expanded || renderedPeriod === next) return;
     panel.setAttribute('aria-busy', 'true');
     list.replaceChildren();
+    renderedPeriod = null;
     status.textContent = 'Đang tải bảng xếp hạng…';
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    if (!requests.has(next)) {
+      requests.set(next, fetchPeriod(next).catch(error => {
+        requests.delete(next);
+        throw error;
+      }));
+    }
     try {
-      const response = await fetch('leaderboard.php?period=' + period, { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('Không tải được bảng xếp hạng.');
-      const data = await response.json();
-      if (request !== controller) return;
-      render(data.items);
-      status.textContent = data.items.length ? '' : 'Chưa có lượt donate trong thời gian này.';
+      const items = await requests.get(next);
+      if (!expanded || period !== next || renderedPeriod === next) return;
+      render(items);
+      renderedPeriod = next;
+      status.textContent = items.length ? '' : 'Chưa có lượt donate trong thời gian này.';
     } catch {
-      if (request === controller) status.textContent = 'Chưa tải được bảng xếp hạng. Bấm tab để thử lại.';
+      if (expanded && period === next) status.textContent = 'Chưa tải được bảng xếp hạng. Bấm tab để thử lại.';
     } finally {
-      clearTimeout(timeout);
-      if (request === controller) panel.setAttribute('aria-busy', 'false');
+      if (expanded && period === next) panel.setAttribute('aria-busy', 'false');
     }
   }
   tabs.forEach((tab, index) => {
@@ -104,8 +119,5 @@
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.textContent = expanded ? 'Thu gọn' : 'Hiển thị';
     if (expanded) load();
-    else { request?.abort(); request = null; list.replaceChildren(); }
   });
-  window.addEventListener('donation:paid', () => { if (expanded) load(); });
-  setInterval(() => { if (expanded && !document.hidden) load(); }, 60000);
 })();

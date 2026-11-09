@@ -4,7 +4,18 @@ try {
     $settings = donation_settings();
     $wheels = [];
     try {
-        $wheels = db()->query('SELECT id,name,minimum FROM roulette_wheels WHERE active=1 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+        $rows = db()->query('SELECT id,name,minimum,options_json FROM roulette_wheels WHERE active=1 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $wheel) {
+            $options = roulette_options($wheel);
+            $total = array_sum(array_column($options, 'frequency'));
+            if ($total <= 0) continue;
+            unset($wheel['options_json']);
+            $wheel['options'] = array_map(static fn($option) => [
+                'label'=>$option['label'],
+                'chance'=>$option['frequency'] / $total
+            ], $options);
+            $wheels[] = $wheel;
+        }
     } catch (PDOException $error) {
         if (($error->errorInfo[1] ?? null) != 1146) throw $error;
     }
