@@ -2,5 +2,10 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{THE_REQUEST} \s/+[^?\s]*index\.html[?\s] [NC]
-RewriteRule ^index\.html$ ./ [R=302,L]
+RewriteRule ^index\.html$ ./ [R=301,L]
+</IfModule>
+<IfModule mod_headers.c>
+<FilesMatch "^(admin\.php|overlay\.html|music-preview\.html)$">
+Header always set X-Robots-Tag "noindex"
+</FilesMatch>
 </IfModule>

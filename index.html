@@ -3,11 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Donate cho Van Tuan Le · Tiếp thêm động lực livestream</title>
+<title>Donate cho Van Tuan Le | Ủng hộ livestream</title>
+<meta name="description" content="Gửi donate cho Van Tuan Le bằng mã QR ngân hàng. Ủng hộ livestream, gửi lời nhắn, order nhạc hoặc tham gia vòng quay cùng cộng đồng.">
+<meta name="theme-color" content="#080f17">
+<link rel="canonical" href="https://donate.vantuanle.com/">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/van-tuan-le-logo.png">
+<link rel="apple-touch-icon" href="assets/van-tuan-le-logo.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:site_name" content="Donate Van Tuan Le">
+<meta property="og:title" content="Donate cho Van Tuan Le | Ủng hộ livestream">
+<meta property="og:description" content="Gửi lời nhắn, order nhạc hoặc tham gia vòng quay khi ủng hộ livestream của Van Tuan Le.">
+<meta property="og:url" content="https://donate.vantuanle.com/">
+<meta property="og:image" content="https://donate.vantuanle.com/assets/van-tuan-le-logo.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="Logo Van Tuan Le">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Donate Van Tuan Le",
+  "alternateName": "Ủng hộ Van Tuan Le",
+  "url": "https://donate.vantuanle.com/",
+  "inLanguage": "vi",
+  "publisher": {
+    "@type": "Person",
+    "name": "Van Tuan Le",
+    "url": "https://vantuanle.com/"
+  }
+}
+</script>
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=36">
+<link rel="stylesheet" href="site.css?v=37">
 <script>
 if (location.pathname.endsWith('/index.html')) {
   history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
@@ -16,12 +47,16 @@ if (location.pathname.endsWith('/index.html')) {
 <script src="leaderboard.js?v=30" defer></script>
 </head>
 <body class="donate-site">
-<header class="site-header"><a class="site-wordmark" href="./" aria-label="Van Tuan Le, trang chủ"><span class="monogram">VT</span> VAN TUAN LE</a><span class="header-caption">CREATOR SUPPORT</span></header>
+<header class="site-header">
+  <a class="site-wordmark" href="./" aria-label="Van Tuan Le, trang chủ"><img class="site-logo" src="assets/van-tuan-le-logo.png" width="40" height="40" alt=""> VAN TUAN LE</a>
+  <a class="header-caption" href="#site-contact">CỘNG ĐỒNG</a>
+</header>
 
 <div class="site-shell">
   <aside class="intro">
-    <div class="brand">CỘNG ĐỒNG · VAN TUAN LE</div>
-    <h1>Một lời nhắn.<br><em>Thêm động lực.</em></h1>
+    <div class="brand">TIẾP THÊM ĐỘNG LỰC LIVESTREAM</div>
+    <h1>Donate cho<br><em>Van Tuan Le</em></h1>
+    <p class="sub intro-copy">Ủng hộ Van Tuan Le bằng mã QR ngân hàng. Bạn có thể gửi lời nhắn, order nhạc hoặc tham gia vòng quay khi livestream.</p>
 
     <section class="account" id="account">
       <div id="signedOut">
@@ -81,7 +116,7 @@ if (location.pathname.endsWith('/index.html')) {
   </aside>
 
   <div class="donation-column">
-  <main class="donation-panel" aria-label="Gửi donate">
+  <main class="donation-panel" id="donate" aria-label="Gửi donate">
 
 
     <div id="f">
@@ -172,6 +207,24 @@ if (location.pathname.endsWith('/index.html')) {
     </section>
   </div>
 </div>
+
+<footer class="site-footer" id="site-contact">
+  <div class="site-footer-content">
+    <div>
+      <h2>Van Tuan Le</h2>
+      <p>Cảm ơn bạn đã đồng hành cùng mình trên livestream.</p>
+      <p>Khi quét QR, hãy giữ nguyên số tiền và nội dung chuyển khoản để hệ thống nhận đúng lượt ủng hộ.</p>
+    </div>
+    <nav aria-label="Cộng đồng và liên hệ">
+      <ul>
+        <li><a href="https://vantuanle.com/">Website cá nhân</a></li>
+        <li><a href="https://t.me/+vDOObkif0nY3NjE9">Telegram cộng đồng</a></li>
+        <li><a href="mailto:vantuanleforwork@gmail.com">vantuanleforwork@gmail.com</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="site-footer-bottom"><small>© Van Tuan Le</small><a href="#donate">Về phần donate ↑</a></div>
+</footer>
 
 <script src="donation-site.js?v=39"></script>
 <script>

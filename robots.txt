@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://donate.vantuanle.com/sitemap.xml
