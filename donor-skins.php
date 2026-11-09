@@ -1,9 +1,55 @@
 <?php
-function donor_skin_catalog(): array {
-    return [
+function donor_skin_catalog(PDO $db): array {
+    $catalog = [
         'itachi'=>['name'=>'Itachi','url'=>'assets/skins/itachi.gif'],
         'naruto'=>['name'=>'Naruto','url'=>'assets/skins/naruto.gif'],
     ];
+    try {
+        $rows = $db->query('SELECT id,name FROM uploaded_donor_skins ORDER BY id');
+        foreach ($rows as $row) {
+            $key = 'gif-' . $row['id'];
+            $catalog[$key] = ['name'=>$row['name'], 'url'=>'uploads/skins/'.$key.'.gif'];
+        }
+    } catch (PDOException $error) {
+        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+    }
+    return $catalog;
+}
+
+function upload_donor_skin(PDO $db, $name, array $file): void {
+    $name = is_string($name) ? clean($name, 60) : '';
+    if ($name === '') throw new InvalidArgumentException('Hãy nhập tên skin.');
+    $tmp = $file['tmp_name'] ?? '';
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)
+        || filesize($tmp) > 2 * 1024 * 1024) {
+        throw new InvalidArgumentException('Hãy chọn tệp GIF tối đa 2 MB.');
+    }
+    $info = @getimagesize($tmp);
+    if (!$info || $info[2] !== IMAGETYPE_GIF || $info[0] < 1 || $info[1] < 1 || max($info[0], $info[1]) > 1024) {
+        throw new InvalidArgumentException('Chỉ nhận ảnh GIF tối đa 1024 × 1024 px.');
+    }
+    $dir = __DIR__.'/uploads/skins';
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Không tạo được thư mục skin.');
+    }
+    $db->exec("CREATE TABLE IF NOT EXISTS uploaded_donor_skins (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(60) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $path = null;
+    $db->beginTransaction();
+    try {
+        $db->prepare('INSERT INTO uploaded_donor_skins(name) VALUES(?)')->execute([$name]);
+        $path = $dir.'/gif-'.$db->lastInsertId().'.gif';
+        if (!move_uploaded_file($tmp, $path) || !chmod($path, 0644)) {
+            throw new RuntimeException('Không lưu được tệp skin.');
+        }
+        $db->commit();
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) $db->rollBack();
+        if ($path !== null && is_file($path)) unlink($path);
+        throw $error;
+    }
 }
 
 function donor_skin_record(PDO $db, int $userId): array {
@@ -21,21 +67,23 @@ function donor_skin_record(PDO $db, int $userId): array {
     ] : ['unlocked'=>[], 'selected'=>null];
 }
 
-function donor_skin_options(array $record, int $level): array {
+function donor_skin_options(array $record, int $level, array $catalog): array {
     $unlocked = array_slice($record['unlocked'], 0, $level);
     return [
         'unlocked'=>$unlocked,
         'selected'=>in_array($record['selected'], $unlocked, true) ? $record['selected'] : null,
-        'remaining'=>max(0, min($level, count(donor_skin_catalog())) - count($unlocked)),
+        'remaining'=>max(0, min($level, count($catalog)) - count($unlocked)),
     ];
 }
 
 function donor_skin_profile(PDO $db, int $userId, int $level): array {
-    return donor_skin_options(donor_skin_record($db, $userId), $level) + ['catalog'=>donor_skin_catalog()];
+    $catalog = donor_skin_catalog($db);
+    return donor_skin_options(donor_skin_record($db, $userId), $level, $catalog) + ['catalog'=>$catalog];
 }
 
 function select_donor_skin(PDO $db, int $userId, string $skin): array {
-    if (!isset(donor_skin_catalog()[$skin])) throw new InvalidArgumentException('Skin này chưa có.');
+    $catalog = donor_skin_catalog($db);
+    if (!isset($catalog[$skin])) throw new InvalidArgumentException('Skin này chưa có.');
     $db->exec("CREATE TABLE IF NOT EXISTS donor_skins (
         user_id BIGINT UNSIGNED PRIMARY KEY,
         unlocked_json TEXT NOT NULL,
@@ -50,7 +98,7 @@ function select_donor_skin(PDO $db, int $userId, string $skin): array {
         $level = donor_level($db, $userId);
         if ($level < 1) throw new InvalidArgumentException('Đạt Lv1 trở lên để mở khóa 1 skin bạn muốn.');
         $record = donor_skin_record($db, $userId);
-        $available = donor_skin_options($record, $level);
+        $available = donor_skin_options($record, $level, $catalog);
         if (!in_array($skin, $available['unlocked'], true)) {
             if (!$available['remaining']) throw new InvalidArgumentException('Hãy lên level để mở khóa thêm skin.');
             $record['unlocked'][] = $skin;
@@ -60,7 +108,7 @@ function select_donor_skin(PDO $db, int $userId, string $skin): array {
             ON DUPLICATE KEY UPDATE unlocked_json=VALUES(unlocked_json),active_skin=VALUES(active_skin)')
             ->execute([$userId,json_encode($record['unlocked'], JSON_THROW_ON_ERROR),$skin]);
         $db->commit();
-        return donor_skin_options($record, $level) + ['catalog'=>donor_skin_catalog()];
+        return donor_skin_options($record, $level, $catalog) + ['catalog'=>$catalog];
     } catch (Throwable $error) {
         $db->rollBack();
         throw $error;

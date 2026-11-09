@@ -61,4 +61,24 @@ $donateSound = donate_sound_url();
     </form>
     <?php if ($donateSound) action_form('reset_donate_sound', [], 'Dùng lại âm thanh mặc định'); ?>
   </section>
+  <section class="speech-panel" aria-labelledby="donorSkinTitle">
+    <h3 id="donorSkinTitle">Skin</h3>
+    <p class="muted">Skin mới xuất hiện trong hồ sơ donate. Người dùng mở khóa theo cấp và chọn một skin để hiển thị trên OBS.</p>
+    <form method="post" enctype="multipart/form-data">
+      <?php csrf_field() ?>
+      <input type="hidden" name="action" value="upload_donor_skin">
+      <div class="speech-grid">
+        <label>Tên skin <input name="skin_name" maxlength="60" required></label>
+        <label>Tệp GIF <input type="file" name="skin_gif" accept=".gif,image/gif" required></label>
+      </div>
+      <p class="muted">Tối đa 2 MB và 1024 × 1024 px.</p>
+      <button type="submit">Thêm skin</button>
+    </form>
+    <h4>Skin hiện có</h4>
+    <ul class="admin-skin-list">
+      <?php foreach (donor_skin_catalog($db) as $skin): ?>
+        <li><img src="<?=h($skin['url'])?>" alt="" width="48" height="48" loading="lazy"><span><?=h($skin['name'])?></span></li>
+      <?php endforeach ?>
+    </ul>
+  </section>
 </section>

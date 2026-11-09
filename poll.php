@@ -44,8 +44,8 @@ try {
             $userId = (int)$row['user_id'];
             $row['donor_level'] = donor_level($db, $userId);
             if ($row['donor_level'] > 0) {
-                $skin = donor_skin_options(donor_skin_record($db, $userId), $row['donor_level'])['selected'];
-                $row['donor_skin'] = donor_skin_catalog()[$skin] ?? null;
+                $skins = donor_skin_profile($db, $userId, $row['donor_level']);
+                $row['donor_skin'] = $skins['catalog'][$skins['selected']] ?? null;
             }
         } catch (Throwable $error) {
             error_log('Overlay donor skin: ' . $error->getMessage());

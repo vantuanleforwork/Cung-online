@@ -92,21 +92,24 @@ def run():
                     try:
                         with opener.open(req) as response:return response.status,json.loads(response.read().decode('utf-8-sig'))
                     except urllib.error.HTTPError as error:return error.code,json.loads(error.read().decode('utf-8-sig'))
-                def upload_sound(content, token=csrf):
-                    boundary = 'fixture-donate-sound'
-                    body = (f'--{boundary}\r\nContent-Disposition: form-data; name="action"\r\n\r\nupload_donate_sound\r\n'
+                def upload_media(content, token=csrf, *, skin=False):
+                    boundary = 'fixture-donate-media'
+                    action, field, filename, mime = ('upload_donor_skin', 'skin_gif', 'fixture.gif', 'image/gif') if skin else (
+                        'upload_donate_sound', 'donate_sound', 'alert.mp3', 'audio/mpeg')
+                    name = f'--{boundary}\r\nContent-Disposition: form-data; name="skin_name"\r\n\r\nFixture skin\r\n' if skin else ''
+                    body = (f'--{boundary}\r\nContent-Disposition: form-data; name="action"\r\n\r\n{action}\r\n'
                             f'--{boundary}\r\nContent-Disposition: form-data; name="csrf"\r\n\r\n{token}\r\n'
-                            f'--{boundary}\r\nContent-Disposition: form-data; name="donate_sound"; filename="alert.mp3"\r\n'
-                            'Content-Type: audio/mpeg\r\n\r\n').encode() + content + f'\r\n--{boundary}--\r\n'.encode()
+                            f'{name}--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="{filename}"\r\n'
+                            f'Content-Type: {mime}\r\n\r\n').encode() + content + f'\r\n--{boundary}--\r\n'.encode()
                     req = urllib.request.Request(base+'/admin.php?view=donate',data=body,
                         headers={'Content-Type':f'multipart/form-data; boundary={boundary}'})
                     try:
                         with opener.open(req,timeout=15) as response: return response.status
                     except urllib.error.HTTPError as error: return error.code
                 mp3 = (bytes.fromhex('fffb9064') + bytes(413))*8
-                assert upload_sound(mp3, 'bad') == 403
-                assert upload_sound(b'not audio') == 409
-                assert upload_sound(mp3) == 200
+                assert upload_media(mp3, 'bad') == 403
+                assert upload_media(b'not audio') == 409
+                assert upload_media(mp3) == 200
                 sound_url = request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url']
                 assert sound_url.startswith('uploads/donate-sound.mp3?v=')
                 with opener.open(base+'/'+sound_url) as uploaded:
@@ -301,6 +304,20 @@ def run():
                 sql("UPDATE donations SET shown=1; UPDATE donations SET shown=0 WHERE user_id=2")
                 skin_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert skin_alert['donor_skin'] == dict(name='Naruto',url='assets/skins/naruto.gif')
+                assert request('ack.php?k=layout-fixture-key',dict(id=skin_alert['id'],claim_token=skin_alert['claim_token']))[0] == 200
+                gif = (ROOT/'assets/skins/itachi.gif').read_bytes()
+                assert upload_media(gif, 'bad', skin=True) == 403
+                assert upload_media(b'not a gif', skin=True) == 409
+                assert upload_media(gif, skin=True) == 200
+                assert pick_skin('gif-1', skin_csrf)[0] == 409  # Lv2 already has two skins.
+                (site/'fixture.php').write_text(test_fixture,encoding='utf-8')
+                owner_csrf = request('fixture.php')[1]['csrf']
+                uploaded = pick_skin('gif-1', owner_csrf)[1]['skins']['catalog']['gif-1']
+                assert uploaded == dict(name='Fixture skin',url='uploads/skins/gif-1.gif')
+                with opener.open(base+'/'+uploaded['url']) as response:
+                    assert response.read() == gif
+                assert owner_create('message')[0] == 200
+                assert request('poll.php?k=layout-fixture-key', {})[1][0]['donor_skin'] == uploaded
                 assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
                 print(browser.stdout.strip())

@@ -108,6 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
+            } elseif ($action === 'upload_donor_skin') {
+                upload_donor_skin(db(), $_POST['skin_name'] ?? '', $_FILES['skin_gif'] ?? []);
+                $_SESSION['flash'] = 'Đã thêm skin vào hồ sơ donate.';
+                redirect_admin('donate');
             } elseif ($action === 'upload_donate_sound' || $action === 'reset_donate_sound') {
                 if ($action === 'upload_donate_sound') save_donate_sound($_FILES['donate_sound'] ?? []);
                 else reset_donate_sound();
@@ -241,7 +245,7 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quản trị donate · Van Tuan Le</title>
 <link rel="stylesheet" href="ui-tokens.css?v=32">
-<link rel="stylesheet" href="admin-theme.css?v=37"></head>
+<link rel="stylesheet" href="admin-theme.css?v=38"></head>
 <body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
 <?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
 <a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>

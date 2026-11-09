@@ -92,7 +92,7 @@ function showDonorSkin(skin){
   const image=$('donorSkin');
   if(!image)return;
   image.hidden=true;image.removeAttribute('src');
-  if(typeof skin?.url!=='string'||!/^assets\/skins\/[a-z0-9-]+\.gif$/.test(skin.url))return;
+  if(typeof skin?.url!=='string'||!/^(?:assets\/skins\/[a-z0-9-]+|uploads\/skins\/gif-[0-9]+)\.gif$/.test(skin.url))return;
   image.alt=skin.name||'';
   image.onerror=()=>{image.hidden=true};
   image.src=skin.url;
