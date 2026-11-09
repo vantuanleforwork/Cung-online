@@ -58,6 +58,7 @@ try {
     $row['donate_sound_url'] = donate_sound_url();
     if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
         $row['roulette'] = roulette_spin($db, (int)$row['id']);
+        unset($row['roulette']['wheel_id']);
     }
     unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);

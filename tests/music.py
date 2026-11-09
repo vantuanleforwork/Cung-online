@@ -1,5 +1,6 @@
 """Real PHP/MariaDB layout checks in a disposable database. Never reads config.php."""
 import http.cookiejar
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -156,6 +157,7 @@ def run():
                 for url in ['https://www.youtube.com.evil.test/watch?v=dQw4w9WgXcQ','https://evil.test/','https://www.youtube.com@evil.test/watch?v=dQw4w9WgXcQ','http://youtu.be/dQw4w9WgXcQ','https://www.youtube.com/watch?v[]=dQw4w9WgXcQ','https://www.youtube.com/']:
                     assert create(url=url)[0]==400,url
                 one=create()[1];assert 'code' in one,one
+                assert create()[1] == one
                 assert request('music-queue.php')[1]['items']==[]
                 def pay(order,tx,amount=60000):
                     return request('webhook.php',{'transactions':[dict(id=tx,transferAmount=amount,content=order['code'],accountNumber='123456789',transferType='IN',gateway='MB')]},{'Authorization':'Bearer music-fixture-secret'})
@@ -224,6 +226,7 @@ def run():
                 assert spin(24999)[0] == 400
                 status, order = spin(25000)
                 assert status == 200 and 'code' in order and 'roulette' not in order, order
+                assert spin(25000)[1] == order
                 sql("UPDATE donations SET shown=1 WHERE status='paid'")
                 assert pay(order, 'roulette-fixture', 25000)[0] == 200
                 assert admin(dict(wheel, id=wheel_id, name='Renamed') | {'option_label[]':'C', 'option_frequency[]':1})[0] == 200
@@ -362,6 +365,27 @@ def run():
                     assert request('kpi.php')[1] == dict(target=800000,total=8000*milestone,percent=milestone,milestone=milestone)
                 assert admin(goal | dict(target_amount='0'))[0] == 200
                 assert request('kpi.php')[1]['target'] == 0
+                (site/'fixture.php').write_text(fixture,encoding='utf-8')
+                donor_csrf = request('fixture.php')[1]['csrf']
+                orders = [create(amount,kind='message')[1] for amount in [20000,21000,22000]]
+                assert len({order['code'] for order in orders}) == 3
+                assert create(23000,kind='message')[0] == 400
+                assert create(20000,kind='message')[1] == orders[0]
+                cleanup = (ROOT/'tools/cleanup-pending-20261109.php').read_text(encoding='utf-8')
+                fixture_codes = ['FIXTURESPAM1', 'FIXTURESPAM2', 'FIXTURESPAM3']
+                hashes = iter(hashlib.sha256(code.encode()).hexdigest() for code in fixture_codes)
+                cleanup = re.sub(r"[a-f0-9]{64}", lambda _: next(hashes), cleanup)
+                cleanup_file = tmp/'cleanup.php'
+                cleanup_file.write_text(cleanup, encoding='utf-8')
+                sql("INSERT INTO donations(id,code,expected_amount,status,paid_amount) VALUES"
+                    "(779,'FIXTURESPAM1',50000,'pending',NULL),"
+                    "(780,'FIXTURESPAM2',50000,'paid',50000),"
+                    "(781,'FIXTURESPAM3',50000,'pending',0)")
+                sql("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,direction) "
+                    "VALUES('fixture-spam-payment',50000,'FIXTURESPAM3','123456789','IN')")
+                result = subprocess.run([str(PHP),str(cleanup_file),str(site)],env=env,capture_output=True,creationflags=FLAGS)
+                assert result.returncode == 1 and b'removed 1 unpaid' in result.stdout, result.stderr
+                assert sql('SELECT GROUP_CONCAT(id ORDER BY id) FROM donations WHERE id IN (779,780,781)') == '780,781'
                 print(browser.stdout.strip())
                 print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:

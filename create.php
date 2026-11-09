@@ -10,6 +10,12 @@ function fail(int $code, string $msg) {
     exit(json_encode(['error' => $msg], JSON_UNESCAPED_UNICODE));
 }
 
+function send_payment_code(string $code, string $statusToken, int $amount): void {
+    $qr = 'https://img.vietqr.io/image/' . BANK_ID . '-' . ACCOUNT_NO . '-compact2.png'
+        . '?amount=' . $amount . '&addInfo=' . $code . '&accountName=' . rawurlencode(ACCOUNT_NAME);
+    respond(200, ['code'=>$code, 'qr'=>$qr, 'status_token'=>$statusToken, 'test_paid'=>false]);
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Chỉ hỗ trợ POST.');
     donor_session();
@@ -63,6 +69,7 @@ try {
         if (!$wheel) fail(400, 'Vòng quay này đã đóng. Hãy tải lại trang.');
         $minimum = (int)$wheel['minimum'];
         $spin = roulette_snapshot($wheel);
+        $spin['wheel_id'] = (int)$wheelId;
     }
     if ($amount < $minimum) fail(400, 'Số tiền tối thiểu là ' . number_format($minimum,0,',','.') . 'đ.');
     $youtubeId = null;
@@ -73,16 +80,6 @@ try {
         catch (InvalidArgumentException $error) { fail(400, $error->getMessage()); }
     }
 
-
-    // Dọn dẹp các đơn 'pending' cũ của người dùng này để tránh bị nghẽn đơn
-    try {
-        $db->prepare("DELETE FROM donations WHERE user_id=? AND status='pending' AND created_at < NOW() - INTERVAL 15 SECOND")->execute([$user['id']]);
-    } catch (Throwable $ignore) {}
-
-    // Kiểm tra giới hạn tạo đơn với ngưỡng rộng rãi (tránh chặn nhầm khi test)
-    $c = $db->prepare("SELECT COUNT(*) FROM donations WHERE ip=? AND status='pending' AND created_at > NOW() - INTERVAL 5 MINUTE");
-    $c->execute([$ip]);
-    if ($c->fetchColumn() >= 30) fail(429, 'Bạn thao tác quá nhanh. Hãy thử lại sau 1-2 phút.');
 
     $name = clean($user['display_name'], 40) ?: 'Người gửi donate';
     $avatar = $user['custom_avatar_path'] ?: $user['google_avatar_url'];
@@ -120,6 +117,33 @@ try {
         }
         try {
             $db->beginTransaction();
+            if (!$isTestAccount) {
+                // Serialize requests for the same verified account, including requests from different sessions.
+                $lock = $db->prepare('SELECT id FROM donor_users WHERE id=? FOR UPDATE');
+                $lock->execute([$user['id']]);
+                $lock->fetchColumn();
+                $voiceColumn = $hasVoiceCols ? 'selected_voice_id' : 'NULL AS selected_voice_id';
+                $pending = $db->prepare("SELECT id,code,status_token,expected_amount,required_amount,message,donation_kind,youtube_id,$voiceColumn
+                    FROM donations WHERE user_id=? AND status='pending' AND created_at > NOW() - INTERVAL 10 MINUTE
+                    ORDER BY id DESC FOR UPDATE");
+                $pending->execute([$user['id']]);
+                $orders = $pending->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($orders as $order) {
+                    if (!$order['code'] || !$order['status_token'] || (int)$order['expected_amount'] !== $amount
+                        || (int)$order['required_amount'] !== $minimum || $order['message'] !== $msg
+                        || $order['donation_kind'] !== $kind || $order['youtube_id'] !== $youtubeId
+                        || $order['selected_voice_id'] !== $selectedVoiceId) continue;
+                    if ($spin !== null && (roulette_spin($db, (int)$order['id'])['wheel_id'] ?? null) !== $spin['wheel_id']) continue;
+                    $db->commit();
+                    send_payment_code($order['code'], $order['status_token'], $amount);
+                }
+                $network = $db->prepare("SELECT COUNT(*) FROM donations WHERE ip=? AND status='pending' AND created_at > NOW() - INTERVAL 5 MINUTE");
+                $network->execute([$ip]);
+                if (count($orders) >= 3 || $network->fetchColumn() >= 30) {
+                    $db->rollBack();
+                    fail(429, 'Bạn đã tạo nhiều mã đang chờ. Hãy dùng mã hiện có hoặc thử lại sau vài phút.');
+                }
+            }
             if ($hasVoiceCols) {
                 $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
                    ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
@@ -143,20 +167,15 @@ try {
             }
             $db->commit();
             break;
-        } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); if ($t === 4 || (int)($e->errorInfo[1] ?? 0) !== 1062) throw $e; }
+        } catch (PDOException $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            if ($t === 4 || !in_array((int)($e->errorInfo[1] ?? 0), [1062,1205,1213], true)) throw $e;
+        }
     }
 
     if ($isTestAccount) respond(200, ['test_paid' => true]);
 
-    $qr = 'https://img.vietqr.io/image/' . BANK_ID . '-' . ACCOUNT_NO . '-compact2.png'
-        . '?amount=' . $amount . '&addInfo=' . $code . '&accountName=' . rawurlencode(ACCOUNT_NAME);
-
-    echo json_encode([
-        'code' => $code,
-        'qr' => $qr,
-        'status_token' => $statusToken,
-        'test_paid' => $isTestAccount
-    ], JSON_UNESCAPED_UNICODE);
+    send_payment_code($code, $statusToken, $amount);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();
     error_log('Create donation error: ' . $e->getMessage());
