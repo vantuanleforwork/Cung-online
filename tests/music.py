@@ -71,7 +71,7 @@ def run():
                 env=dict(os.environ)
                 for key in ['FPT_TTS_API_KEY','ELEVENLABS_API_KEY','CUSTOM_API_KEY']: env.pop(key,None)
                 base=f'http://127.0.0.1:{webport}'
-                processes.append(subprocess.Popen([str(PHP),'-S',f'127.0.0.1:{webport}','-t',str(site)],stdout=log,stderr=log,env=env,creationflags=FLAGS))
+                processes.append(subprocess.Popen([str(PHP),'-d','disable_classes=finfo','-S',f'127.0.0.1:{webport}','-t',str(site)],stdout=log,stderr=log,env=env,creationflags=FLAGS))
                 jar=http.cookiejar.CookieJar()
                 opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
                 def admin(fields=None):
@@ -110,6 +110,9 @@ def run():
                 mp3 = (bytes.fromhex('fffb9064') + bytes(413))*8
                 assert upload_media(mp3, 'bad') == 403
                 assert upload_media(b'not audio') == 409
+                assert upload_media(b'ID3\x04\x00\x00\x00\x00\x00\x00') == 409
+                assert upload_media(mp3) == 200
+                mp3 = b'ID3\x04\x00\x00\x00\x00\x00\x0c' + bytes(12) + mp3
                 assert upload_media(mp3) == 200
                 sound_settings = dict(action='save_donate_sound_volume',csrf=csrf,donate_sound_volume='40')
                 assert admin(sound_settings | dict(donate_sound_volume='101'))[0] == 409
