@@ -11,6 +11,13 @@ CREATE TABLE donor_users (
   INDEX donor_email (email(191))
 ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
+CREATE TABLE IF NOT EXISTS donor_skins (
+  user_id BIGINT UNSIGNED PRIMARY KEY,
+  unlocked_json TEXT NOT NULL,
+  active_skin VARCHAR(32) NULL,
+  FOREIGN KEY (user_id) REFERENCES donor_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE blocked_donors (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   block_type ENUM('email','ip','device') NOT NULL,

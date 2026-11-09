@@ -57,6 +57,18 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .level-progress-track { height: 5px; background: var(--surface-raised); margin: 10px 0; border-radius: 4px; overflow: hidden; }
 .level-progress-bar { display: block; width: 0; height: 100%; background: var(--accent); }
 .account details, .account .logout { margin-top: 16px; }
+.profile-skins { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.profile-skins h2 { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
+.profile-skin-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--space-2); }
+.profile-skin { min-width: 0; padding: var(--space-1); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); text-align: center; }
+.profile-skin img, .profile-skin-empty span { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius-sm); background: var(--bg); }
+.profile-skin-empty span { display: grid; place-items: center; color: var(--muted); }
+.profile-skin strong, .profile-skin small { display: block; overflow-wrap: anywhere; }
+.profile-skin strong { margin-top: var(--space-1); font-size: var(--text-xs); }
+.profile-skin small, .profile-skin-status { font-size: 12px; color: var(--muted); }
+.profile-skin[aria-pressed=true] { border-color: var(--accent); }
+.profile-skin[aria-pressed=true] small { color: var(--accent); }
+.profile-skin:disabled { opacity: .75; }
 .account summary { color: var(--muted); cursor: pointer; font-size: 14px; }
 .account small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
 .account .logout { background: transparent; color: var(--muted); padding: 6px 12px; font-size: 14px; }

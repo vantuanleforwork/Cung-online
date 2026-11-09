@@ -49,6 +49,7 @@ def run():
                     for source in ROOT.glob(pattern):
                         if source.name != 'config.php': shutil.copy2(source,site/source.name)
                 shutil.copytree(ROOT/'vendor',site/'vendor')
+                shutil.copytree(ROOT/'assets'/'skins',site/'assets'/'skins')
                 # Stub only the external oEmbed lookup in the disposable copy.
                 music_source=(site/'music.php').read_text(encoding='utf-8')
                 music_source=music_source.replace('function youtube_song_title(string $videoId): string {', "function youtube_song_title(string $videoId): string {\n    return $videoId === 'FWYrRSWabIs' ? '' : 'Fixture metadata ' . $videoId;")
@@ -203,7 +204,8 @@ def run():
                 assert request('music-title.php?k=wrong',dict(id=1))[0]==403
                 # Inspect real browser UI and preview without calling external YouTube.
                 cookie=next(c.value for c in jar if c.name=='cung_admin')
-                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie],capture_output=True,encoding='utf-8',creationflags=FLAGS,timeout=75)
+                donor_cookie=next(c.value for c in jar if c.name=='cung_donor')
+                browser=subprocess.run(['node',str(ROOT/'tests/music.cjs'),base,cookie,donor_cookie],capture_output=True,encoding='utf-8',creationflags=FLAGS,timeout=75)
                 assert browser.returncode==0,browser.stdout+browser.stderr
 
                 wheel = dict(action='save_roulette', csrf=csrf, name='Fixture wheel', minimum=25000, active='on')
@@ -251,6 +253,29 @@ def run():
                 assert sql('SELECT COUNT(*) FROM payment_transactions') == payment_count
                 test_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert test_alert['name'] == 'Test OBS' and test_alert['roulette'] == dict(name='Renamed', options=['C'], winner=0)
+                assert request('ack.php?k=layout-fixture-key',dict(id=test_alert['id'],claim_token=test_alert['claim_token']))[0] == 200
+                (site/'fixture.php').write_text(fixture.replace("donor_id']=1", "donor_id']=2").replace(
+                    "VALUES(1,'fixture','music@example.test'", "VALUES(2,'skin-fixture','skin@example.test'"),encoding='utf-8')
+                skin_csrf = request('fixture.php')[1]['csrf']
+                def pick_skin(skin):
+                    body = urllib.parse.urlencode(dict(csrf=skin_csrf,action='select_skin',skin=skin)).encode()
+                    try:
+                        with opener.open(urllib.request.Request(base+'/profile.php',data=body)) as result:
+                            return result.status,json.load(result)
+                    except urllib.error.HTTPError as result:
+                        return result.code,json.load(result)
+                assert request('profile.php')[1]['user']['skins']['remaining'] == 0
+                assert pick_skin('itachi')[0] == 409
+                sql("INSERT INTO donations(user_id,name,paid_amount,status,shown) VALUES(2,'Skin donor',200000,'paid',1)")
+                assert pick_skin('naruto')[1]['skins']['selected'] == 'naruto'
+                assert pick_skin('itachi')[0] == 409
+                sql("UPDATE donations SET paid_amount=480000 WHERE user_id=2")
+                assert pick_skin('itachi')[1]['skins']['unlocked'] == ['naruto','itachi']
+                assert pick_skin('naruto')[1]['skins']['selected'] == 'naruto'
+                assert request('profile.php')[1]['user']['skins']['selected'] == 'naruto'
+                sql("UPDATE donations SET shown=1; UPDATE donations SET shown=0 WHERE user_id=2")
+                skin_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
+                assert skin_alert['donor_skin'] == dict(name='Naruto',url='assets/skins/naruto.gif')
                 assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
                 print(browser.stdout.strip())

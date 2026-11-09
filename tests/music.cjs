@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),{spawn}=require('node:child_process'),assert=require('node:assert/strict');
-const [base,cookie]=process.argv.slice(2),root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'cung-layout-browser-'));
+const [base,cookie,donorCookie]=process.argv.slice(2),root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'cung-layout-browser-'));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));let ws,child;
 let completed=false;const watchdog=setTimeout(()=>{console.error('Layout browser test timed out');child?.kill();process.exit(1)},60000);
 process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
@@ -13,6 +13,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
  await send('Runtime.enable');await send('Page.enable');await send('Network.enable');
  await send('Network.setCookie',{name:'cung_admin',value:cookie,url:base,httpOnly:true,sameSite:'Strict'});
+ await send('Network.setCookie',{name:'cung_donor',value:donorCookie,url:base,httpOnly:true,sameSite:'Strict'});
  await send('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:false});
  await send('Page.navigate',{url:base+'/admin.php?view=roulette'});
  for(let i=0;i<100;i++){if(await evaluate('!!document.querySelector("[data-roulette-add]:enabled")'))break;await wait(50)}
@@ -41,6 +42,9 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  await send('Page.navigate',{url:base+'/index.html'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungDonate?.ready'))break;await wait(50)}
  assert(await evaluate('CungDonate.ready'));
+ for(let i=0;i<100;i++){if(await evaluate('document.querySelectorAll("#profileSkinGrid .profile-skin").length===3'))break;await wait(50)}
+ assert(await evaluate('document.querySelector("#signedIn details + .profile-skins").offsetWidth>0'));
+ assert.deepEqual(await evaluate('[...document.querySelectorAll("#profileSkinGrid .profile-skin strong")].map(x=>x.textContent)'),['Itachi','Naruto','Sắp có']);
  for(let i=0;i<100;i++){if(await evaluate('!!document.querySelector("#musicQueueList a")'))break;await wait(50)}
  assert(await evaluate('document.querySelector(".intro > .leaderboard + #musicQueueSection")?.offsetWidth > 0 && CungDonate.kind==="message"'));
  await evaluate('renderHistory([{name:"Test",amount:10000,kind:"music",music_title:"Tên bài",music_video_id:"dQw4w9WgXcQ",message:"Chào live"},{name:"Test",amount:10000,kind:"roulette",roulette_name:"Thử thách",roulette_result:"Ô A"}],true)');
@@ -129,6 +133,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
      return Promise.resolve(new Response('{"audio_url":"/fixture-audio"}'));
    };
    const donation=await getDemo();donation.speech.provider="fpt";donation.donate_sound_url="uploads/donate-sound.mp3?v=0123456789abcdef";
+   donation.donor_skin={name:"Naruto",url:"assets/skins/naruto.gif"};
    void window.play(donation);
  })()`);
  for(let i=0;i<125;i++){if(await evaluate('reads.length===1'))break;await wait(80)}
@@ -137,5 +142,6 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.deepEqual(await evaluate('alertEvents'),[{url:'uploads/donate-sound.mp3?v=0123456789abcdef',stage:false,wheel:false},'ended']);
  assert(await evaluate('ttsRequests.length===1&&ttsRequests[0].alertEnded&&ttsRequests[0].payload.roulette_preview===true&&!ttsRequests[0].reveal.includes("Ô trúng")'));
  assert(await evaluate('reads[0].text.includes("và nhận được Thêm một thử thách")&&reads[0].reveal==="Ô trúng · Thêm một thử thách"&&reads[0].audio==="/fixture-audio"&&reads[0].stage&&!reads[0].wheel'));
+ assert(await evaluate('(()=>{const img=document.querySelector("blockquote + #donorSkin");return !img.hidden&&img.alt==="Naruto"&&img.src.endsWith("/assets/skins/naruto.gif")})()'));
  assert.deepEqual(errors,[]);completed=true;console.log('PASS: real admin music settings tab, live idle preview, mobile layout, idle-to-manual playback transition, music alerts and index validation');await send('Browser.close').catch(()=>{});
 })().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{clearTimeout(watchdog);ws?.close();child?.kill();setTimeout(()=>{try{fs.rmSync(tmp,{recursive:true,force:true})}catch{}},500).unref()});

@@ -88,6 +88,16 @@ function render(d){
   globalThis.CungLayout?.apply(d.speech?.overlay);
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
+function showDonorSkin(skin){
+  const image=$('donorSkin');
+  if(!image)return;
+  image.hidden=true;image.removeAttribute('src');
+  if(typeof skin?.url!=='string'||!/^assets\/skins\/[a-z0-9-]+\.gif$/.test(skin.url))return;
+  image.alt=skin.name||'';
+  image.onerror=()=>{image.hidden=true};
+  image.src=skin.url;
+  image.hidden=false;
+}
 const apiSpeech=d=>['fpt','elevenlabs','custom_api'].includes(d.speech?.provider);
 async function prepareSpeech(d,signal){
   if(!d.speech?.enabled||d.speech.volume===0)return false;
@@ -145,6 +155,8 @@ async function play(d){
     }
     if(lease.signal.aborted)return false;
     if(d.roulette)render(d);
+    showDonorSkin(d.donor_skin);
+    globalThis.CungLayout?.apply(d.speech?.overlay);
     void $('stage').offsetWidth;$('stage').classList.add('is-visible');
     await sleep(700,lease.signal);
     const reading=speak(d,lease.signal,ready).catch(error=>{
@@ -159,7 +171,7 @@ async function play(d){
     $('stage').classList.remove('is-visible');
     if(!preview)notice('Kết nối giữ lượt bị gián đoạn. Lượt chưa xác nhận sẽ được phát lại.');
     return false;
-  }finally{lease.close();CungSpeech.stop();$('speechState').classList.remove('is-speaking')}
+  }finally{if(!preview)showDonorSkin(null);lease.close();CungSpeech.stop();$('speechState').classList.remove('is-speaking')}
 }
 globalThis.play=play;
 async function acknowledge(d){

@@ -181,3 +181,4 @@ function attach_payment(PDO $db, array $payment, array $donation) {
 require_once __DIR__ . '/music.php';
 require_once __DIR__ . '/roulette.php';
 require_once __DIR__ . '/donate-sound.php';
+require_once __DIR__ . '/donor-skins.php';

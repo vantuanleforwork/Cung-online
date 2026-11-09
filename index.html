@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=35">
+<link rel="stylesheet" href="site.css?v=36">
 <script>
 if (location.pathname.endsWith('/index.html')) {
   history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
@@ -49,6 +49,12 @@ if (location.pathname.endsWith('/index.html')) {
             <button type="submit">Lưu hồ sơ</button><span id="profileError" role="alert"></span>
           </form>
         </details>
+        <section class="profile-skins" aria-labelledby="profileSkinTitle">
+          <h2 id="profileSkinTitle">Skin hiển thị</h2>
+          <div class="profile-skin-grid" id="profileSkinGrid"></div>
+          <p class="sub" id="profileSkinHint"></p>
+          <span class="profile-skin-status" id="profileSkinStatus" role="status"></span>
+        </section>
         <form action="google-auth.php?action=logout" method="post"><input type="hidden" name="csrf" id="logoutCsrf"><button class="logout" type="submit">Đăng xuất</button></form>
       </div>
     </section>
@@ -203,6 +209,7 @@ async function refreshStatus(generation){
     if(finished){
       // Tải lại lịch sử phiên donate thành công ngay khi thanh toán xong
       loadHistory(true);
+      loadProfile();
       window.dispatchEvent(new Event('donation:paid'));
     }
   }catch(e){if(generation===statusGeneration)$('paymentStatus').textContent='Chưa kết nối được để kiểm tra thanh toán; sẽ tự thử lại. Bạn không cần chuyển lại.'}
@@ -339,6 +346,52 @@ document.querySelectorAll('.history-tab').forEach(tab=>{
   });
 });
 
+let skinSaving=false;
+function renderSkins(skins,level){
+  const grid=$('profileSkinGrid');
+  grid.replaceChildren();
+  if(!skins)return;
+  $('profileSkinHint').textContent=level<1?'Đạt Lv1 trở lên để mở khóa 1 skin bạn muốn.':
+    skins.remaining?'Bạn có thể mở khóa thêm '+skins.remaining+' skin. Chọn một skin để dùng trên OBS.':
+    'Bạn có thể đổi giữa các skin đã mở khóa.';
+  for(const [id,skin] of Object.entries(skins.catalog)){
+    const owned=skins.unlocked.includes(id),active=skins.selected===id;
+    const tile=document.createElement('button');tile.type='button';tile.className='profile-skin';
+    tile.dataset.skin=id;
+    tile.disabled=!owned&&!skins.remaining;
+    tile.setAttribute('aria-pressed',String(active));
+    const img=document.createElement('img');img.src=skin.url;img.alt='';img.loading='lazy';img.decoding='async';
+    const name=document.createElement('strong');name.textContent=skin.name;
+    const status=document.createElement('small');
+    status.textContent=active?'Đang dùng':owned?'Chọn dùng':skins.remaining?'Mở khóa & dùng':'Đã khóa';
+    tile.append(img,name,status);
+    tile.addEventListener('click',()=>{if(!active)saveSkin(id)});
+    grid.append(tile);
+  }
+  for(let i=grid.children.length;i<3;i++){
+    const tile=document.createElement('div');tile.className='profile-skin profile-skin-empty';
+    const square=document.createElement('span');square.textContent='✦';square.setAttribute('aria-hidden','true');
+    const label=document.createElement('strong');label.textContent='Sắp có';
+    tile.append(square,label);grid.append(tile);
+  }
+}
+async function saveSkin(id){
+  if(skinSaving)return;
+  skinSaving=true;
+  const status=$('profileSkinStatus'),grid=$('profileSkinGrid');
+  grid.setAttribute('aria-busy','true');
+  status.textContent='Đang lưu skin…';
+  try{
+    const r=await fetch('profile.php',{method:'POST',body:new URLSearchParams({csrf:csrfToken,action:'select_skin',skin:id})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Không lưu được skin.');
+    profile.skins=d.skins;
+    renderSkins(profile.skins,profile.level);
+    grid.querySelector('[aria-pressed="true"]')?.focus();
+    status.textContent='Đã chọn '+d.skins.catalog[id].name+' để hiển thị trên OBS.';
+  }catch(error){status.textContent=error.message}
+  finally{skinSaving=false;grid.removeAttribute('aria-busy')}
+}
 function renderProfile(user){
   profile=user;$('profileName').textContent=user.name;$('profileNameInput').value=user.name;
   $('profileEmail').textContent=user.email;$('profileLevel').textContent='Lv'+user.level;
@@ -350,6 +403,7 @@ function renderProfile(user){
   $('profileProgressAmount').textContent=percent+'%';
   $('profileProgressBar').style.width=percent+'%';$('profileProgressTrack').setAttribute('aria-valuenow',String(percent));
   $('profileProgressNote').textContent='Còn '+money(remaining)+' để lên Lv'+(level+1);
+  renderSkins(user.skins,level);
 }
 
 function upd(){

@@ -12,11 +12,22 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
     respond(200,['logged_in'=>true,'csrf'=>$_SESSION['donor_csrf'],'user'=>[
         'id'=>(int)$user['id'],'email'=>$user['email'],'name'=>$user['display_name'],
         'avatar'=>$user['custom_avatar_path'] ?: $user['google_avatar_url'],'level'=>$progress['level'],
-        'level_progress'=>$progress]]);
+        'level_progress'=>$progress,'skins'=>donor_skin_profile($db,(int)$user['id'],$progress['level'])]]);
 }
 if ($_SERVER['REQUEST_METHOD']!=='POST') respond(405,['error'=>'Chỉ hỗ trợ GET/POST.']);
 if (empty($_SESSION['donor_id'])) respond(401,['error'=>'Hãy đăng nhập Google.']);
 if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['donor_csrf'],$_POST['csrf'])) respond(403,['error'=>'Phiên không hợp lệ. Tải lại trang.']);
+if (($_POST['action'] ?? '') === 'select_skin') {
+    try {
+        $skin = is_string($_POST['skin'] ?? null) ? $_POST['skin'] : '';
+        respond(200,['skins'=>select_donor_skin(db(),(int)$_SESSION['donor_id'],$skin)]);
+    } catch (InvalidArgumentException $error) {
+        respond(409,['error'=>$error->getMessage()]);
+    } catch (Throwable $error) {
+        error_log('Select donor skin: ' . $error->getMessage());
+        respond(500,['error'=>'Không lưu được skin. Vui lòng thử lại.']);
+    }
+}
 $name=clean($_POST['display_name'] ?? '',40);
 if ($name==='') respond(400,['error'=>'Tên hiển thị không được để trống.']);
 $db=db(); $s=$db->prepare('SELECT custom_avatar_path FROM donor_users WHERE id=?'); $s->execute([$_SESSION['donor_id']]); $old=$s->fetchColumn();

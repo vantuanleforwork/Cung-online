@@ -57,6 +57,8 @@
   background: #ffffff05;
 }
 #obsFrame .donate-card blockquote p { color: #ecedf6; font: 400 var(--message-size, 22px)/1.55 "Segoe UI", sans-serif; }
+#obsFrame .donor-skin { display: block; width: 156px; height: 156px; object-fit: contain; margin: 16px auto 0; }
+#obsFrame .donor-skin[hidden] { display: none; }
 #obsFrame .donate-card .speech-state { display: none; margin-top: 14px; color: #a6b0c5; font-size: 9px; letter-spacing: 1px; }
 #obsFrame .donate-card .speech-state.is-speaking { display: flex; }
 #obsFrame .donate-card .speech-state i { background: var(--accent); }

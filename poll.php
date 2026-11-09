@@ -19,7 +19,7 @@ try {
     $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
     $hasVoiceCols = in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true);
     $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
-    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,{$voiceSelect}
+    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,d.user_id,{$voiceSelect}
         (d.paid_amount >= d.required_amount) AS spin_eligible,
         (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
@@ -40,7 +40,15 @@ try {
     }
 
     $row['donor_level'] = donor_level_progress((int)$row['donor_total'])['level'];
-    unset($row['donor_total']);
+    if ($row['user_id'] && $row['donor_level'] > 0) {
+        try {
+            $skin = donor_skin_options(donor_skin_record($db,(int)$row['user_id']),$row['donor_level'])['selected'];
+            $row['donor_skin'] = donor_skin_catalog()[$skin] ?? null;
+        } catch (Throwable $error) {
+            error_log('Overlay donor skin: ' . $error->getMessage());
+        }
+    }
+    unset($row['donor_total'],$row['user_id']);
     $row['claim_token'] = $token;
     $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;
