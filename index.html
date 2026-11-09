@@ -39,6 +39,8 @@
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
 <link rel="stylesheet" href="site.css?v=37">
+<link rel="stylesheet" href="kpi.css?v=1">
+<script src="kpi.js?v=1" defer></script>
 <script>
 if (location.pathname.endsWith('/index.html')) {
   history.replaceState(null, '', location.pathname.slice(0, -10) + location.search + location.hash);
@@ -113,6 +115,7 @@ if (location.pathname.endsWith('/index.html')) {
       <p id="musicQueueStatus" class="sub" role="status">Đang tải hàng đợi…</p>
       <ol id="musicQueueList" class="music-queue-list"></ol>
     </section>
+    <section class="daily-kpi" data-daily-kpi hidden></section>
   </aside>
 
   <div class="donation-column">

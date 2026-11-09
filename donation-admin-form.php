@@ -2,6 +2,8 @@
 if (empty($loggedIn)) { http_response_code(403); exit; }
 $donate = donation_settings($db);
 $donateSound = donate_sound_url();
+$kpiDay = kpi_day();
+$dailyKpi = kpi_progress($db, $kpiDay);
 ?>
 <section data-tabs="donate" class="settings-workspace">
   <h2>Cài đặt donate</h2>
@@ -45,6 +47,22 @@ $donateSound = donate_sound_url();
     </section>
     <button type="submit">Lưu cài đặt donate</button>
   </form>
+  <section class="speech-panel" aria-labelledby="dailyKpiTitle">
+    <h3 id="dailyKpiTitle">KPI donate hôm nay</h3>
+    <p class="muted"><?=h($kpiDay->format('d/m/Y'))?> · Ngày tính theo giờ Việt Nam. Nhập 0 để tắt KPI.</p>
+    <?php if ($dailyKpi['target']): ?>
+      <p>Đã nhận <strong><?=h(number_format($dailyKpi['total'], 0, ',', '.'))?>đ</strong> · <?=h($dailyKpi['percent'])?>%</p>
+    <?php endif ?>
+    <form method="post">
+      <?php csrf_field() ?>
+      <input type="hidden" name="action" value="save_kpi_target">
+      <input type="hidden" name="goal_date" value="<?=h($kpiDay->format('Y-m-d'))?>">
+      <label>Mục tiêu (đ) <input type="number" name="target_amount" min="0" max="1000000000" step="1" required value="<?=h($dailyKpi['target'])?>"></label>
+      <button type="submit">Lưu KPI hôm nay</button>
+    </form>
+    <p class="muted">Thêm một Browser Source trong OBS, rộng 360 px và cao 640 px.</p>
+    <a href="kpi-overlay.html" target="_blank" rel="noopener">Mở trang Browser Source KPI ↗</a>
+  </section>
   <section class="speech-panel" aria-labelledby="donateSoundTitle">
     <h3 id="donateSoundTitle">Âm thanh donate</h3>
     <p class="muted">Tệp MP3 tối đa 2 MB. OBS phát tối đa 10 giây đầu làm tiếng báo donate.</p>

@@ -342,6 +342,26 @@ def run():
                 assert pick_skin('gif-2', skin_csrf)[1]['skins']['unlocked'] == ['itachi', 'gif-2']
                 assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
+                with opener.open(base+'/admin.php?view=donate') as response:
+                    html = response.read().decode('utf-8')
+                day = re.search(r'name="goal_date" value="([0-9-]+)"', html)[1]
+                goal = dict(action='save_kpi_target', csrf=csrf, goal_date=day, target_amount='800000')
+                assert admin(goal | dict(csrf='wrong'))[0] == 403
+                assert admin(goal | dict(goal_date='2000-01-01'))[0] == 409
+                assert admin(goal)[0] == 200
+                sql("UPDATE donations SET created_at='2000-01-01'; UPDATE payment_transactions SET created_at='2000-01-01'")
+                sql("INSERT INTO donations(name,paid_amount,status,is_test) VALUES"
+                    "('KPI test',999999,'paid',1),('KPI pending',999999,'pending',0)")
+                assert request('kpi.php')[1] == dict(target=800000,total=0,percent=0,milestone=0)
+                sql("UPDATE donations SET paid_amount=199999 WHERE tx_id='music-one'; UPDATE payment_transactions SET created_at=NOW() WHERE tx_id='music-one'")
+                assert request('kpi.php')[1] == dict(target=800000,total=199999,percent=24,milestone=0)
+                sql("UPDATE donations SET paid_amount=200000 WHERE tx_id='music-one'")
+                for milestone in [25,50,75,100]:
+                    if milestone > 25:
+                        sql("INSERT INTO donations(name,paid_amount,status) VALUES('KPI real',200000,'paid')")
+                    assert request('kpi.php')[1] == dict(target=800000,total=8000*milestone,percent=milestone,milestone=milestone)
+                assert admin(goal | dict(target_amount='0'))[0] == 200
+                assert request('kpi.php')[1]['target'] == 0
                 print(browser.stdout.strip())
                 print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
             finally:

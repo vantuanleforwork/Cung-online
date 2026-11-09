@@ -34,6 +34,11 @@ CREATE TABLE IF NOT EXISTS donor_skin_order (
   skin_keys TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS donation_kpi (
+  goal_date DATE PRIMARY KEY,
+  target_amount INT UNSIGNED NOT NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE blocked_donors (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   block_type ENUM('email','ip','device') NOT NULL,

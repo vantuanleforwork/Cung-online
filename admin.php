@@ -2,6 +2,7 @@
 require __DIR__ . '/admin-actions.php';
 require_once __DIR__ . '/speech-schema.php';
 require_once __DIR__ . '/voice-catalog.php';
+require_once __DIR__ . '/kpi-data.php';
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
@@ -108,6 +109,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
+            } elseif ($action === 'save_kpi_target') {
+                $day = kpi_day();
+                if (($_POST['goal_date'] ?? null) !== $day->format('Y-m-d')) {
+                    throw new InvalidArgumentException('Đã sang ngày mới. Hãy tải lại trang trước khi lưu KPI.');
+                }
+                save_kpi_target(db(), $day, $_POST['target_amount'] ?? null);
+                $_SESSION['flash'] = 'Đã lưu KPI donate hôm nay.';
+                redirect_admin('donate');
             } elseif ($action === 'save_donor_skin_order') {
                 $order = $_POST['skin_order'] ?? '';
                 save_donor_skin_order(db(), is_string($order) ? $order : '');

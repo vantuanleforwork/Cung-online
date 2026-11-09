@@ -6,3 +6,4 @@ deployment:
  - /bin/cp -R assets vendor $DEPLOYPATH
  - /bin/cp skin-admin.js $DEPLOYPATH
  - /bin/cp robots.txt sitemap.xml $DEPLOYPATH
+ - /bin/cp kpi-data.php kpi.php kpi-overlay.html kpi.js kpi.css $DEPLOYPATH
