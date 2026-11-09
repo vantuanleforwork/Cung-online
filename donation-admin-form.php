@@ -77,11 +77,16 @@ $donateSound = donate_sound_url();
     <h4>Skin hiện có</h4>
     <?php $skinCatalog = donor_skin_catalog($db); ?>
     <?php if (!$skinCatalog): ?><p class="muted">Chưa có skin nào.</p><?php endif ?>
-    <ul class="admin-skin-list">
+    <ul class="admin-skin-list" id="adminSkinList">
       <?php foreach ($skinCatalog as $key=>$skin): ?>
-        <li>
+        <li data-skin-key="<?=h($key)?>">
           <img src="<?=h($skin['url'])?>" alt="" width="48" height="48" loading="lazy"><span><?=h($skin['name'])?></span>
-          <form method="post" onsubmit="return confirm('Xóa skin này khỏi hồ sơ donate và OBS? Người dùng đã mở khóa sẽ lấy lại lượt chọn.')">
+          <?php if (count($skinCatalog)>1): ?>
+            <span draggable="true" data-skin-handle title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>
+            <button type="button" data-skin-move="-1" aria-label="<?=h('Đưa '.$skin['name'].' lên trước')?>">↑</button>
+            <button type="button" data-skin-move="1" aria-label="<?=h('Đưa '.$skin['name'].' xuống sau')?>">↓</button>
+          <?php endif ?>
+          <form method="post" data-remove-skin>
             <?php csrf_field() ?>
             <input type="hidden" name="action" value="remove_donor_skin">
             <input type="hidden" name="skin_key" value="<?=h($key)?>">
@@ -90,5 +95,14 @@ $donateSound = donate_sound_url();
         </li>
       <?php endforeach ?>
     </ul>
+    <?php if (count($skinCatalog)>1): ?>
+      <p class="muted">Kéo tay nắm ⠿ vào skin muốn đổi vị trí, hoặc dùng các nút mũi tên. Ba skin đầu sẽ xuất hiện trước trong hồ sơ.</p>
+      <form method="post" id="adminSkinOrder">
+        <?php csrf_field() ?>
+        <input type="hidden" name="action" value="save_donor_skin_order">
+        <input type="hidden" name="skin_order">
+        <button type="submit" disabled>Lưu thứ tự skin</button>
+      </form>
+    <?php endif ?>
   </section>
 </section>

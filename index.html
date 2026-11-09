@@ -52,6 +52,7 @@ if (location.pathname.endsWith('/index.html')) {
         <section class="profile-skins" aria-labelledby="profileSkinTitle">
           <h2 id="profileSkinTitle">Skin hiển thị</h2>
           <div class="profile-skin-grid" id="profileSkinGrid"></div>
+          <div id="profileSkinMoreWrap" hidden><button type="button" class="history-more" id="profileSkinMore" aria-controls="profileSkinGrid" aria-expanded="false">Hiển thị thêm</button></div>
           <p class="sub" id="profileSkinHint"></p>
           <span class="profile-skin-status" id="profileSkinStatus" role="status"></span>
         </section>
@@ -348,14 +349,29 @@ document.querySelectorAll('.history-tab').forEach(tab=>{
 });
 
 let skinSaving=false;
+let skinsExpanded=false;
+$('profileSkinMore').onclick=()=>{
+  skinsExpanded=!skinsExpanded;
+  renderSkins(profile.skins,profile.level);
+  if(skinsExpanded){
+    const extra=[...$('profileSkinGrid').children].slice(3).find(tile=>!tile.disabled);
+    extra?.focus();
+  }
+};
 function renderSkins(skins,level){
   const grid=$('profileSkinGrid');
   grid.replaceChildren();
+  const entries=Object.entries(skins?.catalog||{});
+  const more=$('profileSkinMore');
+  $('profileSkinMoreWrap').hidden=entries.length<=3;
+  more.textContent=skinsExpanded?'Thu gọn':'Hiển thị thêm';
+  more.setAttribute('aria-expanded',String(skinsExpanded));
   if(!skins)return;
   $('profileSkinHint').textContent=level<1?'Đạt Lv1 trở lên để mở khóa 1 skin bạn muốn.':
     skins.remaining?'Bạn có thể mở khóa thêm '+skins.remaining+' skin. Chọn một skin để dùng trên OBS.':
-    'Bạn có thể đổi giữa các skin đã mở khóa.';
-  for(const [id,skin] of Object.entries(skins.catalog)){
+    skins.unlocked.length>1?'Bạn có thể đổi giữa các skin đã mở khóa.':
+    skins.unlocked.length===1?'Bạn đã mở khóa 1 skin. Lên cấp để có thêm lượt mở khóa.':'Chưa có skin để mở khóa.';
+  for(const [id,skin] of (skinsExpanded?entries:entries.slice(0,3))){
     const owned=skins.unlocked.includes(id),active=skins.selected===id;
     const tile=document.createElement('button');tile.type='button';tile.className='profile-skin';
     tile.dataset.skin=id;

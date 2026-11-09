@@ -26,6 +26,8 @@ textarea { width: 100%; min-height: 100px; line-height: 1.7; }
 .admin-skin-list img { flex: none; object-fit: contain; border-radius: 8px; }
 .admin-skin-list form { flex: none; margin: 0; }
 .admin-skin-list button { margin: 0; padding: var(--space-2) var(--space-3); }
+.admin-skin-list [data-skin-handle] { cursor: grab; padding: var(--space-2); }
+.admin-skin-list [data-skin-handle]:active { cursor: grabbing; }
 .bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .queue-controls { background: var(--surface); padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-md); }
 .queue-controls strong { color: var(--accent); font-size: 14px; margin-right: auto; }

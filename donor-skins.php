@@ -15,11 +15,38 @@ function donor_skin_catalog(PDO $db): array {
     }
     try {
         $removed = $db->query('SELECT skin_key FROM removed_donor_skins')->fetchAll(PDO::FETCH_COLUMN);
-        return array_diff_key($catalog, array_fill_keys($removed, true));
+        $catalog = array_diff_key($catalog, array_fill_keys($removed, true));
     } catch (PDOException $error) {
         if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
-        return $catalog;
     }
+    try {
+        $saved = $db->query('SELECT skin_keys FROM donor_skin_order WHERE id=1')->fetchColumn();
+        if ($saved !== false) {
+            $keys = json_decode($saved, true, 16, JSON_THROW_ON_ERROR);
+            $ordered = [];
+            foreach ($keys as $key) {
+                if (isset($catalog[$key])) $ordered[$key] = $catalog[$key];
+            }
+            $catalog = $ordered + $catalog;
+        }
+    } catch (PDOException $error) {
+        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+    }
+    return $catalog;
+}
+
+function save_donor_skin_order(PDO $db, string $order): void {
+    $keys = explode(',', $order);
+    $catalogKeys = array_keys(donor_skin_catalog($db));
+    if (count($keys) !== count($catalogKeys) || count(array_unique($keys)) !== count($keys)
+        || array_diff($keys, $catalogKeys)) {
+        throw new InvalidArgumentException('Danh sách skin đã thay đổi. Hãy tải lại trang và thử lại.');
+    }
+    $db->exec("CREATE TABLE IF NOT EXISTS donor_skin_order (
+        id TINYINT PRIMARY KEY, skin_keys TEXT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $db->prepare('INSERT INTO donor_skin_order(id,skin_keys) VALUES(1,?) ON DUPLICATE KEY UPDATE skin_keys=VALUES(skin_keys)')
+       ->execute([json_encode($keys, JSON_THROW_ON_ERROR)]);
 }
 
 function remove_donor_skin(PDO $db, string $key): void {

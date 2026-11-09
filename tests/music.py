@@ -309,6 +309,10 @@ def run():
                 assert upload_media(gif, 'bad', skin=True) == 403
                 assert upload_media(b'not a gif', skin=True) == 409
                 assert upload_media(gif, skin=True) == 200
+                reorder = dict(action='save_donor_skin_order', skin_order='gif-1,naruto,itachi', csrf=csrf)
+                assert admin(reorder | dict(skin_order='gif-1,gif-1,itachi'))[0] == 409
+                assert admin(reorder)[0] == 200
+                assert list(request('profile.php')[1]['user']['skins']['catalog']) == ['gif-1','naruto','itachi']
                 assert pick_skin('gif-1', skin_csrf)[0] == 409  # Lv2 already has two skins.
                 (site/'fixture.php').write_text(test_fixture,encoding='utf-8')
                 owner_csrf = request('fixture.php')[1]['csrf']
