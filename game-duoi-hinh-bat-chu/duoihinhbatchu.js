@@ -1,14 +1,12 @@
 /**
  * Đuổi Hình Bắt Chữ - Livestream Game Show Engine
- * Quản lý vòng đời trò chơi, đồng hồ đếm ngược trừ dần tiền thưởng,
- * gạch chân đáp án preview theo số từ, che phủ chống xem trước,
- * chấm điểm tự động & thủ công cho host, và màn hình tổng kết.
+ * Cơ chế: Chỉ dùng 2 nút ĐÚNG / SAI cho Host, có thanh soi đáp án trước (mờ/rõ)
+ * kèm Modal danh sách toàn bộ đáp án để Host tra cứu.
  */
 
 (function () {
   'use strict';
 
-  // Helper formatting currency
   function formatMoney(amount) {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -17,29 +15,6 @@
     }).format(amount);
   }
 
-  // Remove accents for fuzzy check
-  function normalizeStr(str) {
-    if (!str) return '';
-    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
-    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
-    str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
-    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
-    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
-    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
-    str = str.replace(/đ/g, "d");
-    str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "a");
-    str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "e");
-    str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "i");
-    str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "o");
-    str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "u");
-    str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "y");
-    str = str.replace(/Đ/g, "d");
-    str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
-    str = str.replace(/\u02C6|\u0306|\u031B/g, "");
-    return str.replace(/[^a-zA-Z0-9]/g, "").trim().toLowerCase();
-  }
-
-  // Shuffle array utility
   function shuffle(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -51,7 +26,7 @@
 
   class DHBCGame {
     constructor() {
-      // Game Configuration
+      // Config
       this.playerName = 'Khách Mời';
       this.questionCount = 10;
       this.basePrizePerQuestion = 10000;
@@ -64,7 +39,7 @@
       this.totalWon = 0;
       this.correctCount = 0;
       this.unansweredCount = 0;
-      this.history = []; // { id, phrase, result: 'correct'|'unanswered', prize, timeUsed }
+      this.history = [];
 
       // Timer & Clock
       this.timerInterval = null;
@@ -83,6 +58,7 @@
     init() {
       this.cacheDom();
       this.bindEvents();
+      this.renderFullAnswerModal();
       this.showView('setup');
     }
 
@@ -101,6 +77,12 @@
       this.dom.headerTotalPrize = document.getElementById('headerTotalPrize');
       this.dom.headerPlayerName = document.getElementById('headerPlayerName');
       this.dom.btnSoundToggle = document.getElementById('btnSoundToggle');
+      this.dom.btnOpenAnswerList = document.getElementById('btnOpenAnswerList');
+
+      // Host Spy Bar
+      this.dom.hostCheatBox = document.getElementById('hostCheatBox');
+      this.dom.hostCheatAnswer = document.getElementById('hostCheatAnswer');
+      this.dom.chkAlwaysShowCheat = document.getElementById('chkAlwaysShowCheat');
 
       // Match Bar
       this.dom.matchPlayerName = document.getElementById('matchPlayerName');
@@ -120,9 +102,7 @@
       this.dom.previewWordSlots = document.getElementById('previewWordSlots');
       this.dom.previewBadge = document.getElementById('previewBadge');
 
-      // Controls & Input
-      this.dom.answerInput = document.getElementById('answerInput');
-      this.dom.btnSubmitAnswer = document.getElementById('btnSubmitAnswer');
+      // Host Direct Buttons
       this.dom.btnHostCorrect = document.getElementById('btnHostCorrect');
       this.dom.btnHostSkip = document.getElementById('btnHostSkip');
       this.dom.feedbackAlert = document.getElementById('feedbackAlert');
@@ -144,6 +124,12 @@
       this.dom.summaryTableBody = document.getElementById('summaryTableBody');
       this.dom.btnPlayAgain = document.getElementById('btnPlayAgain');
       this.dom.btnNewSetup = document.getElementById('btnNewSetup');
+
+      // Modal
+      this.dom.hostAnswersModal = document.getElementById('hostAnswersModal');
+      this.dom.btnCloseAnswerList = document.getElementById('btnCloseAnswerList');
+      this.dom.modalSearchAnswer = document.getElementById('modalSearchAnswer');
+      this.dom.answersGridList = document.getElementById('answersGridList');
     }
 
     bindEvents() {
@@ -152,6 +138,38 @@
         this.dom.btnSoundToggle.addEventListener('click', () => {
           const enabled = window.gameAudio ? window.gameAudio.toggleSound() : true;
           this.dom.btnSoundToggle.textContent = enabled ? '🔊 Âm thanh: BẬT' : '🔇 Âm thanh: TẮT';
+        });
+      }
+
+      // Host Spy Toggle always reveal
+      if (this.dom.chkAlwaysShowCheat) {
+        this.dom.chkAlwaysShowCheat.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            this.dom.hostCheatBox.classList.remove('blur-mode');
+            this.dom.hostCheatBox.classList.add('peek-always');
+          } else {
+            this.dom.hostCheatBox.classList.remove('peek-always');
+            this.dom.hostCheatBox.classList.add('blur-mode');
+          }
+        });
+      }
+
+      // Open / Close Answers Modal
+      if (this.dom.btnOpenAnswerList) {
+        this.dom.btnOpenAnswerList.addEventListener('click', () => {
+          this.dom.hostAnswersModal.classList.add('open');
+          this.dom.modalSearchAnswer.focus();
+        });
+      }
+      if (this.dom.btnCloseAnswerList) {
+        this.dom.btnCloseAnswerList.addEventListener('click', () => {
+          this.dom.hostAnswersModal.classList.remove('open');
+        });
+      }
+      if (this.dom.modalSearchAnswer) {
+        this.dom.modalSearchAnswer.addEventListener('input', (e) => {
+          const query = e.target.value.toLowerCase().trim();
+          this.filterModalAnswers(query);
         });
       }
 
@@ -165,25 +183,12 @@
         this.dom.btnCurtainStart.addEventListener('click', () => this.unlockAndStartClock());
       }
 
-      // Submit Input Answer
-      if (this.dom.btnSubmitAnswer) {
-        this.dom.btnSubmitAnswer.addEventListener('click', () => this.checkInputAnswer());
-      }
-      if (this.dom.answerInput) {
-        this.dom.answerInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            this.checkInputAnswer();
-          }
-        });
-      }
-
-      // Host Quick Actions
+      // Host Fast Actions: ĐÚNG / SAI
       if (this.dom.btnHostCorrect) {
-        this.dom.btnHostCorrect.addEventListener('click', () => this.resolveQuestion(true, 'Host duyệt đúng'));
+        this.dom.btnHostCorrect.addEventListener('click', () => this.resolveQuestion(true, 'Khách trả lời ĐÚNG'));
       }
       if (this.dom.btnHostSkip) {
-        this.dom.btnHostSkip.addEventListener('click', () => this.resolveQuestion(false, 'Host bỏ qua / Hết giờ'));
+        this.dom.btnHostSkip.addEventListener('click', () => this.resolveQuestion(false, 'Khách trả lời SAI / Bỏ qua'));
       }
 
       // Next Question
@@ -201,40 +206,70 @@
 
       // Global Keyboard Shortcuts for Streamer
       window.addEventListener('keydown', (e) => {
-        // If typing in input, let normal typing happen (except shortcuts when not focused)
-        const isInputFocused = document.activeElement === this.dom.answerInput || 
-                               document.activeElement === this.dom.inputPlayerName ||
-                               document.activeElement === this.dom.inputPrizePerQ;
+        // If modal open, Escape to close
+        if (this.dom.hostAnswersModal.classList.contains('open')) {
+          if (e.key === 'Escape') {
+            this.dom.hostAnswersModal.classList.remove('open');
+          }
+          return;
+        }
 
-        if (this.dom.viewGameplay.classList.contains('active')) {
-          // Space to unlock curtain if not running
-          if (e.code === 'Space' && !this.isCurtainOpen && !isInputFocused) {
+        const isInputFocused = document.activeElement === this.dom.inputPlayerName ||
+                               document.activeElement === this.dom.inputPrizePerQ ||
+                               document.activeElement === this.dom.modalSearchAnswer;
+
+        if (this.dom.viewGameplay.classList.contains('active') && !isInputFocused) {
+          // Space: Mở hình & tính giờ
+          if (e.code === 'Space' && !this.isCurtainOpen) {
             e.preventDefault();
             this.unlockAndStartClock();
             return;
           }
 
-          // Hotkey D: Accept Correct (only if clock running or curtain open, and not currently typing text)
-          if ((e.key === 'd' || e.key === 'D') && !isInputFocused && !this.isQuestionResolved && this.isCurtainOpen) {
+          // D: Chấp nhận ĐÚNG
+          if ((e.key === 'd' || e.key === 'D') && !this.isQuestionResolved && this.isCurtainOpen) {
             e.preventDefault();
-            this.resolveQuestion(true, 'Host phím tắt [D]');
+            this.resolveQuestion(true, 'Khách trả lời ĐÚNG [D]');
             return;
           }
 
-          // Hotkey S: Skip / Show answer
-          if ((e.key === 's' || e.key === 'S') && !isInputFocused && !this.isQuestionResolved && this.isCurtainOpen) {
+          // S: Đánh SAI / Bỏ qua
+          if ((e.key === 's' || e.key === 'S') && !this.isQuestionResolved && this.isCurtainOpen) {
             e.preventDefault();
-            this.resolveQuestion(false, 'Host phím tắt [S]');
+            this.resolveQuestion(false, 'Khách trả lời SAI [S]');
             return;
           }
 
-          // Hotkey N or Enter: Next Question if already resolved
-          if ((e.key === 'n' || e.key === 'N' || (e.key === 'Enter' && !isInputFocused)) && this.isQuestionResolved) {
+          // N or Enter: Câu tiếp theo sau khi câu đã xong
+          if ((e.key === 'n' || e.key === 'N' || e.key === 'Enter') && this.isQuestionResolved) {
             e.preventDefault();
             this.nextQuestion();
             return;
           }
         }
+      });
+    }
+
+    renderFullAnswerModal() {
+      const list = window.DHBC_QUESTIONS || [];
+      let html = '';
+      list.forEach(q => {
+        html += `
+          <div class="answer-item-card" data-phrase="${q.phrase.toLowerCase()}">
+            <span class="num">#${q.id}</span>
+            <span class="phrase">${q.phrase}</span>
+            <span class="cat">(${q.category})</span>
+          </div>
+        `;
+      });
+      this.dom.answersGridList.innerHTML = html;
+    }
+
+    filterModalAnswers(query) {
+      const cards = this.dom.answersGridList.querySelectorAll('.answer-item-card');
+      cards.forEach(card => {
+        const text = card.getAttribute('data-phrase') || '';
+        card.style.display = text.includes(query) ? 'block' : 'none';
       });
     }
 
@@ -253,7 +288,6 @@
     }
 
     handleStartGame() {
-      // Read setup values
       const name = this.dom.inputPlayerName.value.trim();
       this.playerName = name || 'Khách Mời';
 
@@ -270,7 +304,6 @@
     }
 
     startGame() {
-      // Prepare pool from DHBC_QUESTIONS
       const allQuestions = window.DHBC_QUESTIONS || [];
       if (!allQuestions.length) {
         alert('Không tìm thấy dữ liệu câu hỏi!');
@@ -281,20 +314,17 @@
       const chosenCount = Math.min(this.questionCount, shuffled.length);
       this.pool = shuffled.slice(0, chosenCount);
 
-      // Reset match state
       this.currentIndex = 0;
       this.totalWon = 0;
       this.correctCount = 0;
       this.unansweredCount = 0;
       this.history = [];
 
-      // Update Top Bar
       this.dom.headerPlayerName.textContent = this.playerName;
       this.dom.matchPlayerName.textContent = this.playerName;
       this.dom.headerTotalPrize.textContent = formatMoney(0);
       this.dom.totalQNumber.textContent = this.pool.length;
 
-      // Show gameplay view & load first question
       this.showView('gameplay');
       this.loadQuestion(0);
     }
@@ -317,7 +347,6 @@
 
       clearInterval(this.timerInterval);
 
-      // Reset timers
       this.totalMs = this.questionDurationSeconds * 1000;
       this.remainingMs = this.totalMs;
       this.currentRunningPrize = this.basePrizePerQuestion;
@@ -332,16 +361,16 @@
       this.dom.timeBarFill.style.width = '100%';
       this.dom.timeBarFill.className = 'time-bar-fill';
 
+      // CẬP NHẬT THANH SOI ĐÁP ÁN CHO HOST (Biết trước đáp án ngay lập tức)
+      this.dom.hostCheatAnswer.textContent = `${this.currentQuestion.phrase} (${this.currentQuestion.category})`;
+
       // Insert SVG Artwork
       this.dom.svgArtContainer.innerHTML = this.currentQuestion.svg || '';
 
-      // Render Word Underline Slots (Preview)
+      // Render Word Underline Slots
       this.renderWordSlots(this.currentQuestion);
 
-      // Reset controls
-      this.dom.answerInput.value = '';
-      this.dom.answerInput.disabled = true;
-      this.dom.btnSubmitAnswer.disabled = true;
+      // Disable Host judge buttons until curtain opens
       this.dom.btnHostCorrect.disabled = true;
       this.dom.btnHostSkip.disabled = true;
 
@@ -363,7 +392,6 @@
 
       let html = '';
       words.forEach((w, idx) => {
-        // Underline blanks for each letter
         let blanks = '';
         for (let i = 0; i < w.length; i++) {
           blanks += `<div class="letter-blank"></div>`;
@@ -385,24 +413,18 @@
       if (this.isCurtainOpen) return;
       this.isCurtainOpen = true;
 
-      // Sound
       if (window.gameAudio) {
         window.gameAudio.playStart();
       }
 
-      // Hide Curtain
       this.dom.arenaCurtain.classList.add('hidden');
 
-      // Enable Controls
-      this.dom.answerInput.disabled = false;
-      this.dom.btnSubmitAnswer.disabled = false;
+      // Enable Host judge buttons
       this.dom.btnHostCorrect.disabled = false;
       this.dom.btnHostSkip.disabled = false;
-      this.dom.answerInput.focus();
 
-      // Start countdown timer
       this.isClockRunning = true;
-      const stepMs = 50; // Smooth tick
+      const stepMs = 50;
       const startTime = performance.now();
       const initialRemaining = this.remainingMs;
 
@@ -412,20 +434,17 @@
         const elapsed = performance.now() - startTime;
         this.remainingMs = Math.max(0, initialRemaining - elapsed);
 
-        // Calculate running prize: currentPrize = Math.round(basePrize * (remainingMs / totalMs))
+        // Deduct prize linearly: prize = Math.round(basePrize * (remainingMs / totalMs))
         const ratio = this.remainingMs / this.totalMs;
         this.currentRunningPrize = Math.max(0, Math.round(this.basePrizePerQuestion * ratio));
         this.dom.prizeAmount.textContent = formatMoney(this.currentRunningPrize);
 
-        // Update Clock seconds display
         const secondsLeft = Math.ceil(this.remainingMs / 1000);
         this.dom.clockNumber.textContent = secondsLeft;
 
-        // Progress bar width
         const pct = Math.max(0, (this.remainingMs / this.totalMs) * 100);
         this.dom.timeBarFill.style.width = pct + '%';
 
-        // Warning & Urgent color changes
         if (secondsLeft <= 5) {
           this.dom.clockNumber.className = 'clock-number urgent';
           this.dom.timeBarFill.className = 'time-bar-fill urgent';
@@ -437,7 +456,6 @@
           this.dom.timeBarFill.className = 'time-bar-fill';
         }
 
-        // Tick sound every integer second
         if (secondsLeft !== this.lastTickSecond && secondsLeft > 0) {
           this.lastTickSecond = secondsLeft;
           if (window.gameAudio) {
@@ -445,36 +463,11 @@
           }
         }
 
-        // Time's up!
         if (this.remainingMs <= 0) {
           clearInterval(this.timerInterval);
-          this.resolveQuestion(false, 'HẾT GIỜ!');
+          this.resolveQuestion(false, 'HẾT THỜI GIAN 30S!');
         }
       }, stepMs);
-    }
-
-    checkInputAnswer() {
-      if (!this.isCurtainOpen || this.isQuestionResolved) return;
-      const userText = this.dom.answerInput.value.trim();
-      if (!userText) return;
-
-      const normUser = normalizeStr(userText);
-      const acceptedList = this.currentQuestion.accepted || [];
-      const exactMatch = acceptedList.some(acc => normalizeStr(acc) === normUser);
-
-      if (exactMatch) {
-        this.resolveQuestion(true, 'Chính xác tuyệt vời!');
-      } else {
-        // Shake feedback alert
-        if (window.gameAudio) window.gameAudio.playWrong();
-        this.dom.feedbackAlert.className = 'feedback-alert wrong';
-        this.dom.feedbackAlert.textContent = '❌ Chưa chính xác, hãy tiếp tục đoán nhanh!';
-        this.dom.feedbackAlert.style.display = 'block';
-
-        // Clear input for another attempt
-        this.dom.answerInput.value = '';
-        this.dom.answerInput.focus();
-      }
     }
 
     resolveQuestion(isCorrect, reason) {
@@ -483,13 +476,10 @@
       this.isClockRunning = false;
       clearInterval(this.timerInterval);
 
-      // Disable inputs
-      this.dom.answerInput.disabled = true;
-      this.dom.btnSubmitAnswer.disabled = true;
       this.dom.btnHostCorrect.disabled = true;
       this.dom.btnHostSkip.disabled = true;
 
-      // Reveal all word slots
+      // Reveal words in underline slots
       const wordSlots = this.dom.previewWordSlots.querySelectorAll('.word-slot');
       wordSlots.forEach(slot => slot.classList.add('revealed'));
 
@@ -504,18 +494,17 @@
         if (window.gameAudio) window.gameAudio.playCorrect();
 
         this.dom.feedbackAlert.className = 'feedback-alert correct';
-        this.dom.feedbackAlert.textContent = `🎉 CHÍNH XÁC! Bạn nhận được +${formatMoney(prizeEarned)} (${reason})`;
+        this.dom.feedbackAlert.textContent = `🎉 CHÍNH XÁC! Nhận được +${formatMoney(prizeEarned)} (${reason})`;
         this.dom.feedbackAlert.style.display = 'block';
       } else {
         this.unansweredCount++;
         if (window.gameAudio) window.gameAudio.playWrong();
 
         this.dom.feedbackAlert.className = 'feedback-alert wrong';
-        this.dom.feedbackAlert.textContent = `❌ ${reason} • Đáp án chính xác là: "${this.currentQuestion.phrase}"`;
+        this.dom.feedbackAlert.textContent = `❌ ${reason} • Đáp án chính xác: "${this.currentQuestion.phrase}"`;
         this.dom.feedbackAlert.style.display = 'block';
       }
 
-      // Record History
       this.history.push({
         index: this.currentIndex + 1,
         phrase: this.currentQuestion.phrase,
@@ -525,13 +514,13 @@
         timeSpentSec: timeSpentSec
       });
 
-      // Show cultural explanation / allusions card
+      // Show explanation card
       this.dom.explanationPhrase.textContent = this.currentQuestion.phrase;
-      this.dom.explanationText.textContent = this.currentQuestion.explanation || 'Một câu nói mang ý nghĩa sâu sắc trong kho tàng dân gian Việt Nam.';
+      this.dom.explanationText.textContent = this.currentQuestion.explanation || 'Ý nghĩa sâu sắc trong văn học dân gian Việt Nam.';
       this.dom.explanationCard.className = 'explanation-card active';
       this.dom.explanationCard.style.display = 'block';
 
-      // Show Next Question action bar
+      // Next button
       this.dom.postAnswerBar.style.display = 'flex';
       this.dom.btnNextQuestion.focus();
     }
@@ -541,10 +530,8 @@
     }
 
     finishGame() {
-      // Victory fanfare
       if (window.gameAudio) window.gameAudio.playVictory();
 
-      // Render Summary View
       this.dom.summaryPlayerName.textContent = this.playerName;
       this.dom.summaryTotalWon.textContent = formatMoney(this.totalWon);
       this.dom.summaryCorrectCount.textContent = `${this.correctCount} / ${this.pool.length}`;
@@ -554,12 +541,10 @@
 
       this.dom.summaryUnansweredCount.textContent = `${this.unansweredCount} câu`;
 
-      // Calculate Average time
       const totalSec = this.history.reduce((acc, h) => acc + h.timeSpentSec, 0);
       const avgSec = this.history.length ? (totalSec / this.history.length).toFixed(1) : 0;
       this.dom.summaryAvgTime.textContent = `${avgSec}s / câu`;
 
-      // Build Table
       let tableHtml = '';
       this.history.forEach(h => {
         tableHtml += `
@@ -580,12 +565,10 @@
       });
       this.dom.summaryTableBody.innerHTML = tableHtml;
 
-      // Show summary view
       this.showView('summary');
     }
   }
 
-  // Initialize on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     window.gameInstance = new DHBCGame();
     window.gameInstance.init();

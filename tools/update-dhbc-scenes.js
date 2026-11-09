@@ -723,3 +723,4 @@ scriptCode = scriptCode.replace(regex, renderSceneCode.trim());
 
 fs.writeFileSync(scriptPath, scriptCode, 'utf8');
 console.log('Updated build-dhbc-data.js with full 62 scenes.');
+

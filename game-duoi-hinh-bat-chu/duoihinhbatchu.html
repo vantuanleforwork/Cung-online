@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
+  <!-- Top Navigation Header (Khán giả & Stream xem) -->
   <header class="dhbc-header">
     <div class="dhbc-brand">
       <span class="dhbc-badge-live">LIVE SHOW</span>
@@ -30,8 +30,28 @@
       <button class="btn btn-ghost" id="btnSoundToggle" title="Bật/Tắt âm thanh hiệu ứng">
         🔊 Âm thanh: BẬT
       </button>
+      <button class="btn btn-ghost" id="btnOpenAnswerList" title="Xem danh sách toàn bộ đáp án (chỉ Host xem)">
+        📋 List đáp án (Host)
+      </button>
     </div>
   </header>
+
+  <!-- Thanh Soi Bí Mật Dành Riêng Cho Host (Khách không biết) -->
+  <div class="host-spy-bar" id="hostSpyBar">
+    <div class="host-spy-left">
+      <span class="host-spy-tag">👁️ HOST SOI ĐÁP ÁN:</span>
+      <div class="host-cheat-box blur-mode" id="hostCheatBox" title="Rê chuột vào để soi đáp án, rời chuột ra là tự làm mờ lại">
+        <span>Đáp án câu này: </span>
+        <strong class="cheat-answer" id="hostCheatAnswer">Đang tải...</strong>
+      </div>
+    </div>
+    <div class="host-spy-right">
+      <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">
+        <input type="checkbox" id="chkAlwaysShowCheat">
+        <span>Luôn hiện rõ đáp án cho Host</span>
+      </label>
+    </div>
+  </div>
 
   <!-- Main Game Container -->
   <main class="dhbc-container">
@@ -60,7 +80,7 @@
           <div class="form-group">
             <label>
               <span>Số Lượng Câu Hỏi Trong Phiên</span>
-              <span class="desc">Kho dữ liệu 62 câu thành ngữ, tục ngữ, điển tích</span>
+              <span class="desc">Kho 62 câu thành ngữ, tục ngữ, điển tích</span>
             </label>
             <div class="radio-chips">
               <label class="chip-label">
@@ -103,7 +123,7 @@
           <div class="form-group">
             <label>
               <span>Thời Gian Trả Lời Mỗi Câu</span>
-              <span class="desc">Mặc định 30 giây kịch tính</span>
+              <span class="desc">Mặc định 30 giây</span>
             </label>
             <div class="radio-chips">
               <label class="chip-label">
@@ -131,7 +151,7 @@
               🚀 BẮT ĐẦU TRẬN ĐẤU / VÀO GAME
             </button>
             <div class="host-key-hint">
-              🎮 <strong>Phím tắt cho Host:</strong> <kbd>Space</kbd> Mở hình & Tính giờ • <kbd>Enter</kbd> Kiểm tra • <kbd>D</kbd> Chấp nhận Đúng • <kbd>S</kbd> Bỏ qua • <kbd>N</kbd> Câu tiếp theo
+              🎮 <strong>Phím tắt nhanh:</strong> <kbd>Space</kbd> Mở hình & Đếm giờ • <kbd>D</kbd> Bấm ĐÚNG • <kbd>S</kbd> Bấm SAI/Bỏ qua • <kbd>N</kbd> Câu tiếp theo
             </div>
           </div>
         </form>
@@ -191,7 +211,7 @@
               ▶ BẮT ĐẦU ĐẾM GIỜ & MỞ HÌNH
             </button>
             <div style="font-size: 12px; color: var(--text-secondary);">
-              (Hoặc Host bấm phím <kbd>Space</kbd> trên bàn phím)
+              (Phím tắt bàn phím: bấm phím <kbd>Space</kbd>)
             </div>
           </div>
 
@@ -209,44 +229,33 @@
           </div>
         </div>
 
-        <!-- Điều Khiển Trả Lời & Phím Nhanh Cho Host -->
-        <div class="controls-area">
-          <!-- Text Input Row -->
-          <div class="input-row">
-            <input type="text" class="answer-input" id="answerInput" placeholder="Gõ câu trả lời (hoặc khách nói mic)..." autocomplete="off" disabled>
-            <button type="button" class="btn btn-lime" id="btnSubmitAnswer" disabled>
-              Kiểm Tra (Enter)
-            </button>
-          </div>
+        <!-- 2 Nút Bấm Trực Tiếp Cho Host: ĐÚNG / SAI (Không cần gõ chữ) -->
+        <div class="host-direct-controls">
+          <button type="button" class="btn btn-lime btn-host-judge" id="btnHostCorrect" title="Khách nói đúng đáp án qua mic, bấm để nhận tiền" disabled>
+            ✓ ĐÚNG (+ TIỀN) <kbd>D</kbd>
+          </button>
+          <button type="button" class="btn btn-danger btn-host-judge" id="btnHostSkip" title="Khách trả lời sai hoặc xin bỏ qua" disabled>
+            ✗ SAI / BỎ QUA <kbd>S</kbd>
+          </button>
+        </div>
 
-          <!-- Nút Chấm Nhanh Cho Host Trực Tiếp Trên Stream -->
-          <div class="host-fast-actions">
-            <button type="button" class="btn btn-lime" id="btnHostCorrect" title="Host duyệt khi khách trả lời đúng qua mic" disabled>
-              ✓ Chấp Nhận Đúng <kbd>D</kbd>
-            </button>
-            <button type="button" class="btn btn-danger" id="btnHostSkip" title="Bỏ qua câu này hoặc khách trả lời sai" disabled>
-              ✗ Bỏ Qua / Lộ Đáp Án <kbd>S</kbd>
-            </button>
-          </div>
+        <!-- Feedback Alert -->
+        <div class="feedback-alert" id="feedbackAlert"></div>
 
-          <!-- Feedback Alert -->
-          <div class="feedback-alert" id="feedbackAlert"></div>
-
-          <!-- Bảng Giải Thích Điển Tích & Ý Nghĩa Sâu Sắc -->
-          <div class="explanation-card" id="explanationCard">
-            <div class="explanation-card-header">
-              <span class="explanation-badge">📖 Ý NGHĨA & XUẤT XỨ DÂN GIAN</span>
-              <span class="explanation-phrase" id="explanationPhrase">Đáp án</span>
-            </div>
-            <p class="explanation-text" id="explanationText">Giải thích chi tiết...</p>
+        <!-- Bảng Giải Thích Điển Tích & Ý Nghĩa Sâu Sắc -->
+        <div class="explanation-card" id="explanationCard">
+          <div class="explanation-card-header">
+            <span class="explanation-badge">📖 Ý NGHĨA & XUẤT XỨ DÂN GIAN</span>
+            <span class="explanation-phrase" id="explanationPhrase">Đáp án</span>
           </div>
+          <p class="explanation-text" id="explanationText">Giải thích chi tiết...</p>
+        </div>
 
-          <!-- Nút Sang Câu Kế Tiếp (Sau khi câu đã kết thúc) -->
-          <div class="post-answer-bar" id="postAnswerBar" style="display: none;">
-            <button type="button" class="btn btn-lime btn-lg" id="btnNextQuestion">
-              CÂU TIẾP THEO ➜ <kbd>N</kbd>
-            </button>
-          </div>
+        <!-- Nút Sang Câu Kế Tiếp (Sau khi câu đã kết thúc) -->
+        <div class="post-answer-bar" id="postAnswerBar" style="display: none;">
+          <button type="button" class="btn btn-lime btn-lg" id="btnNextQuestion" style="min-width: 260px;">
+            CÂU TIẾP THEO ➜ <kbd>N</kbd>
+          </button>
         </div>
 
       </div>
@@ -322,6 +331,22 @@
     </section>
 
   </main>
+
+  <!-- MODAL: DANH SÁCH TOÀN BỘ ĐÁP ÁN CHO HOST TRA CỨU -->
+  <div class="host-answers-modal" id="hostAnswersModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📋 DANH SÁCH 62 ĐÁP ÁN (DÀNH CHO HOST TRA CỨU)</h3>
+        <button type="button" class="btn btn-ghost" id="btnCloseAnswerList">✕ Đóng</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-input modal-search" id="modalSearchAnswer" placeholder="🔍 Gõ từ khóa tìm nhanh đáp án...">
+        <div class="answers-grid" id="answersGridList">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Sound Synth & Question Data & Game Controller -->
   <script src="duoihinhbatchu-audio.js"></script>
