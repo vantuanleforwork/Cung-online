@@ -254,6 +254,23 @@ def run():
                 test_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
                 assert test_alert['name'] == 'Test OBS' and test_alert['roulette'] == dict(name='Renamed', options=['C'], winner=0)
                 assert request('ack.php?k=layout-fixture-key',dict(id=test_alert['id'],claim_token=test_alert['claim_token']))[0] == 200
+                test_fixture = "<?php require 'common.php'; donor_session(); $_SESSION['donor_id']=3; db()->prepare(\"INSERT IGNORE INTO donor_users(id,google_sub,email,email_hash,display_name) VALUES(3,'owner-test','vantuanleforwork@gmail.com',?,'Owner test')\")->execute([donor_hash('vantuanleforwork@gmail.com')]); echo json_encode(['csrf'=>$_SESSION['donor_csrf']]);"
+                (site/'fixture.php').write_text(test_fixture,encoding='utf-8')
+                owner_csrf = request('fixture.php')[1]['csrf']
+                owner_profile = request('profile.php')[1]['user']
+                assert owner_profile['level'] == 100 and owner_profile['is_test_account'] is True
+                def owner_create(kind, **extra):
+                    body = dict(amount=60000,message='Owner test',kind=kind,**extra)
+                    return request('create.php',body,{'X-CSRF-Token':owner_csrf})
+                owner_message = owner_create('message')[1]
+                owner_music = owner_create('music',music_url='https://youtu.be/dQw4w9WgXcQ')[1]
+                owner_spin = owner_create('roulette',wheel_id=wheel_id)[1]
+                assert owner_message['test_paid'] and owner_music['test_paid'] and owner_spin['test_paid']
+                assert sql("SELECT COUNT(*) FROM donations WHERE user_id=3 AND status='paid' AND is_test=1") == '3'
+                assert sql("SELECT COUNT(*) FROM music_requests q JOIN donations d ON d.id=q.donation_id WHERE d.user_id=3") == '1'
+                assert request('donation-history.php?limit=50&scope=me')[1]['items'] == []
+                assert sql("SELECT COALESCE(SUM(paid_amount),0) FROM donations WHERE user_id=3 AND status='paid' AND is_test=0") == '0'
+                sql("UPDATE donations SET shown=1 WHERE user_id=3; UPDATE music_requests q JOIN donations d ON d.id=q.donation_id SET q.state='done' WHERE d.user_id=3")
                 (site/'fixture.php').write_text(fixture.replace("donor_id']=1", "donor_id']=2").replace(
                     "VALUES(1,'fixture','music@example.test'", "VALUES(2,'skin-fixture','skin@example.test'"),encoding='utf-8')
                 skin_csrf = request('fixture.php')[1]['csrf']

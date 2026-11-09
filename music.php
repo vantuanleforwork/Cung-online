@@ -83,7 +83,7 @@ function enqueue_paid_music(PDO $db, array $donation, int $paid): void {
 
 // Manual requests have no donation row. Paid requests must still pass moderation.
 function music_playable_sql(): string {
-    return "(q.donation_id IS NULL OR (d.status='paid' AND d.is_test=0 AND d.queue_state='queued'))";
+    return "(q.donation_id IS NULL OR (d.status='paid' AND d.queue_state='queued'))";
 }
 function music_song_columns(): string {
     return "q.*,COALESCE(d.name,'Quản trị viên') AS name,COALESCE(d.message,'') AS message,

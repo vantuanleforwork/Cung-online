@@ -1,10 +1,12 @@
 <?php
 require __DIR__ . '/common.php';
 try {
-    $settings = donation_settings();
+    $db = db();
+    ensure_donor_privilege_schema($db);
+    $settings = donation_settings($db);
     $wheels = [];
     try {
-        $rows = db()->query('SELECT id,name,minimum,options_json FROM roulette_wheels WHERE active=1 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $db->query('SELECT id,name,minimum,options_json FROM roulette_wheels WHERE active=1 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $wheel) {
             $options = roulette_options($wheel);
             $total = array_sum(array_column($options, 'frequency'));

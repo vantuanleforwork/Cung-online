@@ -1,7 +1,7 @@
 /* Shared donation modes and read-only music queue on the public page. */
 (function () {
   'use strict';
-  const state = window.CungDonate = {ready:false,kind:'message',settings:{message_min:10000,tier2_min:50000,tier3_min:200000,music_min:50000,music_enabled:true,music_seconds:180}};
+  const state = window.CungDonate = {ready:false,kind:'message',testAccount:false,settings:{message_min:10000,tier2_min:50000,tier3_min:200000,music_min:50000,music_enabled:true,music_seconds:180}};
   const wheelSelect = document.getElementById('rouletteWheel');
   const odds = document.getElementById('rouletteOdds');
   const oddsList = document.getElementById('rouletteOddsList');
@@ -64,7 +64,7 @@
       if (Number(amount.value) < state.minimum()) amount.value = state.minimum();
     }
     document.getElementById('amt').min = state.minimum();
-    document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài'+(!state.settings.music_enabled?' · Hiện tạm dừng nhận nhạc.':'');
+    document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài'+(!state.settings.music_enabled&&!state.testAccount?' · Hiện tạm dừng nhận nhạc.':'');
     if (window.upd) window.upd();
   }
   buttons.forEach(button => button.addEventListener('click', () => {

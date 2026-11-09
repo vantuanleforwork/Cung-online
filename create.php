@@ -35,7 +35,8 @@ try {
     $ip = $context['ip'];
     $deviceHash = $context['device_hash'];
 
-    $userStmt = $db->prepare('SELECT id,email,email_hash,display_name,google_avatar_url,custom_avatar_path FROM donor_users WHERE id=?');
+    ensure_donor_privilege_schema($db);
+    $userStmt = $db->prepare('SELECT id,email,email_hash,display_name,google_avatar_url,custom_avatar_path,is_test_account,level_override FROM donor_users WHERE id=?');
     $userStmt->execute([$_SESSION['donor_id']]);
     $user = $userStmt->fetch(PDO::FETCH_ASSOC);
     if (!$user) fail(401, 'Phiên đăng nhập hết hạn. Hãy đăng nhập lại Google.');
@@ -51,11 +52,12 @@ try {
     if (!is_string($kind) || !in_array($kind, ['message','music','roulette'], true)) fail(400, 'Loại donate không hợp lệ.');
     $minimum = (int)$donateSettings[$kind === 'music' ? 'music_min' : 'message_min'];
     $spin = null;
+    $isTestAccount = !empty($user['is_test_account']);
     if ($kind === 'roulette') {
         $wheelId = filter_var($in['wheel_id'] ?? null, FILTER_VALIDATE_INT);
         if (!$wheelId) fail(400, 'Hãy chọn một vòng quay.');
         ensure_roulette_schema($db);
-        $wheelQuery = $db->prepare('SELECT * FROM roulette_wheels WHERE id=? AND active=1');
+        $wheelQuery = $db->prepare('SELECT * FROM roulette_wheels WHERE id=?' . ($isTestAccount ? '' : ' AND active=1'));
         $wheelQuery->execute([$wheelId]);
         $wheel = $wheelQuery->fetch(PDO::FETCH_ASSOC);
         if (!$wheel) fail(400, 'Vòng quay này đã đóng. Hãy tải lại trang.');
@@ -65,7 +67,7 @@ try {
     if ($amount < $minimum) fail(400, 'Số tiền tối thiểu là ' . number_format($minimum,0,',','.') . 'đ.');
     $youtubeId = null;
     if ($kind === 'music') {
-        if (!$donateSettings['music_enabled']) fail(400, 'Donate phát nhạc đang tạm đóng.');
+        if (!$donateSettings['music_enabled'] && !$isTestAccount) fail(400, 'Donate phát nhạc đang tạm đóng.');
         if (!is_string($in['music_url'] ?? null)) fail(400, 'Chỉ nhận link YouTube.');
         try { $youtubeId = youtube_video_id($in['music_url']); }
         catch (InvalidArgumentException $error) { fail(400, $error->getMessage()); }
@@ -128,6 +130,14 @@ try {
                 $db->prepare('INSERT INTO roulette_spins(donation_id,snapshot) VALUES(?,?)')
                    ->execute([$donationId,json_encode($spin, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
             }
+            if ($isTestAccount) {
+                $testTx = 'TEST_ACCOUNT_' . $donationId . '_' . strtoupper(bin2hex(random_bytes(4)));
+                $db->prepare("UPDATE donations SET paid_amount=expected_amount,status='paid',tx_id=?,is_test=1,queue_state='queued' WHERE id=?")
+                   ->execute([$testTx,$donationId]);
+                if ($kind === 'music' && $youtubeId) {
+                    $db->prepare('INSERT IGNORE INTO music_requests(donation_id,video_id) VALUES(?,?)')->execute([$donationId,$youtubeId]);
+                }
+            }
             $db->commit();
             break;
         } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); if ($t === 4 || (int)($e->errorInfo[1] ?? 0) !== 1062) throw $e; }
@@ -139,7 +149,8 @@ try {
     echo json_encode([
         'code' => $code,
         'qr' => $qr,
-        'status_token' => $statusToken
+        'status_token' => $statusToken,
+        'test_paid' => $isTestAccount
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

@@ -394,6 +394,7 @@ async function saveSkin(id){
 }
 function renderProfile(user){
   profile=user;$('profileName').textContent=user.name;$('profileNameInput').value=user.name;
+  CungDonate.testAccount=!!user.is_test_account;
   $('profileEmail').textContent=user.email;$('profileLevel').textContent='Lv'+user.level;
   if(user.avatar){$('profileAvatar').src=user.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
   const progress=user.level_progress||{},level=Math.max(0,Number(progress.level??user.level)||0);
@@ -412,7 +413,7 @@ function upd(){
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=minimum&&a<=50000000;
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(minimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<minimum?'Số tiền tối thiểu là '+money(minimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
-  $('go').disabled=!CungDonate.ready||!loggedIn||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled);
+  $('go').disabled=!CungDonate.ready||!loggedIn||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;

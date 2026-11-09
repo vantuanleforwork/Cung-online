@@ -5,14 +5,15 @@ donor_session();
 if ($_SERVER['REQUEST_METHOD']==='GET') {
     donor_device_token();
     if (empty($_SESSION['donor_id'])) respond(200,['logged_in'=>false,'csrf'=>$_SESSION['donor_csrf']]);
-    $db=db(); $s=$db->prepare('SELECT id,email,display_name,google_avatar_url,custom_avatar_path FROM donor_users WHERE id=?');
+    $db=db(); ensure_donor_privilege_schema($db); $s=$db->prepare('SELECT id,email,display_name,google_avatar_url,custom_avatar_path,is_test_account FROM donor_users WHERE id=?');
     $s->execute([$_SESSION['donor_id']]); $user=$s->fetch(PDO::FETCH_ASSOC);
     if (!$user) { $_SESSION=[]; respond(200,['logged_in'=>false,'csrf'=>$_SESSION['donor_csrf'] ?? bin2hex(random_bytes(32))]); }
     $progress=donor_progress($db,(int)$user['id']);
     respond(200,['logged_in'=>true,'csrf'=>$_SESSION['donor_csrf'],'user'=>[
         'id'=>(int)$user['id'],'email'=>$user['email'],'name'=>$user['display_name'],
         'avatar'=>$user['custom_avatar_path'] ?: $user['google_avatar_url'],'level'=>$progress['level'],
-        'level_progress'=>$progress,'skins'=>donor_skin_profile($db,(int)$user['id'],$progress['level'])]]);
+        'level_progress'=>$progress,'is_test_account'=>(bool)$user['is_test_account'],
+        'skins'=>donor_skin_profile($db,(int)$user['id'],$progress['level'])]]);
 }
 if ($_SERVER['REQUEST_METHOD']!=='POST') respond(405,['error'=>'Chỉ hỗ trợ GET/POST.']);
 if (empty($_SESSION['donor_id'])) respond(401,['error'=>'Hãy đăng nhập Google.']);

