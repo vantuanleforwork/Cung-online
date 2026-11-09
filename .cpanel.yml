@@ -7,4 +7,4 @@ deployment:
  - /bin/cp skin-admin.js $DEPLOYPATH
  - /bin/cp robots.txt sitemap.xml $DEPLOYPATH
  - /bin/cp kpi-data.php kpi.php kpi-overlay.html kpi.js kpi.css $DEPLOYPATH
- - /usr/local/bin/php tools/cleanup-pending-20261109.php "$DEPLOYPATH" && /bin/cp index.html "$DEPLOYPATH"
+ - /bin/cp index.html "$DEPLOYPATH"
