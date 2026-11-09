@@ -139,6 +139,7 @@ if (location.pathname.endsWith('/index.html')) {
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
       <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
       <div id="err" role="alert"></div>
+      <div class="profile-skin-status" id="donateTestStatus" role="status"></div>
       </div>
     </div>
 
@@ -388,13 +389,14 @@ async function saveSkin(id){
     profile.skins=d.skins;
     renderSkins(profile.skins,profile.level);
     grid.querySelector('[aria-pressed="true"]')?.focus();
-    status.textContent='Đã chọn '+d.skins.catalog[id].name+' để hiển thị trên OBS.';
+    status.textContent='Đã chọn Skin '+d.skins.catalog[id].name+' để hiển thị trên donate.';
   }catch(error){status.textContent=error.message}
   finally{skinSaving=false;grid.removeAttribute('aria-busy')}
 }
 function renderProfile(user){
   profile=user;$('profileName').textContent=user.name;$('profileNameInput').value=user.name;
   CungDonate.testAccount=!!user.is_test_account;
+  if(CungDonate.testAccount)$('go').textContent='Gửi donate test ↗';
   $('profileEmail').textContent=user.email;$('profileLevel').textContent='Lv'+user.level;
   if(user.avatar){$('profileAvatar').src=user.avatar;$('profileAvatar').hidden=false}else $('profileAvatar').hidden=true;
   const progress=user.level_progress||{},level=Math.max(0,Number(progress.level??user.level)||0);
@@ -417,7 +419,7 @@ function upd(){
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
-  $('hint').textContent=CungDonate.kind==='roulette'?'OBS sẽ quay sau khi xác nhận chuyển khoản.':hint(a);
+  $('hint').textContent=CungDonate.kind==='roulette'?(CungDonate.testAccount?'OBS sẽ quay khi đến lượt donate test.':'OBS sẽ quay sau khi xác nhận chuyển khoản.'):hint(a);
   syncVoiceOptions(a);
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
@@ -436,10 +438,10 @@ async function loadProfile(){
     const allowed=!!d.logged_in;loggedIn=allowed;
     $('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
     $('tabMe').hidden=!allowed;
-    upd();
     if(allowed){
       renderProfile(d.user);
     }
+    upd();
   }catch(e){
     loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.';
   }
@@ -460,6 +462,7 @@ $('go').onclick=async()=>{
   const amount=Number($('amt').value);
   if(!loggedIn||!Number.isInteger(amount)||amount<CungDonate.minimum()||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
+  $('donateTestStatus').textContent='';
   $('go').disabled=true;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
@@ -474,6 +477,11 @@ $('go').onclick=async()=>{
       throw new Error('Máy chủ đang bận, vui lòng thử lại sau giây lát.');
     }
     if(!r.ok){$('err').textContent=d.error||'Không tạo được mã, hãy thử lại.';return}
+    if(d.test_paid){
+      $('donateTestStatus').textContent='Đã donate test thành công!';
+      window.dispatchEvent(new Event('donation:paid'));
+      return;
+    }
     showOrder(d);
   }catch(e){$('err').textContent=e.message||'Mất kết nối, hãy thử lại.'}finally{upd()}
 };

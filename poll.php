@@ -23,7 +23,6 @@ try {
         (d.paid_amount >= d.required_amount) AS spin_eligible,
         (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
-        COALESCE((SELECT SUM(x.paid_amount) FROM donations x WHERE x.user_id=d.user_id AND x.status='paid' AND x.is_test=0),0) AS donor_total,
         (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
         WHERE d.status='paid' AND d.shown=0 AND d.queue_state='queued' ORDER BY d.id LIMIT 1 FOR UPDATE")
         ->fetch(PDO::FETCH_ASSOC);
@@ -39,16 +38,20 @@ try {
         catch (Throwable $ignore) { $row['music_title'] = ''; }
     }
 
-    $row['donor_level'] = donor_level_progress((int)$row['donor_total'])['level'];
-    if ($row['user_id'] && $row['donor_level'] > 0) {
+    $row['donor_level'] = 0;
+    if ($row['user_id']) {
         try {
-            $skin = donor_skin_options(donor_skin_record($db,(int)$row['user_id']),$row['donor_level'])['selected'];
-            $row['donor_skin'] = donor_skin_catalog()[$skin] ?? null;
+            $userId = (int)$row['user_id'];
+            $row['donor_level'] = donor_level($db, $userId);
+            if ($row['donor_level'] > 0) {
+                $skin = donor_skin_options(donor_skin_record($db, $userId), $row['donor_level'])['selected'];
+                $row['donor_skin'] = donor_skin_catalog()[$skin] ?? null;
+            }
         } catch (Throwable $error) {
             error_log('Overlay donor skin: ' . $error->getMessage());
         }
     }
-    unset($row['donor_total'],$row['user_id']);
+    unset($row['user_id']);
     $row['claim_token'] = $token;
     $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;

@@ -111,10 +111,13 @@ try {
     $hasVoiceCols = in_array('selected_voice_id', $donationCols, true) && in_array('voice_name', $donationCols, true);
 
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $statusToken = bin2hex(random_bytes(32));
+    $statusToken = $isTestAccount ? null : bin2hex(random_bytes(32));
     for ($t = 0; $t < 5; $t++) {
-        $code = PREFIX;
-        for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, 31)];
+        $code = null;
+        if (!$isTestAccount) {
+            $code = PREFIX;
+            for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, 31)];
+        }
         try {
             $db->beginTransaction();
             if ($hasVoiceCols) {
@@ -142,6 +145,8 @@ try {
             break;
         } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); if ($t === 4 || (int)($e->errorInfo[1] ?? 0) !== 1062) throw $e; }
     }
+
+    if ($isTestAccount) respond(200, ['test_paid' => true]);
 
     $qr = 'https://img.vietqr.io/image/' . BANK_ID . '-' . ACCOUNT_NO . '-compact2.png'
         . '?amount=' . $amount . '&addInfo=' . $code . '&accountName=' . rawurlencode(ACCOUNT_NAME);
