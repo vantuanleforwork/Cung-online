@@ -45,7 +45,7 @@ def run():
                 sql('CREATE DATABASE layout_test CHARACTER SET utf8mb4',None)
                 sql((ROOT/'schema.sql').read_text(encoding='utf-8'))
                 # Emulate an installed version 12 without the new idle settings.
-                sql("ALTER TABLE donation_settings DROP COLUMN donate_sound_volume,DROP COLUMN music_idle_enabled,DROP COLUMN music_idle_message; ALTER TABLE music_requests MODIFY donation_id INT NOT NULL,DROP COLUMN title_retry_at; UPDATE app_settings SET speech_schema_version=12,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
+                sql("ALTER TABLE donation_settings DROP COLUMN music_idle_enabled,DROP COLUMN music_idle_message; ALTER TABLE music_requests MODIFY donation_id INT NOT NULL,DROP COLUMN title_retry_at; UPDATE app_settings SET speech_schema_version=12,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
                 for pattern in ['*.php','*.js','*.mjs','*.css','*.html']:
                     for source in ROOT.glob(pattern):
                         if source.name != 'config.php': shutil.copy2(source,site/source.name)
@@ -113,7 +113,11 @@ def run():
                 assert upload_media(mp3) == 200
                 sound_settings = dict(action='save_donate_sound_volume',csrf=csrf,donate_sound_volume='40')
                 assert admin(sound_settings | dict(donate_sound_volume='101'))[0] == 409
+                assert admin(sound_settings | dict(donate_sound_volume='0'))[0] == 200
+                assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_volume'] == 0
                 assert admin(sound_settings)[0] == 200
+                assert (site/'uploads/donate-sound-volume.json').read_text() == '40'
+                assert sql("SHOW COLUMNS FROM donation_settings LIKE 'donate_sound_volume'") == ''
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_volume'] == 40
                 sound_url = request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url']
                 assert sound_url.startswith('uploads/donate-sound.mp3?v=')

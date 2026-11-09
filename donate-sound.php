@@ -1,22 +1,38 @@
 <?php
 const DONATE_SOUND_FILE = 'uploads/donate-sound.mp3';
+const DONATE_SOUND_VOLUME_FILE = 'uploads/donate-sound-volume.json';
 const DONATE_SOUND_MAX_BYTES = 2 * 1024 * 1024;
 
 function donate_sound_volume(PDO $db): int {
+    $path = __DIR__.'/'.DONATE_SOUND_VOLUME_FILE;
+    if (is_file($path)) {
+        $raw = @file_get_contents($path, false, null, 0, 32);
+        $saved = is_string($raw) ? json_decode($raw, true) : null;
+        if (is_int($saved) && $saved >= 0 && $saved <= 100) return $saved;
+    }
     return (int)(donation_settings($db)['donate_sound_volume'] ?? 100);
 }
 
-function save_donate_sound_volume(PDO $db, $input): void {
+function save_donate_sound_volume($input): void {
     $volume = filter_var($input, FILTER_VALIDATE_INT, ['options'=>['min_range'=>0,'max_range'=>100]]);
     if ($volume === false) throw new InvalidArgumentException('Âm lượng phải từ 0 đến 100%.');
-    if (!$db->query("SHOW COLUMNS FROM donation_settings LIKE 'donate_sound_volume'")->fetchColumn()) {
-        try {
-            $db->exec('ALTER TABLE donation_settings ADD COLUMN donate_sound_volume TINYINT UNSIGNED NOT NULL DEFAULT 100');
-        } catch (PDOException $error) {
-            if ((int)($error->errorInfo[1] ?? 0) !== 1060) throw $error;
-        }
+    $destination = __DIR__.'/'.DONATE_SOUND_VOLUME_FILE;
+    $directory = dirname($destination);
+    if (!is_dir($directory) && !@mkdir($directory, 0755, true) && !is_dir($directory)) {
+        throw new RuntimeException('Không tạo được thư mục lưu âm lượng.');
     }
-    $db->prepare('UPDATE donation_settings SET donate_sound_volume=? WHERE id=1')->execute([$volume]);
+    if (!is_writable($directory)) throw new RuntimeException('Thư mục lưu âm lượng chưa có quyền ghi.');
+    $temporary = @tempnam($directory, 'donate-volume-');
+    if ($temporary === false) throw new RuntimeException('Không tạo được tệp âm lượng tạm.');
+    try {
+        $contents = json_encode($volume, JSON_THROW_ON_ERROR);
+        if (@file_put_contents($temporary, $contents) !== strlen($contents) ||
+            !@chmod($temporary, 0644) || !@rename($temporary, $destination)) {
+            throw new RuntimeException('Không ghi được cấu hình âm lượng.');
+        }
+    } finally {
+        if (is_file($temporary)) @unlink($temporary);
+    }
 }
 
 function donate_sound_url(): ?string {

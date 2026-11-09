@@ -4,6 +4,7 @@
 !/\.env.example
 /artifacts/*.png
 /uploads/donate-sound.mp3
+/uploads/donate-sound-volume.json
 
 __pycache__/
 *.py[cod]

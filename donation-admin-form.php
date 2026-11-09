@@ -2,6 +2,7 @@
 if (empty($loggedIn)) { http_response_code(403); exit; }
 $donate = donation_settings($db);
 $donateSound = donate_sound_url();
+$donateSoundVolume = donate_sound_volume($db);
 $kpi = kpi_progress($db);
 ?>
 <section data-tabs="donate" class="settings-workspace">
@@ -102,8 +103,8 @@ $kpi = kpi_progress($db);
     <form method="post">
       <?php csrf_field() ?>
       <input type="hidden" name="action" value="save_donate_sound_volume">
-      <label for="donateSoundVolume">Âm lượng tiếng báo · <output id="donateSoundVolumeValue" for="donateSoundVolume"><?=h($donate['donate_sound_volume'] ?? 100)?>%</output></label>
-      <input id="donateSoundVolume" type="range" name="donate_sound_volume" min="0" max="100" step="1" value="<?=h($donate['donate_sound_volume'] ?? 100)?>">
+      <label for="donateSoundVolume">Âm lượng tiếng báo · <output id="donateSoundVolumeValue" for="donateSoundVolume"><?=h($donateSoundVolume)?>%</output></label>
+      <input id="donateSoundVolume" type="range" name="donate_sound_volume" min="0" max="100" step="1" value="<?=h($donateSoundVolume)?>">
       <p class="muted">0% tắt tiếng báo. Chuông mặc định không phát cho lượt dưới 50.000đ.</p>
       <button type="submit">Lưu âm lượng</button>
     </form>
