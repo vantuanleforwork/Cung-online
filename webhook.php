@@ -77,6 +77,7 @@ try {
        ->execute([count($transactions), $raw]);
     $logId = $db->lastInsertId();
     $duplicates = 0;
+    $kpiPaid = 0;
     // Entire batch either commits or is retried. Log success is committed with payments.
     $db->beginTransaction();
     foreach ($transactions as $payment) {
@@ -109,14 +110,17 @@ try {
         }
         if ($row) {
             attach_payment($db, $payment, $row);
+            if (empty($row['is_test'])) $kpiPaid += (int)$payment['paid_amount'];
         } elseif (ANON_FALLBACK) {
             $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Ẩn danh','paid',?,?,?)")
                ->execute([$payment['paid_amount'], $payment['tx_id'], review_state()]);
             $donationId = $db->lastInsertId();
             $db->prepare("UPDATE payment_transactions SET donation_id=?,decision='anonymous' WHERE tx_id=?")
                ->execute([$donationId, $payment['tx_id']]);
+            $kpiPaid += (int)$payment['paid_amount'];
         }
     }
+    record_kpi_payment($db, $kpiPaid);
     $db->prepare("UPDATE webhook_logs SET response_code=200,outcome='processed',duplicate_count=? WHERE id=?")
        ->execute([$duplicates, $logId]);
     $db->commit();

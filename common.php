@@ -214,3 +214,4 @@ require_once __DIR__ . '/music.php';
 require_once __DIR__ . '/roulette.php';
 require_once __DIR__ . '/donate-sound.php';
 require_once __DIR__ . '/donor-skins.php';
+require_once __DIR__ . '/kpi-data.php';

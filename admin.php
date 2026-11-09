@@ -2,7 +2,6 @@
 require __DIR__ . '/admin-actions.php';
 require_once __DIR__ . '/speech-schema.php';
 require_once __DIR__ . '/voice-catalog.php';
-require_once __DIR__ . '/kpi-data.php';
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
@@ -109,13 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 session_write_close();
                 $res = push_test_webhook(db(), $amount, $name, $message, $_SERVER['REMOTE_ADDR'] ?? '', $selectedVoiceId);
                 respond(200, $res);
-            } elseif ($action === 'save_kpi_target') {
-                $day = kpi_day();
-                if (($_POST['goal_date'] ?? null) !== $day->format('Y-m-d')) {
-                    throw new InvalidArgumentException('Đã sang ngày mới. Hãy tải lại trang trước khi lưu KPI.');
-                }
-                save_kpi_target(db(), $day, $_POST['target_amount'] ?? null);
-                $_SESSION['flash'] = 'Đã lưu KPI donate hôm nay.';
+            } elseif ($action === 'save_kpi_settings' || $action === 'reset_kpi') {
+                if ($action === 'reset_kpi') reset_kpi(db());
+                else save_kpi_settings(db(), $_POST, $_FILES);
+                $_SESSION['flash'] = $action === 'reset_kpi' ? 'Đã đặt tiến độ KPI về 0đ.' : 'Đã lưu cấu hình KPI.';
                 redirect_admin('donate');
             } elseif ($action === 'save_donor_skin_order') {
                 $order = $_POST['skin_order'] ?? '';
@@ -264,7 +260,7 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quản trị donate · Van Tuan Le</title>
 <link rel="stylesheet" href="ui-tokens.css?v=32">
-<link rel="stylesheet" href="admin-theme.css?v=40"></head>
+<link rel="stylesheet" href="admin-theme.css?v=41"></head>
 <body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
 <?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
 <a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>
@@ -367,7 +363,7 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php endif ?></main>
 <?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
 <?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=36"></script><?php endif ?>
-<?php if ($loggedIn && $view==='donate'): ?><script src="skin-admin.js?v=1"></script><?php endif ?>
+<?php if ($loggedIn && $view==='donate'): ?><script src="skin-admin.js?v=1"></script><script src="kpi-admin.js?v=1"></script><?php endif ?>
 <?php if ($loggedIn && $view==='roulette'): ?><script src="roulette-admin.js?v=1"></script><?php endif ?>
 <?php if ($loggedIn && $view==='revenue'): ?><script src="revenue-chart.js?v=35"></script><?php endif ?>
 <?php if ($loggedIn && $view==='music'): ?><script src="music-queue-admin.js?v=36"></script><?php endif ?>

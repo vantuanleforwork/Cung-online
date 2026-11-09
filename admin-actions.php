@@ -148,12 +148,14 @@ function admin_action(PDO $db, array $in, string $ip) {
                         throw new InvalidArgumentException('Không tìm thấy đơn đang chờ thanh toán.');
                     }
                     attach_payment($db, $payment, $donation);
+                    if (empty($donation['is_test'])) record_kpi_payment($db, (int)$payment['paid_amount']);
                     $audit['donation_id'] = $donation['id'];
                 } else {
                     $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Ẩn danh','paid',?,?,?)")
                        ->execute([$payment['paid_amount'], $tx, review_state()]);
                     $id = $db->lastInsertId();
                     $db->prepare("UPDATE payment_transactions SET donation_id=?,decision='anonymous' WHERE tx_id=?")->execute([$id, $tx]);
+                    record_kpi_payment($db, (int)$payment['paid_amount']);
                     $audit['donation_id'] = $id;
                 }
             }

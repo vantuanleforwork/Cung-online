@@ -2,8 +2,7 @@
 if (empty($loggedIn)) { http_response_code(403); exit; }
 $donate = donation_settings($db);
 $donateSound = donate_sound_url();
-$kpiDay = kpi_day();
-$dailyKpi = kpi_progress($db, $kpiDay);
+$kpi = kpi_progress($db);
 ?>
 <section data-tabs="donate" class="settings-workspace">
   <h2>Cài đặt donate</h2>
@@ -47,20 +46,49 @@ $dailyKpi = kpi_progress($db, $kpiDay);
     </section>
     <button type="submit">Lưu cài đặt donate</button>
   </form>
-  <section class="speech-panel" aria-labelledby="dailyKpiTitle">
-    <h3 id="dailyKpiTitle">KPI donate hôm nay</h3>
-    <p class="muted"><?=h($kpiDay->format('d/m/Y'))?> · Ngày tính theo giờ Việt Nam. Nhập 0 để tắt KPI.</p>
-    <?php if ($dailyKpi['target']): ?>
-      <p>Đã nhận <strong><?=h(number_format($dailyKpi['total'], 0, ',', '.'))?>đ</strong> · <?=h($dailyKpi['percent'])?>%</p>
-    <?php endif ?>
-    <form method="post">
+  <section class="speech-panel" aria-labelledby="kpiTitle">
+    <h3 id="kpiTitle">KPI donate</h3>
+    <p>Đã nhận <strong><?=h(number_format($kpi['total'], 0, ',', '.'))?>đ</strong> · <?=h($kpi['percent'])?>%</p>
+    <p class="muted">KPI tiếp tục cộng qua các ngày cho đến khi bạn reset. Các mốc chia đều theo thứ tự.</p>
+    <form method="post" enctype="multipart/form-data" id="kpiSettings">
       <?php csrf_field() ?>
-      <input type="hidden" name="action" value="save_kpi_target">
-      <input type="hidden" name="goal_date" value="<?=h($kpiDay->format('Y-m-d'))?>">
-      <label>Mục tiêu (đ) <input type="number" name="target_amount" min="0" max="1000000000" step="1" required value="<?=h($dailyKpi['target'])?>"></label>
-      <button type="submit">Lưu KPI hôm nay</button>
+      <input type="hidden" name="action" value="save_kpi_settings">
+      <div class="speech-grid">
+        <label>Mục tiêu (đ) <input type="number" name="target_amount" min="0" max="1000000000" step="1" required value="<?=h($kpi['target'])?>"></label>
+        <label>Số mốc <select name="stage_count">
+          <option value="4" <?=$kpi['stage_count']===4?'selected':''?>>4 mốc</option>
+          <option value="5" <?=$kpi['stage_count']===5?'selected':''?>>5 mốc</option>
+        </select></label>
+      </div>
+      <p class="muted">Kéo tay nắm hoặc dùng mũi tên để đổi thứ tự. GIF, PNG, JPG hoặc WebP, tối đa 2 MB mỗi tệp.</p>
+      <div class="kpi-admin-stage">
+        <img src="<?=h($kpi['base_image'])?>" alt="" width="56" height="72" loading="lazy">
+        <label>Ảnh ban đầu (0%) <input type="file" name="kpi_base" accept="image/gif,image/png,image/jpeg,image/webp"></label>
+      </div>
+      <ol id="kpiStageList" class="kpi-admin-stages">
+      <?php $position = 0; foreach ($kpi['stage_images'] as $key=>$path): $position++; ?>
+        <li class="kpi-admin-stage">
+          <input type="hidden" name="stage_order[]" value="<?=h($key)?>">
+          <?php if ($path): ?><img src="<?=h($path)?>" alt="" width="56" height="72" loading="lazy"><?php endif ?>
+          <label><span data-kpi-stage-label><?=$position <= $kpi['stage_count'] ? 'Mốc '.($position * 100 / $kpi['stage_count']).'%' : 'Dự phòng'?></span>
+            <input type="file" name="<?=h('kpi_'.$key)?>" accept="image/gif,image/png,image/jpeg,image/webp">
+          </label>
+          <div class="kpi-stage-controls">
+            <span draggable="true" data-kpi-drag aria-hidden="true" title="Kéo để đổi thứ tự">⠿</span>
+            <button type="button" data-kpi-move="-1" aria-label="Đưa mốc lên trước">↑</button>
+            <button type="button" data-kpi-move="1" aria-label="Đưa mốc xuống sau">↓</button>
+          </div>
+        </li>
+      <?php endforeach ?>
+      </ol>
+      <button type="submit">Lưu KPI</button>
     </form>
-    <p class="muted">Thêm một Browser Source trong OBS, rộng 360 px và cao 640 px.</p>
+    <form method="post" id="resetKpiForm">
+      <?php csrf_field() ?>
+      <input type="hidden" name="action" value="reset_kpi">
+      <button type="submit">Reset KPI về 0đ</button>
+    </form>
+    <p class="muted">Browser Source 360 × 640 px. OBS hiện trong 1 phút và phát tiếng báo khi đạt mốc mới.</p>
     <a href="kpi-overlay.html" target="_blank" rel="noopener">Mở trang Browser Source KPI ↗</a>
   </section>
   <section class="speech-panel" aria-labelledby="donateSoundTitle">

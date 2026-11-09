@@ -345,28 +345,54 @@ def run():
                 assert pick_skin('gif-2', skin_csrf)[1]['skins']['unlocked'] == ['itachi', 'gif-2']
                 assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
-                with opener.open(base+'/admin.php?view=donate') as response:
-                    html = response.read().decode('utf-8')
-                day = re.search(r'name="goal_date" value="([0-9-]+)"', html)[1]
-                goal = dict(action='save_kpi_target', csrf=csrf, goal_date=day, target_amount='800000')
+                goal = dict(action='save_kpi_settings', csrf=csrf, target_amount='800000', stage_count='4')
+                goal['stage_order[]'] = ['stage1','stage2','stage3','stage4','stage5']
                 assert admin(goal | dict(csrf='wrong'))[0] == 403
-                assert admin(goal | dict(goal_date='2000-01-01'))[0] == 409
+                assert admin(goal | dict(stage_count='6'))[0] == 409
                 assert admin(goal)[0] == 200
-                sql("UPDATE donations SET created_at='2000-01-01'; UPDATE payment_transactions SET created_at='2000-01-01'")
-                sql("INSERT INTO donations(name,paid_amount,status,is_test) VALUES"
-                    "('KPI test',999999,'paid',1),('KPI pending',999999,'pending',0)")
-                assert request('kpi.php')[1] == dict(target=800000,total=0,percent=0,milestone=0)
-                sql("UPDATE donations SET paid_amount=199999 WHERE tx_id='music-one'; UPDATE payment_transactions SET created_at=NOW() WHERE tx_id='music-one'")
-                assert request('kpi.php')[1] == dict(target=800000,total=199999,percent=24,milestone=0)
-                sql("UPDATE donations SET paid_amount=200000 WHERE tx_id='music-one'")
-                for milestone in [25,50,75,100]:
-                    if milestone > 25:
-                        sql("INSERT INTO donations(name,paid_amount,status) VALUES('KPI real',200000,'paid')")
-                    assert request('kpi.php')[1] == dict(target=800000,total=8000*milestone,percent=milestone,milestone=milestone)
-                assert admin(goal | dict(target_amount='0'))[0] == 200
-                assert request('kpi.php')[1]['target'] == 0
+                kpi = lambda: request('kpi.php')[1]
+                assert kpi()['target'] == 800000 and kpi()['total'] == kpi()['remaining'] == 0
+                (site/'fixture.php').write_text(test_fixture,encoding='utf-8')
+                owner_csrf = request('fixture.php')[1]['csrf']
+                assert owner_create('message')[0] == 200 and kpi()['total'] == 0
                 (site/'fixture.php').write_text(fixture,encoding='utf-8')
                 donor_csrf = request('fixture.php')[1]['csrf']
+                order = create(20000,kind='message')[1]
+                assert kpi()['total'] == 0
+                assert pay(order,'kpi-under',199999)[0] == 200
+                assert kpi()['percent'] == 24 and kpi()['stage'] == kpi()['remaining'] == 0
+                reset = dict(action='reset_kpi', csrf=csrf)
+                assert admin(reset)[0] == 200 and kpi()['total'] == 0
+                for stage in range(1,5):
+                    order = create(20000,kind='message')[1]
+                    assert pay(order,f'kpi-{stage}',200000)[0] == 200
+                    assert pay(order,f'kpi-{stage}',200000)[0] == 200
+                    state = kpi()
+                    assert state['total'] == 200000*stage and state['stage'] == state['event'] == stage
+                    assert state['percent'] == 25*stage and 0 < state['remaining'] <= 60
+                sql("UPDATE donation_kpi_state SET event_at=UNIX_TIMESTAMP()-61; UPDATE donations SET created_at='2000-01-01'")
+                assert kpi()['remaining'] == 0 and kpi()['total'] == 800000
+                assert admin(reset)[0] == 200
+                assert kpi()['target'] == 800000 and kpi()['total'] == kpi()['remaining'] == 0
+                order_keys = ['stage5','stage4','stage3','stage2','stage1']
+                fields = goal | {'stage_count':'5', 'stage_order[]':order_keys}
+                boundary = 'fixture-kpi'
+                form = ''.join(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'
+                    for key, values in fields.items() for value in (values if isinstance(values,list) else [values]))
+                form += f'--{boundary}\r\nContent-Disposition: form-data; name="kpi_stage5"; filename="stage.gif"\r\nContent-Type: image/gif\r\n\r\n'
+                req = urllib.request.Request(base+'/admin.php?view=donate',
+                    data=form.encode()+gif+f'\r\n--{boundary}--\r\n'.encode(),
+                    headers={'Content-Type':f'multipart/form-data; boundary={boundary}'})
+                with opener.open(req) as response:
+                    assert response.status == 200
+                assert list(kpi()['stage_images']) == order_keys
+                order = create(20000,kind='message')[1]
+                assert pay(order,'kpi-five-stages',160000)[0] == 200
+                state = kpi()
+                assert state['stage_count'] == 5 and state['stage'] == 1 and state['percent'] == 20
+                assert state['image'] == state['stage_images']['stage5'] and state['image'].endswith('.gif')
+                with opener.open(base+'/'+state['image']) as response:
+                    assert response.read() == gif
                 orders = [create(amount,kind='message')[1] for amount in [20000,21000,22000]]
                 assert len({order['code'] for order in orders}) == 3
                 assert create(23000,kind='message')[0] == 400
