@@ -75,15 +75,15 @@ function bell(freq,t0,dur,vol,{bright=false,wet=.35,out=null}={}){
   });
   noise(t0,.05,{f0:bright?5000:2500,q:.8,pts:[[.002,vol*.5],[.05,.0001]],out});
 }
-function ting(){
+function ting(level=1){
   if(!enabled||!ac())return;resume();checkBlocked();
-  bell(1976,ctx.currentTime+.03,1.3,.5,{bright:true,wet:.3});
+  bell(1976,ctx.currentTime+.03,1.3,.5*level,{bright:true,wet:.3});
 }
-function templeBell(){
+function templeBell(level=1){
   if(!enabled||!ac())return;resume();checkBlocked();
   const t=ctx.currentTime+.03;
-  bell(262,t,4.2,.5,{wet:.35});
-  bell(262,t+1.9,3.4,.3,{wet:.35});
+  bell(262,t,4.2,.5*level,{wet:.35});
+  bell(262,t+1.9,3.4,.3*level,{wet:.35});
 }
 function panner(t0,from,to,dur){
   if(!ctx.createStereoPanner)return null;
@@ -228,10 +228,10 @@ function rouletteClick(landing){
   tone('triangle',pitch,at,.045,landing?.18:.11,{attack:.001,wet:.05});
   noise(at,.038,{f0:landing?2100:3700,q:1.6,pts:[[.001,landing?.22:.14],[.034,.0001]]});
 }
-function uploadedAlert(url,signal){
+function uploadedAlert(url,signal,level){
   return new Promise(resolve=>{
     const audio=new Audio(url);
-    audio.volume=VOL;
+    audio.volume=VOL*level;
     let timer,playing=false,finished=false;
     const done=()=>{
       if(finished)return;
@@ -256,13 +256,14 @@ function uploadedAlert(url,signal){
     audio.play().catch(done);
   });
 }
-async function donateAlert(url,useTing,signal){
-  if(!enabled||signal.aborted)return;
+async function donateAlert(url,signal,{useTing=false,bellAllowed=true,level=1}={}){
+  if(!enabled||signal.aborted||!(level>0))return;
+  level=Math.min(1,level);
   const custom=typeof url==='string'&&/^uploads\/donate-sound\.mp3\?v=[a-f0-9]{16}$/.test(url);
-  if(custom&&await uploadedAlert(url,signal))return;
+  if(custom&&await uploadedAlert(url,signal,level))return;
   if(signal.aborted)return;
-  if(custom||useTing){
-    ting();
+  if(bellAllowed&&(custom||useTing)){
+    ting(level);
     await sleep(1350,signal);
   }else resume();
 }
@@ -276,11 +277,12 @@ if(global.document){
     const baseIntro=global.playTierIntro;
     global.playTierIntro=async function(d,signal){
       const tier=Math.max(1,Math.min(3,Number(d.tier)||1));
-      if(enabled){
-        if(tier===1&&signal)signal.addEventListener('abort',stop,{once:true});
-        if(tier===1)S.bell();
-        // Video intros carry their own audio and start it with their first frame.
+      const level=Math.min(1,Number(d.donate_sound_volume??100)/100);
+      if(enabled&&tier===1&&Number(d.paid_amount)>=50000&&level>0){
+        if(signal)signal.addEventListener('abort',stop,{once:true});
+        S.bell(level);
       }
+      // Video intros carry their own audio and start it with their first frame.
       return baseIntro.apply(this,arguments);
     };
   }

@@ -2,6 +2,23 @@
 const DONATE_SOUND_FILE = 'uploads/donate-sound.mp3';
 const DONATE_SOUND_MAX_BYTES = 2 * 1024 * 1024;
 
+function donate_sound_volume(PDO $db): int {
+    return (int)(donation_settings($db)['donate_sound_volume'] ?? 100);
+}
+
+function save_donate_sound_volume(PDO $db, $input): void {
+    $volume = filter_var($input, FILTER_VALIDATE_INT, ['options'=>['min_range'=>0,'max_range'=>100]]);
+    if ($volume === false) throw new InvalidArgumentException('Âm lượng phải từ 0 đến 100%.');
+    if (!$db->query("SHOW COLUMNS FROM donation_settings LIKE 'donate_sound_volume'")->fetchColumn()) {
+        try {
+            $db->exec('ALTER TABLE donation_settings ADD COLUMN donate_sound_volume TINYINT UNSIGNED NOT NULL DEFAULT 100');
+        } catch (PDOException $error) {
+            if ((int)($error->errorInfo[1] ?? 0) !== 1060) throw $error;
+        }
+    }
+    $db->prepare('UPDATE donation_settings SET donate_sound_volume=? WHERE id=1')->execute([$volume]);
+}
+
 function donate_sound_url(): ?string {
     $file = __DIR__ . '/' . DONATE_SOUND_FILE;
     if (!is_file($file)) return null;

@@ -18,6 +18,7 @@ try {
     }
     $demo['speech'] = speech_options_for_donation($settings, $demo);
     $demo['donate_sound_url'] = donate_sound_url();
+    $demo['donate_sound_volume'] = donate_sound_volume(db());
     $demo['speech_text'] = speech_text($demo, $settings);
     respond(200, ['demo' => $demo]);
 } catch (Throwable $e) { error_log('Overlay settings: ' . $e->getMessage()); respond(500, ['error' => 'Chưa đọc được cấu hình giọng. Kiểm tra migration 003.']); }

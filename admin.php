@@ -127,6 +127,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 upload_donor_skin(db(), $_POST['skin_name'] ?? '', $_FILES['skin_gif'] ?? []);
                 $_SESSION['flash'] = 'Đã thêm skin vào hồ sơ donate.';
                 redirect_admin('donate');
+            } elseif ($action === 'save_donate_sound_volume') {
+                save_donate_sound_volume(db(), $_POST['donate_sound_volume'] ?? '');
+                $_SESSION['flash'] = 'Đã lưu âm lượng tiếng báo donate.';
+                redirect_admin('donate');
             } elseif ($action === 'upload_donate_sound' || $action === 'reset_donate_sound') {
                 if ($action === 'upload_donate_sound') save_donate_sound($_FILES['donate_sound'] ?? []);
                 else reset_donate_sound();
@@ -362,7 +366,7 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php endif ?>
 <?php endif ?></main>
 <?php if ($loggedIn && $view==='speech'): ?><script src="speech-runtime.js?v=6"></script><script src="admin-voice.js?v=8"></script><script src="admin-layout.js?v=29"></script><?php endif ?>
-<?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=36"></script><?php endif ?>
+<?php if ($loggedIn): ?><script src="ui-tabs.js?v=33"></script><script src="music-admin.js?v=37"></script><?php endif ?>
 <?php if ($loggedIn && $view==='donate'): ?><script src="skin-admin.js?v=1"></script><script src="kpi-admin.js?v=1"></script><?php endif ?>
 <?php if ($loggedIn && $view==='roulette'): ?><script src="roulette-admin.js?v=1"></script><?php endif ?>
 <?php if ($loggedIn && $view==='revenue'): ?><script src="revenue-chart.js?v=35"></script><?php endif ?>

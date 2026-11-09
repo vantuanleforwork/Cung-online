@@ -1,5 +1,16 @@
 (function () {
   'use strict';
+  const volume = document.getElementById('donateSoundVolume');
+  if (volume) {
+    const output = document.getElementById('donateSoundVolumeValue');
+    const preview = document.getElementById('donateSoundPreview');
+    const sync = () => {
+      output.value = volume.value + '%';
+      if (preview) preview.volume = Number(volume.value) / 100;
+    };
+    volume.addEventListener('input', sync);
+    sync();
+  }
   const form = document.getElementById('donationSettingsForm');
   const iframe = document.getElementById('musicPositionPreview');
   if (!form || !iframe) return;

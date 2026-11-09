@@ -142,7 +142,11 @@ async function play(d){
   }
 
   try{
-    await globalThis.CungSFX?.donateAlert?.(d.donate_sound_url,!!d.roulette||donationTier(d)===1,lease.signal);
+    await globalThis.CungSFX?.donateAlert?.(d.donate_sound_url,lease.signal,{
+      useTing:!!d.roulette||donationTier(d)===1,
+      bellAllowed:Number(d.paid_amount)>=50000,
+      level:Number(d.donate_sound_volume??100)/100
+    });
     let ready;
     if(d.roulette){
       ready=prepareSpeech(d,lease.signal).catch(error=>{

@@ -95,10 +95,18 @@ $kpi = kpi_progress($db);
     <h3 id="donateSoundTitle">Âm thanh donate</h3>
     <p class="muted">Tệp MP3 tối đa 2 MB. OBS phát tối đa 10 giây đầu làm tiếng báo donate.</p>
     <?php if ($donateSound): ?>
-      <audio controls preload="none" src="<?=h($donateSound)?>" aria-label="Nghe thử âm thanh donate đã lưu"></audio>
+      <audio id="donateSoundPreview" controls preload="none" src="<?=h($donateSound)?>" aria-label="Nghe thử âm thanh donate đã lưu"></audio>
     <?php else: ?>
       <p class="muted">Đang dùng âm thanh mặc định.</p>
     <?php endif ?>
+    <form method="post">
+      <?php csrf_field() ?>
+      <input type="hidden" name="action" value="save_donate_sound_volume">
+      <label for="donateSoundVolume">Âm lượng tiếng báo · <output id="donateSoundVolumeValue" for="donateSoundVolume"><?=h($donate['donate_sound_volume'] ?? 100)?>%</output></label>
+      <input id="donateSoundVolume" type="range" name="donate_sound_volume" min="0" max="100" step="1" value="<?=h($donate['donate_sound_volume'] ?? 100)?>">
+      <p class="muted">0% tắt tiếng báo. Chuông mặc định không phát cho lượt dưới 50.000đ.</p>
+      <button type="submit">Lưu âm lượng</button>
+    </form>
     <form method="post" enctype="multipart/form-data">
       <?php csrf_field() ?>
       <input type="hidden" name="action" value="upload_donate_sound">

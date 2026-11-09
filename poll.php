@@ -56,6 +56,7 @@ try {
     $row['tier'] = donation_tier((int)$row['paid_amount']);
     $row['lease_seconds'] = $seconds;
     $row['donate_sound_url'] = donate_sound_url();
+    $row['donate_sound_volume'] = donate_sound_volume($db);
     if ($row['donation_kind'] === 'roulette' && $row['spin_eligible']) {
         $row['roulette'] = roulette_spin($db, (int)$row['id']);
         unset($row['roulette']['wheel_id']);

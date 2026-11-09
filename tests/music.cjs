@@ -115,10 +115,10 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  await send('Page.navigate',{url:base+'/overlay.html?preview=1&roulette=1&motion=1'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungSFX?.donateAlert && !document.getElementById("previewTools").hidden'))break;await wait(50)}
  await evaluate(`(async()=>{
-   window.reads=[];window.rouletteClicks=0;window.ttsRequests=[];window.alertEvents=[];
+   window.reads=[];window.rouletteClicks=0;window.ttsRequests=[];window.alertEvents=[];window.playedVolume=null;
    window.Audio=class {
      constructor(url){alertEvents.push({url,stage:document.querySelector("#stage").classList.contains("is-visible"),wheel:!document.getElementById("rouletteOverlay").hidden});}
-     play(){this.onplaying();setTimeout(()=>{alertEvents.push("ended");this.onended?.()},60);return Promise.resolve()}
+     play(){playedVolume=this.volume;this.onplaying();setTimeout(()=>{alertEvents.push("ended");this.onended?.()},60);return Promise.resolve()}
      pause(){}
      removeAttribute(){}
      load(){}
@@ -132,7 +132,14 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
      ttsRequests.push({payload:JSON.parse(opts.body),reveal:document.querySelector(".roulette-result").textContent,alertEnded:alertEvents[1]==="ended"});
      return Promise.resolve(new Response('{"audio_url":"/fixture-audio"}'));
    };
-   const donation=await getDemo();donation.speech.provider="fpt";donation.donate_sound_url="uploads/donate-sound.mp3?v=0123456789abcdef";
+   const donation=await getDemo();donation.speech.provider="fpt";donation.donate_sound_url="uploads/donate-sound.mp3?v=0123456789abcdef";donation.donate_sound_volume=40;
+   const bells=[];const originalBell=CungSFX.bell;
+   CungSFX.bell=level=>bells.push(level);
+   for(const [paid_amount,donate_sound_volume] of [[49999,40],[50000,0],[50000,40]]){
+     await playTierIntro({tier:1,paid_amount,donate_sound_volume},new AbortController().signal);
+   }
+   CungSFX.bell=originalBell;
+   window.fixtureBells=bells;
    donation.donor_skin={name:"Naruto",url:"assets/skins/naruto.gif"};
    void window.play(donation);
  })()`);
@@ -140,6 +147,8 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.equal(await evaluate('reads.length'),1,await evaluate('document.getElementById("notice").textContent'));
  assert(await evaluate('rouletteClicks > 4'));
  assert.deepEqual(await evaluate('alertEvents'),[{url:'uploads/donate-sound.mp3?v=0123456789abcdef',stage:false,wheel:false},'ended']);
+ assert.deepEqual(await evaluate('fixtureBells'),[0.4]);
+ assert.equal(await evaluate('Math.round(playedVolume*100)'),28);
  assert(await evaluate('ttsRequests.length===1&&ttsRequests[0].alertEnded&&ttsRequests[0].payload.roulette_preview===true&&!ttsRequests[0].reveal.includes("Ô trúng")'));
  assert(await evaluate('reads[0].text.includes("và nhận được Thêm một thử thách")&&reads[0].reveal==="Ô trúng · Thêm một thử thách"&&reads[0].audio==="/fixture-audio"&&reads[0].stage&&!reads[0].wheel'));
  assert(await evaluate('(()=>{const img=document.querySelector("blockquote + #donorSkin");return !img.hidden&&img.alt==="Naruto"&&img.src.endsWith("/assets/skins/naruto.gif")})()'));
