@@ -75,9 +75,19 @@ $donateSound = donate_sound_url();
       <button type="submit">Thêm skin</button>
     </form>
     <h4>Skin hiện có</h4>
+    <?php $skinCatalog = donor_skin_catalog($db); ?>
+    <?php if (!$skinCatalog): ?><p class="muted">Chưa có skin nào.</p><?php endif ?>
     <ul class="admin-skin-list">
-      <?php foreach (donor_skin_catalog($db) as $skin): ?>
-        <li><img src="<?=h($skin['url'])?>" alt="" width="48" height="48" loading="lazy"><span><?=h($skin['name'])?></span></li>
+      <?php foreach ($skinCatalog as $key=>$skin): ?>
+        <li>
+          <img src="<?=h($skin['url'])?>" alt="" width="48" height="48" loading="lazy"><span><?=h($skin['name'])?></span>
+          <form method="post" onsubmit="return confirm('Xóa skin này khỏi hồ sơ donate và OBS? Người dùng đã mở khóa sẽ lấy lại lượt chọn.')">
+            <?php csrf_field() ?>
+            <input type="hidden" name="action" value="remove_donor_skin">
+            <input type="hidden" name="skin_key" value="<?=h($key)?>">
+            <button type="submit" aria-label="<?=h('Xóa skin '.$skin['name'])?>">Xóa</button>
+          </form>
+        </li>
       <?php endforeach ?>
     </ul>
   </section>

@@ -13,7 +13,23 @@ function donor_skin_catalog(PDO $db): array {
     } catch (PDOException $error) {
         if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
     }
-    return $catalog;
+    try {
+        $removed = $db->query('SELECT skin_key FROM removed_donor_skins')->fetchAll(PDO::FETCH_COLUMN);
+        return array_diff_key($catalog, array_fill_keys($removed, true));
+    } catch (PDOException $error) {
+        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+        return $catalog;
+    }
+}
+
+function remove_donor_skin(PDO $db, string $key): void {
+    if (!isset(donor_skin_catalog($db)[$key])) {
+        throw new InvalidArgumentException('Skin này không còn trong danh sách.');
+    }
+    $db->exec("CREATE TABLE IF NOT EXISTS removed_donor_skins (
+        skin_key VARCHAR(32) PRIMARY KEY
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $db->prepare('INSERT IGNORE INTO removed_donor_skins(skin_key) VALUES(?)')->execute([$key]);
 }
 
 function upload_donor_skin(PDO $db, $name, array $file): void {
@@ -68,7 +84,7 @@ function donor_skin_record(PDO $db, int $userId): array {
 }
 
 function donor_skin_options(array $record, int $level, array $catalog): array {
-    $unlocked = array_slice($record['unlocked'], 0, $level);
+    $unlocked = array_slice(array_values(array_intersect($record['unlocked'], array_keys($catalog))), 0, $level);
     return [
         'unlocked'=>$unlocked,
         'selected'=>in_array($record['selected'], $unlocked, true) ? $record['selected'] : null,
@@ -101,6 +117,7 @@ function select_donor_skin(PDO $db, int $userId, string $skin): array {
         $available = donor_skin_options($record, $level, $catalog);
         if (!in_array($skin, $available['unlocked'], true)) {
             if (!$available['remaining']) throw new InvalidArgumentException('Hãy lên level để mở khóa thêm skin.');
+            $record['unlocked'] = $available['unlocked'];
             $record['unlocked'][] = $skin;
         }
         $record['selected'] = $skin;

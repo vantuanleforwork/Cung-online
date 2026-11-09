@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS uploaded_donor_skins (
   name VARCHAR(60) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS removed_donor_skins (
+  skin_key VARCHAR(32) PRIMARY KEY
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE blocked_donors (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   block_type ENUM('email','ip','device') NOT NULL,

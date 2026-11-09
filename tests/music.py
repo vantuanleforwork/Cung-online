@@ -317,7 +317,25 @@ def run():
                 with opener.open(base+'/'+uploaded['url']) as response:
                     assert response.read() == gif
                 assert owner_create('message')[0] == 200
-                assert request('poll.php?k=layout-fixture-key', {})[1][0]['donor_skin'] == uploaded
+                uploaded_alert = request('poll.php?k=layout-fixture-key', {})[1][0]
+                assert uploaded_alert['donor_skin'] == uploaded
+                assert request('ack.php?k=layout-fixture-key',dict(id=uploaded_alert['id'],claim_token=uploaded_alert['claim_token']))[0] == 200
+                remove_skin = dict(action='remove_donor_skin', skin_key='gif-1', csrf=csrf)
+                assert admin(remove_skin | dict(csrf='bad'))[0] == 403
+                status, html = admin(remove_skin)
+                assert status == 200 and 'Xóa skin Itachi' in html and 'Fixture skin' not in html
+                skins = request('profile.php')[1]['user']['skins']
+                assert skins['selected'] is None and 'gif-1' not in skins['catalog'] and 'gif-1' not in skins['unlocked']
+                assert pick_skin('gif-1', owner_csrf)[0] == 409
+                assert owner_create('message')[0] == 200
+                assert request('poll.php?k=layout-fixture-key', {})[1][0].get('donor_skin') is None
+                assert admin(remove_skin | dict(skin_key='naruto'))[0] == 200
+                assert upload_media(gif, skin=True) == 200
+                (site/'fixture.php').write_text(fixture.replace("donor_id']=1", "donor_id']=2"),encoding='utf-8')
+                skin_csrf = request('fixture.php')[1]['csrf']
+                skins = request('profile.php')[1]['user']['skins']
+                assert skins['selected'] is None and skins['unlocked'] == ['itachi'] and skins['remaining'] == 1
+                assert pick_skin('gif-2', skin_csrf)[1]['skins']['unlocked'] == ['itachi', 'gif-2']
                 assert admin(dict(action='reset_donate_sound',csrf=csrf))[0] == 200
                 assert request('overlay-settings.php?k=layout-fixture-key',{})[1]['demo']['donate_sound_url'] is None
                 print(browser.stdout.strip())
