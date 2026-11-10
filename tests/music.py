@@ -85,7 +85,7 @@ def run():
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 assert admin(dict(action='login',csrf=csrf,password=password))[0]==200
                 code,html=admin();assert code==200 and 'overlayPositionForm' in html
-                assert sql('SELECT speech_schema_version FROM app_settings')=='13'
+                assert sql('SELECT speech_schema_version FROM app_settings')=='14'
                 assert sql('SELECT music_idle_enabled FROM donation_settings')=='0'
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 def request(path,body=None,headers=None):
@@ -145,6 +145,10 @@ def run():
                 assert manual['donation_id'] is None and manual['name']=='Quản trị viên' and manual['paid_amount']==0
                 assert manual['title']=='Fixture metadata dQw4w9WgXcQ'
                 manual_beat=request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]
+                assert manual_beat['item'] is None and int(manual['approved'])==0
+                assert admin(dict(action='music_approve',csrf='wrong',id=manual['id']))[0]==403
+                assert admin(dict(action='music_approve',csrf=csrf,id=manual['id']))[0]==200
+                manual_beat=request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]
                 assert manual_beat['item']['id']==manual['id']
                 assert admin(dict(action='music_remove',csrf=csrf,id=manual['id']))[0]==200
                 assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]['item'] is None
@@ -175,6 +179,7 @@ def run():
                 assert pay(one,'music-one')[0]==200
                 assert pay(one,'music-one')[0]==200
                 assert sql('SELECT COUNT(*) FROM music_requests WHERE donation_id IS NOT NULL')=='1'
+                assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]['item'] is None
                 price_locked=create(20000,kind='message')[1]
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**(values|dict(message_min=40000))))[0]==200
                 assert pay(price_locked,'price-locked',20000)[0]==200
@@ -183,6 +188,9 @@ def run():
 
                 two=create(100000,'https://youtu.be/9bZkp7q19f0?si=share')[1];assert pay(two,'music-two',100000)[0]==200
                 assert len(request('music-queue.php')[1]['items'])==2
+                for song in request('music-queue.php')[1]['items']:
+                    assert int(song['approved'])==0
+                    assert admin(dict(action='music_approve',csrf=csrf,id=song['id']))[0]==200
                 sql("UPDATE donations SET message='' WHERE tx_id='music-one'; UPDATE app_settings SET paused=0,speech_enabled=0")
                 alert=request('poll.php?k=layout-fixture-key',{})[1][0]
                 assert alert['donation_kind']=='music' and alert['music_title']=='Fixture metadata dQw4w9WgXcQ'
@@ -203,6 +211,9 @@ def run():
                 assert beat()['item'] is None
                 three=create(60000,'https://www.youtube.com/shorts/dQw4w9WgXcQ')[1];assert pay(three,'music-three',60000)[0]==200
                 four=create(100000,'https://www.youtube.com/live/9bZkp7q19f0')[1];assert pay(four,'music-four',100000)[0]==200
+                assert beat()['item'] is None
+                for song in request('music-queue.php')[1]['items']:
+                    assert admin(dict(action='music_approve',csrf=csrf,id=song['id']))[0]==200
                 assert admin(dict(action='save_donation_settings',csrf=csrf,**(values|dict(music_order='amount'))))[0]==200
                 high=beat()['item'];assert high['paid_amount']==100000,high
                 assert admin(dict(action='music_next',csrf=csrf))[0]==200
@@ -213,6 +224,8 @@ def run():
                 assert sql("SELECT queue_state FROM donations WHERE tx_id='music-under'")=='held'
                 five=create(60000)[1];assert pay(five,'music-five',60000)[0]==200
                 six=create(60000,'https://youtu.be/9bZkp7q19f0')[1];assert pay(six,'music-six',60000)[0]==200
+                for song in request('music-queue.php')[1]['items']:
+                    assert admin(dict(action='music_approve',csrf=csrf,id=song['id']))[0]==200
                 sql("UPDATE music_state SET owner='',lease_until=NULL,current_id=NULL,paused=0; UPDATE donation_settings SET music_seconds=10; UPDATE app_settings SET paused=1,speech_enabled=0")
                 sql("UPDATE music_requests SET title=CONCAT('Fixture song ',id) WHERE state='waiting'")
                 cached=request('music-title.php?k=layout-fixture-key',dict(id=sql("SELECT id FROM music_requests WHERE state='waiting' ORDER BY id LIMIT 1")))

@@ -4,7 +4,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));let ws,child;
 let completed=false;const watchdog=setTimeout(()=>{console.error('Layout browser test timed out');child?.kill();process.exit(1)},60000);
 process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
 (async()=>{
- child=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless','--no-first-run','--remote-debugging-port=0',`--user-data-dir=${tmp}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
+ child=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless','--no-first-run','--autoplay-policy=no-user-gesture-required','--remote-debugging-port=0',`--user-data-dir=${tmp}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
  let port;for(let i=0;i<100;i++){try{port=fs.readFileSync(path.join(tmp,'DevToolsActivePort'),'utf8').split('\n')[0];break}catch{await wait(100)}}
  const targets=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json();ws=new WebSocket(targets.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise(r=>ws.addEventListener('open',r,{once:true}));
  let id=0;const pending=new Map(),errors=[];
@@ -103,6 +103,8 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.equal(await evaluate('getComputedStyle(document.querySelector(".music-progress")).display'),'none');
  const idleShot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'music-idle-036.png'),Buffer.from(idleShot.data,'base64'));
  assert(await evaluate('(async()=>{const body=new URLSearchParams({action:"music_add",csrf:'+JSON.stringify(token)+',music_url:"https://youtu.be/dQw4w9WgXcQ"});return(await fetch("admin.php?view=music",{method:"POST",body})).ok})()'));await wait(2300);
+ assert.equal(await evaluate('document.getElementById("musicCard").classList.contains("is-idle")'),true);
+ assert(await evaluate('(async()=>{const rows=(await(await fetch("music-queue.php")).json()).items;const id=rows.find(row=>!Number(row.approved)).id;const body=new URLSearchParams({action:"music_approve",csrf:'+JSON.stringify(token)+',id});return(await fetch("admin.php?view=music",{method:"POST",body})).ok})()'));await wait(2300);
  assert.equal(await evaluate('document.getElementById("musicCard").classList.contains("is-idle")'),false);
  assert.equal(await evaluate('document.getElementById("musicSender").textContent'),'Thêm bởi quản trị viên');
  assert(await evaluate('testPlayers.some(p=>!p.destroyed&&p.state===1)'));
@@ -130,7 +132,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
    window.fetch=(url,opts)=>{
      if(!url.startsWith("tts.php"))return fetchOriginal(url,opts);
      ttsRequests.push({payload:JSON.parse(opts.body),reveal:document.querySelector(".roulette-result").textContent,alertEnded:alertEvents[1]==="ended"});
-     return Promise.resolve(new Response('{"audio_url":"/fixture-audio"}'));
+     return Promise.resolve(new Response('{"audio_url":"/fixture-audio"}',{headers:{'Content-Type':'application/json'}}));
    };
    const donation=await getDemo();donation.speech.provider="fpt";donation.donate_sound_url="uploads/donate-sound.mp3?v=0123456789abcdef";donation.donate_sound_volume=40;
    const bells=[];const originalBell=CungSFX.bell;

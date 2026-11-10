@@ -30,6 +30,8 @@ function ensure_music_schema(PDO $db): void {
     $musicColumns = array_column($db->query('SHOW COLUMNS FROM music_requests')->fetchAll(PDO::FETCH_ASSOC), null, 'Field');
     if ($musicColumns['donation_id']['Null'] !== 'YES') $db->exec('ALTER TABLE music_requests MODIFY donation_id INT NULL');
     if (!isset($musicColumns['title_retry_at'])) $db->exec('ALTER TABLE music_requests ADD COLUMN title_retry_at DATETIME NULL');
+    // Existing orders require review too: do not silently approve old waiting tracks.
+    if (!isset($musicColumns['approved'])) $db->exec('ALTER TABLE music_requests ADD COLUMN approved TINYINT NOT NULL DEFAULT 0');
     $db->exec("CREATE TABLE IF NOT EXISTS music_state (
         id TINYINT PRIMARY KEY, current_id BIGINT UNSIGNED NULL, paused TINYINT NOT NULL DEFAULT 0,
         owner VARCHAR(64) NOT NULL DEFAULT '', lease_until DATETIME NULL
@@ -82,8 +84,11 @@ function enqueue_paid_music(PDO $db, array $donation, int $paid): void {
 }
 
 // Manual requests have no donation row. Paid requests must still pass moderation.
-function music_playable_sql(): string {
+function music_visible_sql(): string {
     return "(q.donation_id IS NULL OR (d.status='paid' AND d.queue_state='queued'))";
+}
+function music_playable_sql(): string {
+    return 'q.approved=1 AND ' . music_visible_sql();
 }
 function music_song_columns(): string {
     return "q.*,COALESCE(d.name,'Quản trị viên') AS name,COALESCE(d.message,'') AS message,
@@ -93,10 +98,10 @@ function music_order_sql(array $settings): string {
     return $settings['music_order'] === 'amount' ? 'COALESCE(d.paid_amount,0) DESC, q.id ASC' : 'q.id ASC';
 }
 function music_queue(PDO $db, array $settings): array {
-    return $db->query("SELECT q.id,q.donation_id,q.video_id,q.title,q.state,
+    return $db->query("SELECT q.id,q.donation_id,q.video_id,q.title,q.state,q.approved,
         COALESCE(d.name,'Quản trị viên') AS name,COALESCE(d.message,'') AS message,COALESCE(d.paid_amount,0) AS paid_amount
         FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
-        WHERE q.state IN ('waiting','playing') AND " . music_playable_sql() . "
+        WHERE q.state IN ('waiting','playing') AND " . music_visible_sql() . "
         ORDER BY (q.state='playing') DESC," . music_order_sql($settings) . ' LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
 }
 function youtube_song_title(string $videoId): string {
@@ -119,10 +124,10 @@ function youtube_song_title(string $videoId): string {
 function music_untitled_id(PDO $db): int {
     return (int)$db->query("SELECT q.id FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
         WHERE q.state IN ('waiting','playing') AND q.title='' AND (q.title_retry_at IS NULL OR q.title_retry_at<=NOW())
-        AND " . music_playable_sql() . " ORDER BY (q.state='playing') DESC,q.id LIMIT 1")->fetchColumn();
+        AND " . music_visible_sql() . " ORDER BY (q.state='playing') DESC,q.id LIMIT 1")->fetchColumn();
 }
 function refresh_music_title(PDO $db, int $id, bool $fromHistory = false): ?string {
-    $eligible = $fromHistory ? "d.status='paid' AND d.is_test=0" : music_playable_sql();
+    $eligible = $fromHistory ? "d.status='paid' AND d.is_test=0" : music_visible_sql();
     $query = $db->prepare("SELECT q.video_id,q.title FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
         WHERE q.id=? AND " . $eligible);
     $query->execute([$id]);
@@ -191,7 +196,15 @@ function music_admin_action(PDO $db, array $in): void {
     $db->beginTransaction();
     try {
         $state = $db->query('SELECT * FROM music_state WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC);
-        if ($action === 'music_pause' || $action === 'music_resume') {
+        if ($action === 'music_approve') {
+            $id = filter_var($in['id'] ?? null, FILTER_VALIDATE_INT);
+            if (!$id || $id < 1) throw new InvalidArgumentException('Bài nhạc không hợp lệ.');
+            $approve = $db->prepare("UPDATE music_requests q LEFT JOIN donations d ON d.id=q.donation_id
+                SET q.approved=1 WHERE q.id=? AND q.state='waiting' AND q.approved=0
+                AND (q.donation_id IS NULL OR (d.status='paid' AND d.queue_state='queued'))");
+            $approve->execute([$id]);
+            if (!$approve->rowCount()) throw new InvalidArgumentException('Bài nhạc không còn chờ duyệt.');
+        } elseif ($action === 'music_pause' || $action === 'music_resume') {
             $db->prepare('UPDATE music_state SET paused=? WHERE id=1')->execute([$action === 'music_pause' ? 1 : 0]);
         } elseif ($action === 'music_next' || $action === 'music_remove') {
             $id = $action === 'music_next' ? (int)$state['current_id'] : filter_var($in['id'] ?? null, FILTER_VALIDATE_INT);

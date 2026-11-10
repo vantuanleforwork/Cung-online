@@ -157,7 +157,7 @@ if (location.pathname.endsWith('/index.html')) {
       <div id="musicLinkField" hidden>
         <label for="musicUrl">Link nhạc YouTube</label>
         <input id="musicUrl" type="url" maxlength="2048" placeholder="https://www.youtube.com/watch?v=… hoặc https://youtu.be/…" aria-describedby="musicRule">
-        <p id="musicRule" class="voice-hint"></p>
+        <p id="musicRule" class="voice-hint">Bài nhạc chỉ được phát sau khi quản trị viên kiểm tra quyền sử dụng trên livestream.</p>
       </div>
       <div id="rouletteField" hidden>
         <label for="rouletteWheel">Chọn vòng quay</label>
@@ -233,7 +233,7 @@ if (location.pathname.endsWith('/index.html')) {
   <div class="site-footer-bottom"><small>© Van Tuan Le</small><a href="#donate">Về phần donate ↑</a></div>
 </footer>
 
-<script src="donation-site.js?v=39"></script>
+<script src="donation-site.js?v=40"></script>
 <script>
 const $=i=>document.getElementById(i);
 let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;

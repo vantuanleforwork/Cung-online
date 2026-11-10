@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS music_requests (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, donation_id INT NULL UNIQUE,
         video_id VARCHAR(11) NOT NULL, state VARCHAR(16) NOT NULL DEFAULT 'waiting',
         position_seconds DECIMAL(10,2) NOT NULL DEFAULT 0, title VARCHAR(200) NOT NULL DEFAULT '',
-        title_retry_at DATETIME NULL,
+        title_retry_at DATETIME NULL, approved TINYINT NOT NULL DEFAULT 0,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX music_waiting(state,id), FOREIGN KEY(donation_id) REFERENCES donations(id) ON DELETE CASCADE
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;

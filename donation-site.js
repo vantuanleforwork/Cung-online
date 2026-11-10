@@ -64,7 +64,7 @@
       if (Number(amount.value) < state.minimum()) amount.value = state.minimum();
     }
     document.getElementById('amt').min = state.minimum();
-    document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài'+(!state.settings.music_enabled&&!state.testAccount?' · Hiện tạm dừng nhận nhạc.':'');
+    document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài · Chỉ phát sau khi quản trị viên kiểm tra quyền sử dụng.'+(!state.settings.music_enabled&&!state.testAccount?' · Hiện tạm dừng nhận nhạc.':'');
     if (window.upd) window.upd();
   }
   buttons.forEach(button => button.addEventListener('click', () => {
@@ -100,14 +100,14 @@
           const link = state.musicLink(song.video_id, song.title || 'Đang lấy tên bài…');
           const person = document.createElement('small'); person.textContent = song.donation_id === null ? 'Thêm bởi quản trị viên' : song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
           text.append(link,person);
-          const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : 'Chờ phát';
+          const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : (!Number(song.approved) ? 'Chờ duyệt' : 'Chờ phát');
           row.append(text,badge);
           return row;
         });
         list.replaceChildren(...rows);
         queueItems = items;
       }
-      const message = !data.items.length ? 'Hiện không có bài nhạc nào được order. Hãy order để được phát nhạc ngay!' :
+      const message = !data.items.length ? 'Hiện không có bài nhạc nào được order.' :
         data.paused ? 'Hàng đợi đang tạm dừng.' :
           'Thứ tự '+(data.order === 'amount' ? 'ưu tiên số tiền donate' : 'thanh toán trước phát trước');
       if (status.textContent !== message) status.textContent = message;
