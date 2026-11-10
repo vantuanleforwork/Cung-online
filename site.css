@@ -19,6 +19,12 @@
 .site-footer a:hover { text-decoration: underline; }
 .site-footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-4) 0; border-top: 1px solid var(--border); font-size: var(--text-xs); }
 .donation-column { display: grid; gap: 24px; min-width: 0; }
+.resume-order { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); border-radius: var(--radius-md); background: #263c24; }
+.resume-order p { margin: 0; }
+.resume-order strong { color: var(--accent); }
+.resume-order > div { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.resume-order button { padding: var(--space-2) var(--space-3); }
+.resume-order button:first-child { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 main { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 30px; box-shadow: 0 14px 36px #0003; border-top: 3px solid var(--accent); }
 .card-header { border-bottom: 1px solid var(--border); padding-bottom: 22px; margin-bottom: 26px; }
 .sub { margin: 0; color: var(--muted); font-size: 16px; }
@@ -130,10 +136,18 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   .site-header { padding: 18px 20px; }
   .header-caption { font-size: 9px; letter-spacing: 1px; }
   .site-wordmark { font-size: 13px; letter-spacing: .6px; }
-  .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 20px; gap: 32px; }
-  .intro, .donation-column, main { width: 100%; }
+  .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 20px; gap: 0; }
+  .intro { display: contents; }
+  .site-shell > .intro > :is(.brand,h1,.intro-copy,.account,.leaderboard,.music-queue,.daily-kpi), .donation-column, main { width: 100%; }
+  .intro .brand { order: 0; }
+  .intro h1 { order: 1; }
+  .intro-copy { order: 2; margin-bottom: var(--space-6); }
+  .donation-column { order: 3; margin-bottom: var(--space-6); }
+  .intro .account { order: 4; margin: 0 0 var(--space-6); }
+  .donate-site .leaderboard { order: 5; margin: 0 0 var(--space-6); }
+  .intro .music-queue { order: 6; margin: 0 0 var(--space-6); }
+  .intro .daily-kpi { order: 7; }
   .intro h1 { font-size: 42px; letter-spacing: -2px; }
-  .intro .account { margin-top: 24px; }
   main, .history { padding: 22px 18px; }
   .intro .account, .donate-site .leaderboard { padding: 20px; }
   .amount-field input { font-size: 34px; }

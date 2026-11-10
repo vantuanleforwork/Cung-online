@@ -1,6 +1,10 @@
 DirectoryIndex index.html
+<FilesMatch "\.(?:sql|md)$">
+Require all denied
+</FilesMatch>
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteRule ^(?:tests|tools|artifacts)/ - [F,L,NC]
 RewriteCond %{THE_REQUEST} \s/+[^?\s]*index\.html[?\s] [NC]
 RewriteRule ^index\.html$ ./ [R=301,L]
 </IfModule>

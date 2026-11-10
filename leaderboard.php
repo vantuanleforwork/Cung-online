@@ -23,7 +23,8 @@ try {
         FROM (
             SELECT SUM(d.paid_amount) AS total, MAX(d.id) AS latest_id
             FROM donations d LEFT JOIN payment_transactions p ON p.tx_id = d.tx_id
-            WHERE d.status = 'paid' AND d.is_test=0 AND d.paid_amount > 0 $dateFilter
+            WHERE d.status = 'paid' AND d.is_test=0 AND d.paid_amount > 0
+              AND (d.user_id IS NOT NULL OR TRIM(d.name) <> 'Ẩn danh') $dateFilter
             GROUP BY CASE WHEN d.user_id IS NOT NULL THEN CONCAT('user:', d.user_id)
                 ELSE CONCAT('guest:', TRIM(d.name)) END
             ORDER BY total DESC, latest_id ASC LIMIT 10

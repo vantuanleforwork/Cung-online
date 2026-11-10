@@ -49,6 +49,7 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  const positions=await evaluate('(()=>{const r=document.querySelector(".leaderboard-row"),n=r.querySelector(".leaderboard-name").getBoundingClientRect(),a=r.querySelector(".leaderboard-amount").getBoundingClientRect();return {nameRight:n.right,amountLeft:a.left}})()');assert(positions.nameRight<=positions.amountLeft);
  assert(await evaluate('!document.getElementById("history").closest("main")'),'history is separate from donation form');
  assert(await evaluate('parseFloat(getComputedStyle(document.getElementById("account")).borderTopWidth)>0'));
+ if(label==='mobile')assert(await evaluate('(()=>{const top=id=>document.getElementById(id).getBoundingClientRect().top;return top("donate")<top("account")&&top("donate")<top("leaderboardToggle")})()'),'donate form precedes secondary sections on mobile');
  assert(await evaluate('parseFloat(getComputedStyle(document.getElementById("msg")).fontSize)>=16'));
  const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'leaderboard-'+label+'-032.png'),Buffer.from(shot.data,'base64'));
  await evaluate('document.getElementById("history").scrollIntoView({block:"end"})');await wait(100);

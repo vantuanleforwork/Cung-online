@@ -2,7 +2,6 @@
 require __DIR__ . '/common.php';
 try {
     $db = db();
-    ensure_donor_privilege_schema($db);
     $settings = donation_settings($db);
     $wheels = [];
     try {

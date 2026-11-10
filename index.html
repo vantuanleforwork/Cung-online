@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=38">
+<link rel="stylesheet" href="site.css?v=39">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=2" defer></script>
 <script>
@@ -121,6 +121,10 @@ if (location.pathname.endsWith('/index.html')) {
   <div class="donation-column">
   <main class="donation-panel" id="donate" aria-label="Gửi donate">
 
+    <div id="resumeOrder" class="resume-order" hidden>
+      <p>Đã có mã QR gần đây: <strong id="resumeCode"></strong></p>
+      <div><button id="resumeOrderButton" type="button">Xem lại QR</button><button id="dismissOrderButton" type="button">Bỏ mã đã lưu</button></div>
+    </div>
 
     <div id="f">
       <div class="workspace-tabs donation-kind-tabs" role="tablist" aria-label="Loại donate">
@@ -235,11 +239,23 @@ const $=i=>document.getElementById(i);
 let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
 let historyOffset=0,historyLoading=false,currentScope='all';
 
-// Xóa triệt để bộ nhớ đệm đơn hàng cũ để luôn hiển thị form donate mặc định khi vào hoặc tải lại trang
-try{
-  localStorage.removeItem('vtl_order');
-  localStorage.removeItem('cung_order');
-}catch(e){}
+const storedOrderKey='cung_order',storedOrderMaxAge=24*60*60*1000;
+function storedOrder(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(storedOrderKey)||'null');
+    const url=new URL(saved?.qr||'');
+    if(saved&&/^[A-Z0-9]{5,16}$/.test(saved.code)&&/^[a-f0-9]{64}$/.test(saved.status_token)
+      &&url.protocol==='https:'&&url.hostname==='img.vietqr.io'
+      &&Number.isFinite(saved.saved_at)&&saved.saved_at<=Date.now()&&Date.now()-saved.saved_at<storedOrderMaxAge)return saved;
+    localStorage.removeItem(storedOrderKey);
+  }catch(e){try{localStorage.removeItem(storedOrderKey)}catch(ignore){}}
+  return null;
+}
+function updateResumeOrder(){
+  const saved=storedOrder();
+  $('resumeOrder').hidden=!saved||!!order;
+  if(saved)$('resumeCode').textContent=saved.code;
+}
 
 async function refreshStatus(generation){
   if(!order||generation!==statusGeneration)return;
@@ -276,10 +292,14 @@ async function refreshStatus(generation){
 
 function showOrder(value){
   order=value;clearTimeout(statusTimer);const generation=++statusGeneration;
+  try{localStorage.setItem(storedOrderKey,JSON.stringify({...value,saved_at:value.saved_at||Date.now()}))}catch(e){}
+  updateResumeOrder();
   $('f').style.display='none';$('res').style.display='block';
   $('qr').src=value.qr;$('code').textContent=value.code;refreshStatus(generation);
 }
-$('newOrder').onclick=()=>{order=null;statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block';upd();};
+$('resumeOrderButton').onclick=()=>{const saved=storedOrder();if(saved)showOrder(saved);else updateResumeOrder()};
+$('dismissOrderButton').onclick=()=>{try{localStorage.removeItem(storedOrderKey)}catch(e){}updateResumeOrder()};
+$('newOrder').onclick=()=>{order=null;statusGeneration++;clearTimeout(statusTimer);$('res').style.display='none';$('f').style.display='block';updateResumeOrder();upd();};
 
 const lim=a=>a>=CungDonate.settings.tier2_min?225:100;
 const hint=a=>a>=CungDonate.settings.tier3_min?'Đã mở khóa tiên nữ và giọng VIP':a>=CungDonate.settings.tier2_min?'Đã mở khóa rồng và tự chọn giọng đọc':'Từ '+money(CungDonate.settings.tier2_min)+' mở chọn giọng và hiệu ứng rồng';
@@ -565,6 +585,7 @@ $('go').onclick=async()=>{
 };
 
 upd();
+updateResumeOrder();
 loadProfile();
 loadVoices();
 loadHistory(true);

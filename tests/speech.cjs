@@ -41,7 +41,7 @@ function overlay(search){
     if(!elements.has(id)){
       const classes=new Set();elements.set(id,{textContent:'',hidden:true,disabled:false,offsetWidth:720,
         style:{setProperty(){}},dataset:{},children:[],classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},
-        replaceChildren(){this.children=[]},append(child){this.children.push(child)},setAttribute(){},addEventListener(){}});
+        replaceChildren(){this.children=[]},append(child){this.children.push(child)},setAttribute(){},removeAttribute(){},addEventListener(){}});
     }return elements.get(id);
   };
   let finishReading,renewStatus=200,stopped=0;
@@ -83,6 +83,7 @@ function overlay(search){
   preview.context.testDonation=donation;
   let complete=false;
   const shown=vm.runInContext('play(testDonation)',preview.context).then(result=>{complete=true;return result});
+  await flush();
   await preview.clock.advance(700);await preview.clock.advance(8000);
   assert.equal(complete,false); // Minimum display has elapsed, still waiting for speech.
   assert.equal(preview.get('donorName').textContent,donation.name); // Untrusted content is text.

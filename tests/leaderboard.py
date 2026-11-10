@@ -71,7 +71,7 @@ def run():
                         break
                     except urllib.error.URLError: time.sleep(.1)
                 sql("INSERT INTO donor_users(id,google_sub,email,email_hash,display_name) VALUES(1,'one','one@example.test','one','Alice'),(2,'two','two@example.test','two','Bob')")
-                sql("INSERT INTO donations(id,code,user_id,name,paid_amount,status,tx_id,created_at) VALUES (1,'DNTVTL000001',1,'Alice old',50000,'paid','one',NOW()-INTERVAL 2 MONTH),(2,'DNTVTL000002',1,'Alice',70000,'paid','two',NOW()),(3,'DNTVTL000003',2,'Bob',80000,'paid','three',NOW()),(4,'DNTVTL000004',NULL,'Guest',30000,'paid',NULL,NOW()),(5,'DNTVTL000005',NULL,'Guest',10000,'paid',NULL,NOW()),(6,'DNTVTL000006',NULL,'Pending',999999,'pending',NULL,NOW()),(7,'DNTVTL000007',2,'Bob',200000,'paid','old',NOW()-INTERVAL 2 MONTH)")
+                sql("INSERT INTO donations(id,code,user_id,name,paid_amount,status,tx_id,created_at) VALUES (1,'DNTVTL000001',1,'Alice old',50000,'paid','one',NOW()-INTERVAL 2 MONTH),(2,'DNTVTL000002',1,'Alice',70000,'paid','two',NOW()),(3,'DNTVTL000003',2,'Bob',80000,'paid','three',NOW()),(4,'DNTVTL000004',NULL,'Guest',30000,'paid',NULL,NOW()),(5,'DNTVTL000005',NULL,'Guest',10000,'paid',NULL,NOW()),(6,'DNTVTL000006',NULL,'Pending',999999,'pending',NULL,NOW()),(7,'DNTVTL000007',2,'Bob',200000,'paid','old',NOW()-INTERVAL 2 MONTH),(8,'DNTVTL000008',NULL,'Ẩn danh',900000,'paid',NULL,NOW()),(9,'DNTVTL000009',NULL,'Ẩn danh',800000,'paid',NULL,NOW())")
                 sql("INSERT INTO payment_transactions(tx_id,paid_amount,content,created_at) VALUES('one',50000,'',NOW()),('old',200000,'',NOW()-INTERVAL 2 MONTH)")
                 def board(period):
                     return json.load(urllib.request.urlopen(base+'/leaderboard.php?period='+period))
@@ -89,7 +89,7 @@ def run():
                 print(browser.stdout.strip())
                 sql('DELETE FROM payment_transactions; DELETE FROM donations')
                 assert board('day')['items']==[]
-                print('PASS: paid-only aggregation, accounts and guest names, payment date, day/month/all ranking, invalid period and empty result')
+                print('PASS: paid-only aggregation, anonymous exclusion, accounts and guest names, payment date, day/month/all ranking, invalid period and empty result')
             finally:
                 for process in reversed(processes):
                     process.terminate();process.wait(timeout=20)

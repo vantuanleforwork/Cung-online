@@ -560,7 +560,28 @@ def run():
                 status, html = admin({'csrf':csrf(html),'action':'login','password':'incorrect'})
                 assert status == 401, status
             assert admin({'csrf':csrf(html),'action':'login','password':password})[0] == 429
+            guest_jar = http.cookiejar.CookieJar()
+            guest = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(guest_jar))
+            guest_csrf = json.load(guest.open(f'http://127.0.0.1:{ports[0]}/profile.php'))['csrf']
+            def guest_qr():
+                request_data = urllib.request.Request(f'http://127.0.0.1:{ports[0]}/create.php',
+                    data=json.dumps({'amount':20000,'message':'Anonymous test'}).encode(),
+                    headers={'Content-Type':'application/json','X-CSRF-Token':guest_csrf})
+                try: response = guest.open(request_data)
+                except urllib.error.HTTPError as error: response = error
+                with response: return response.status, json.load(response)
+            first_status, first_guest = guest_qr()
+            second_status, second_guest = guest_qr()
+            assert first_status == second_status == 200
+            blocked_status, blocked = guest_qr()
+            assert blocked_status == 400 and '5 phút' in blocked['error']
+            assert api('webhook.php', {'transactions':[tx('guest-paid',content=first_guest['code'])]})[0] == 200
+            next_status, next_guest = guest_qr()
+            assert next_status == 200 and next_guest['code'] != second_guest['code']
+            blocked_status, blocked = guest_qr()
+            assert blocked_status == 400 and '5 phút' in blocked['error']
             print('PASS: validation/admin/queue, auto-upgrade 002/003, ElevenLabs settings/key privacy/cache, signed MP3/Range/HEAD, previews, leases')
+            print('PASS: anonymous QR cooldown keeps the remaining unpaid QR after one payment')
         finally:
             for process in reversed(processes):
                 process.terminate()

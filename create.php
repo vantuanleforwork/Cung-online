@@ -111,12 +111,17 @@ try {
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $statusToken = $isTestAccount ? null : bin2hex(random_bytes(32));
     if (!$user) {
-        $db->exec('CREATE TABLE IF NOT EXISTS anonymous_qr_limits (
-            ip_hash CHAR(64) PRIMARY KEY, first_id INT NULL, second_id INT NULL,
-            cooldown_until DATETIME NULL
-        ) ENGINE=InnoDB');
         $ipHash = donor_hash($ip);
-        $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
+        try {
+            $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
+        } catch (PDOException $error) {
+            if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+            $db->exec('CREATE TABLE IF NOT EXISTS anonymous_qr_limits (
+                ip_hash CHAR(64) PRIMARY KEY, first_id INT NULL, second_id INT NULL,
+                cooldown_until DATETIME NULL
+            ) ENGINE=InnoDB');
+            $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
+        }
     }
     for ($t = 0; $t < 5; $t++) {
         $code = null;
@@ -153,8 +158,9 @@ try {
                         fail(429, 'IP này đã tạo 2 mã QR ẩn danh chưa donate. Vui lòng chờ '.ceil($retryAfter/60).' phút hoặc đăng nhập Google.');
                     }
                 }
-                if (!$anonymousFirstId || !$anonymousSecondId || !$limit['cooldown_until'] || $retryAfter === 0) {
-                    if (!$anonymousFirstId || $anonymousSecondId) $anonymousFirstId = null;
+                // Keep the remaining unpaid QR when the other one is paid.
+                if ($anonymousSecondId) {
+                    $anonymousFirstId = $anonymousFirstId ? null : $anonymousSecondId;
                     $anonymousSecondId = null;
                 }
             }

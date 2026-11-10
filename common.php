@@ -64,7 +64,6 @@ function donor_restore_login(): void {
     if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) return;
     try {
         $db = db();
-        donor_remember_schema($db);
         $query = $db->prepare('SELECT user_id FROM donor_remember_tokens WHERE token_hash=? AND expires_at>NOW()');
         $query->execute([hash('sha256',$token)]);
         $userId = (int)$query->fetchColumn();
@@ -143,7 +142,7 @@ function ensure_donor_privilege_schema(PDO $db): void {
     if (!in_array('level_override', $columns, true)) {
         $db->exec('ALTER TABLE donor_users ADD COLUMN level_override SMALLINT UNSIGNED NULL DEFAULT NULL');
     }
-    $db->prepare('UPDATE donor_users SET is_test_account=1,level_override=100 WHERE LOWER(email)=?')
+    $db->prepare('UPDATE donor_users SET is_test_account=1,level_override=100 WHERE LOWER(email)=? AND (is_test_account<>1 OR level_override IS NULL OR level_override<>100)')
        ->execute(['vantuanleforwork@gmail.com']);
     $ready[$connection] = true;
 }
