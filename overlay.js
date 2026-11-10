@@ -23,7 +23,14 @@ async function request(url,body={},signal){
   try{
     if(signal?.aborted)cancel();
     const response=await fetch(url+'?k='+encodeURIComponent(K),{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
-    const data=await response.json();return {response,data,elapsed:Date.now()-started};
+    if(!response.headers.get('Content-Type')?.includes('application/json')){
+      throw new Error(`Máy chủ trả trang HTML cho ${url} (HTTP ${response.status}). Kiểm tra cPanel/Cloudflare và đường dẫn OBS.`);
+    }
+    let data;
+    try{data=await response.json()}catch(error){
+      throw new Error(`JSON từ ${url} không hợp lệ (HTTP ${response.status}). Kiểm tra lỗi PHP trên hosting.`);
+    }
+    return {response,data,elapsed:Date.now()-started};
   }finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel)}
 }
 function startLease(d){

@@ -7,12 +7,39 @@ header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
 ini_set('session.use_strict_mode', '1');
+ini_set('session.gc_maxlifetime', '604800');
 session_name('cung_admin');
-session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Strict', 'path' => '/']);
+session_set_cookie_params(['lifetime' => 604800, 'httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Strict', 'path' => '/']);
 session_start();
-if (isset($_SESSION['last_active']) && time() - $_SESSION['last_active'] > 1800) $_SESSION = [];
+// Shared hosting may collect PHP sessions using another script's shorter lifetime.
+// A signed, HttpOnly cookie restores the admin session without storing the password.
+function admin_login_cookie(string $value, int $expires): void {
+    setcookie('cung_admin_login', $value, ['expires'=>$expires, 'path'=>'/',
+        'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly'=>true, 'samesite'=>'Strict']);
+}
+function admin_login_signature(string $expires): string {
+    return hash_hmac('sha256', $expires, ADMIN_PASSWORD_HASH . "\0" . OVERLAY_KEY);
+}
+function admin_remember_login(): void {
+    $expires = (string)(time() + 604800);
+    admin_login_cookie($expires . ':' . admin_login_signature($expires), (int)$expires);
+}
+if (isset($_SESSION['last_active']) && time() - (int)$_SESSION['last_active'] > 604800) $_SESSION = [];
+if (empty($_SESSION['admin']) && ADMIN_PASSWORD_HASH !== '') {
+    $cookie = $_COOKIE['cung_admin_login'] ?? '';
+    if (is_string($cookie) && preg_match('/^([0-9]{10}):([a-f0-9]{64})$/D', $cookie, $parts)
+        && (int)$parts[1] > time() && hash_equals(admin_login_signature($parts[1]), $parts[2])) {
+        session_regenerate_id(true);
+        $_SESSION = ['admin'=>true, 'last_active'=>time(), 'csrf'=>bin2hex(random_bytes(32))];
+    }
+}
 if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
-if (!empty($_SESSION['admin'])) $_SESSION['last_active'] = time();
+if (!empty($_SESSION['admin'])) {
+    $_SESSION['last_active'] = time();
+    $cookie = $_COOKIE['cung_admin_login'] ?? '';
+    if (!is_string($cookie) || !preg_match('/^([0-9]{10}):/', $cookie, $parts) || (int)$parts[1] < time() + 86400) admin_remember_login();
+}
 $error = '';
 $flash = $_SESSION['flash'] ?? '';
 unset($_SESSION['flash']);
@@ -64,11 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 $db->commit();
                 session_regenerate_id(true);
                 $_SESSION = ['admin' => true, 'last_active' => time(), 'csrf' => bin2hex(random_bytes(32))];
+                admin_remember_login();
                 redirect_admin();
             } elseif (empty($_SESSION['admin'])) {
                 http_response_code(401); throw new InvalidArgumentException('Hãy đăng nhập trước.');
             } elseif ($action === 'logout') {
-                $_SESSION = []; session_regenerate_id(true); redirect_admin();
+                $_SESSION = []; admin_login_cookie('', time()-3600); session_regenerate_id(true); redirect_admin();
             } elseif ($action === 'list_voices') {
                 session_write_close();
                 respond(200, voice_catalog(db(), $_POST));

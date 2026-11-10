@@ -306,6 +306,12 @@ def run():
             assert admin({'csrf':csrf(html),'action':'pause'})[0] == 401
             _, html = admin({'csrf':csrf(html),'action':'login','password':password})
             assert 'name="password"' not in html and 'Original message' in html
+            assert any(cookie.name == 'cung_admin_login' for cookie in jar)
+            for cookie in list(jar):
+                if cookie.name == 'cung_admin':
+                    jar.clear(cookie.domain, cookie.path, cookie.name)
+            _, html = admin()
+            assert 'name="password"' not in html and 'Original message' in html, 'signed cookie restores lost PHP session'
             assert sql('SELECT speech_schema_version FROM app_settings') == '13'
             assert '&lt;script&gt;' in html and '<script>alert(1)</script>' not in html
             session_csrf = csrf(html)
@@ -556,6 +562,7 @@ def run():
             action('logout')
             _, html = admin()
             assert 'name="password"' in html
+            assert not any(cookie.name == 'cung_admin_login' for cookie in jar)
             for _ in range(5):
                 status, html = admin({'csrf':csrf(html),'action':'login','password':'incorrect'})
                 assert status == 401, status
