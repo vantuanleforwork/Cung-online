@@ -17,6 +17,12 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 if ($action === 'logout' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['donor_csrf'],$_POST['csrf'])) { http_response_code(403); exit('Phiên không hợp lệ.'); }
+    $remember = $_COOKIE['cung_remember'] ?? '';
+    if (is_string($remember) && preg_match('/^[a-f0-9]{64}$/D', $remember)) {
+        try { db()->prepare('DELETE FROM donor_remember_tokens WHERE token_hash=?')->execute([hash('sha256',$remember)]); }
+        catch (Throwable $e) { error_log('Revoke donor login: '.$e->getMessage()); }
+    }
+    donor_remember_cookie('',time()-3600);
     $_SESSION=[]; session_regenerate_id(true); session_destroy();
     setcookie(session_name(),'',['expires'=>time()-3600,'path'=>'/','secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off','httponly'=>true,'samesite'=>'Lax']);
     header('Location: ./',true,303); exit;
@@ -36,6 +42,7 @@ try {
     if (!$id) throw new RuntimeException('Không tạo được hồ sơ.');
     session_regenerate_id(true);
     $_SESSION=['donor_id'=>$id,'donor_csrf'=>bin2hex(random_bytes(32)),'donor_last_active'=>time()];
+    donor_remember_login($db,$id);
     header('Location: ./',true,303); exit;
 } catch (Throwable $e) {
     error_log('Google sign-in: '.$e->getMessage()); http_response_code(400);

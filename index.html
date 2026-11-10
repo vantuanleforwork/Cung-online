@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=37">
+<link rel="stylesheet" href="site.css?v=38">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=2" defer></script>
 <script>
@@ -62,8 +62,8 @@ if (location.pathname.endsWith('/index.html')) {
 
     <section class="account" id="account">
       <div id="signedOut">
-        <strong>Đăng nhập Google để lưu tên &amp; cấp ủng hộ</strong>
-        <p class="sub">Lưu tên, avatar và tích lũy cấp độ người ủng hộ trên kênh của Van Tuan Le.</p>
+        <strong>Donate nhanh, không cần đăng nhập</strong>
+        <p class="sub">Donate ẩn danh ngay bên cạnh. Đăng nhập Google để lưu tên, avatar và tích lũy cấp độ.</p>
         <a class="account-button" href="google-auth.php?action=login">Tiếp tục với Google</a>
       </div>
       <div id="signedIn" hidden>
@@ -77,8 +77,8 @@ if (location.pathname.endsWith('/index.html')) {
           <div id="profileProgressTrack" class="level-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="profileProgressBar" class="level-progress-bar"></span></div>
           <p id="profileProgressNote" class="level-progress-note"></p>
         </div>
-        <details>
-          <summary>Chỉnh sửa hồ sơ</summary>
+        <details class="profile-editor">
+          <summary>Chỉnh sửa hồ sơ <span aria-hidden="true">↗</span></summary>
           <form id="profileForm" enctype="multipart/form-data">
             <label>Tên hiển thị <input name="display_name" id="profileNameInput" maxlength="40" required></label>
             <label>Ảnh đại diện <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG hoặc WebP · tối đa 2 MB. Để trống để giữ ảnh hiện tại.</small></label>
@@ -176,7 +176,7 @@ if (location.pathname.endsWith('/index.html')) {
         <dl id="rouletteOddsList" aria-live="polite"></dl>
       </section>
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
-      <p class="privacy-note"><span>✧</span> Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</p>
+      <p class="privacy-note" id="donatePrivacy">Donate ẩn danh hiển thị tên “Ẩn danh” và lời nhắn trên livestream. Sau 2 mã QR chưa thanh toán, IP cần chờ 5 phút hoặc đăng nhập Google.</p>
       <div id="err" role="alert"></div>
       <div class="profile-skin-status" id="donateTestStatus" role="status"></div>
       </div>
@@ -487,7 +487,7 @@ function upd(){
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=minimum&&a<=50000000;
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(minimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<minimum?'Số tiền tối thiểu là '+money(minimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
-  $('go').disabled=creatingOrder||!CungDonate.ready||!loggedIn||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
+  $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -513,6 +513,9 @@ async function loadProfile(){
     if(allowed){
       renderProfile(d.user);
     }
+    CungDonate.testAccount=allowed&&!!d.user?.is_test_account;
+    $('go').textContent=CungDonate.testAccount?'Gửi donate test ↗':'Tạo mã QR donate ↗';
+    $('donatePrivacy').textContent=allowed?'Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.':'Donate ẩn danh hiển thị tên “Ẩn danh” và lời nhắn trên livestream. Sau 2 mã QR chưa thanh toán, IP cần chờ 5 phút hoặc đăng nhập Google.';
     upd();
   }catch(e){
     loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.';
@@ -534,7 +537,7 @@ let creatingOrder=false;
 $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
-  if(!loggedIn||!Number.isInteger(amount)||amount<CungDonate.minimum()||amount>50000000||!CungDonate.ready){upd();return}
+  if(!Number.isInteger(amount)||amount<CungDonate.minimum()||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
   creatingOrder=true;

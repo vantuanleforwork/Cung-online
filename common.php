@@ -23,12 +23,58 @@ function donor_session() {
     if (session_status() === PHP_SESSION_ACTIVE) return;
     ini_set('session.use_strict_mode', '1');
     session_name('cung_donor');
-    session_set_cookie_params(['httponly'=>true,'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    session_set_cookie_params(['lifetime'=>2592000,'httponly'=>true,'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
         'samesite'=>'Lax','path'=>'/']);
+    ini_set('session.gc_maxlifetime', '2592000');
     session_start();
-    if (isset($_SESSION['donor_last_active']) && time() - $_SESSION['donor_last_active'] > 86400) $_SESSION = [];
+    if (empty($_SESSION['donor_id'])) donor_restore_login();
     if (empty($_SESSION['donor_csrf'])) $_SESSION['donor_csrf'] = bin2hex(random_bytes(32));
     if (!empty($_SESSION['donor_id'])) $_SESSION['donor_last_active'] = time();
+}
+
+function donor_remember_cookie(string $value, int $expires): void {
+    setcookie('cung_remember', $value, ['expires'=>$expires,'path'=>'/',
+        'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly'=>true,'samesite'=>'Lax']);
+}
+
+function donor_remember_schema(PDO $db): void {
+    $db->exec('CREATE TABLE IF NOT EXISTS donor_remember_tokens (
+        token_hash CHAR(64) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL,
+        expires_at DATETIME NOT NULL, INDEX (expires_at),
+        FOREIGN KEY (user_id) REFERENCES donor_users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+function donor_remember_login(PDO $db, int $userId): void {
+    donor_remember_schema($db);
+    $old = $_COOKIE['cung_remember'] ?? '';
+    if (is_string($old) && preg_match('/^[a-f0-9]{64}$/D', $old)) {
+        $db->prepare('DELETE FROM donor_remember_tokens WHERE token_hash=?')->execute([hash('sha256',$old)]);
+    }
+    $token = bin2hex(random_bytes(32));
+    $db->prepare('INSERT INTO donor_remember_tokens(token_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 30 DAY))')
+       ->execute([hash('sha256',$token),$userId]);
+    donor_remember_cookie($token, time()+2592000);
+    $_COOKIE['cung_remember'] = $token;
+}
+
+function donor_restore_login(): void {
+    $token = $_COOKIE['cung_remember'] ?? '';
+    if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) return;
+    try {
+        $db = db();
+        donor_remember_schema($db);
+        $query = $db->prepare('SELECT user_id FROM donor_remember_tokens WHERE token_hash=? AND expires_at>NOW()');
+        $query->execute([hash('sha256',$token)]);
+        $userId = (int)$query->fetchColumn();
+        if (!$userId) { donor_remember_cookie('',time()-3600); return; }
+        session_regenerate_id(true);
+        $_SESSION['donor_id'] = $userId;
+        $_SESSION['donor_csrf'] = bin2hex(random_bytes(32));
+    } catch (Throwable $e) {
+        error_log('Restore donor login: '.$e->getMessage());
+    }
 }
 
 function donor_device_token(): string {

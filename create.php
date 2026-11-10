@@ -19,7 +19,6 @@ function send_payment_code(string $code, string $statusToken, int $amount): void
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Chỉ hỗ trợ POST.');
     donor_session();
-    if (empty($_SESSION['donor_id'])) fail(401, 'Vui lòng đăng nhập Google trước khi tạo mã donate.');
     if (!is_string($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null) || !hash_equals($_SESSION['donor_csrf'] ?? '', $_SERVER['HTTP_X_CSRF_TOKEN'])) {
         fail(403, 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang (F5).');
     }
@@ -41,14 +40,16 @@ try {
     $ip = $context['ip'];
     $deviceHash = $context['device_hash'];
 
-    ensure_donor_privilege_schema($db);
-    $userStmt = $db->prepare('SELECT id,email,email_hash,display_name,google_avatar_url,custom_avatar_path,is_test_account,level_override FROM donor_users WHERE id=?');
-    $userStmt->execute([$_SESSION['donor_id']]);
-    $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-    if (!$user) fail(401, 'Phiên đăng nhập hết hạn. Hãy đăng nhập lại Google.');
-
-    $emailHash = donor_hash(mb_strtolower(trim($user['email'])));
-    if (!hash_equals($emailHash, $user['email_hash']) || donor_blocked($db, $emailHash, $ip, $deviceHash)) {
+    $user = null;
+    if (!empty($_SESSION['donor_id'])) {
+        ensure_donor_privilege_schema($db);
+        $userStmt = $db->prepare('SELECT id,email,email_hash,display_name,google_avatar_url,custom_avatar_path,is_test_account,level_override FROM donor_users WHERE id=?');
+        $userStmt->execute([$_SESSION['donor_id']]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) fail(401, 'Phiên đăng nhập hết hạn. Hãy đăng nhập lại Google.');
+    }
+    $emailHash = $user ? donor_hash(mb_strtolower(trim($user['email']))) : '';
+    if (($user && !hash_equals($emailHash, $user['email_hash'])) || donor_blocked($db, $emailHash, $ip, $deviceHash)) {
         fail(403, 'Tài khoản hoặc địa chỉ mạng này đang bị tạm khóa tạo lượt donate.');
     }
 
@@ -81,8 +82,8 @@ try {
     }
 
 
-    $name = clean($user['display_name'], 40) ?: 'Người gửi donate';
-    $avatar = $user['custom_avatar_path'] ?: $user['google_avatar_url'];
+    $name = $user ? (clean($user['display_name'], 40) ?: 'Người gửi donate') : 'Ẩn danh';
+    $avatar = $user ? ($user['custom_avatar_path'] ?: $user['google_avatar_url']) : null;
     $msg  = clean($in['message'] ?? '', donation_message_limit($amount));
 
     $selectedVoiceId = null;
@@ -109,6 +110,14 @@ try {
 
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $statusToken = $isTestAccount ? null : bin2hex(random_bytes(32));
+    if (!$user) {
+        $db->exec('CREATE TABLE IF NOT EXISTS anonymous_qr_limits (
+            ip_hash CHAR(64) PRIMARY KEY, first_id INT NULL, second_id INT NULL,
+            cooldown_until DATETIME NULL
+        ) ENGINE=InnoDB');
+        $ipHash = donor_hash($ip);
+        $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
+    }
     for ($t = 0; $t < 5; $t++) {
         $code = null;
         if (!$isTestAccount) {
@@ -117,7 +126,39 @@ try {
         }
         try {
             $db->beginTransaction();
-            if (!$isTestAccount) {
+            if (!$user) {
+                $lock = $db->prepare('SELECT first_id,second_id,cooldown_until FROM anonymous_qr_limits WHERE ip_hash=? FOR UPDATE');
+                $lock->execute([$ipHash]);
+                $limit = $lock->fetch(PDO::FETCH_ASSOC);
+                $anonymousFirstId = $limit['first_id'] ? (int)$limit['first_id'] : null;
+                $anonymousSecondId = $limit['second_id'] ? (int)$limit['second_id'] : null;
+                $retryAfter = null;
+                if ($anonymousFirstId) {
+                    $state = $db->prepare('SELECT status FROM donations WHERE id=?');
+                    $state->execute([$anonymousFirstId]);
+                    if ($state->fetchColumn() !== 'pending') $anonymousFirstId = null;
+                }
+                if ($anonymousSecondId) {
+                    $state = $db->prepare('SELECT status FROM donations WHERE id=?');
+                    $state->execute([$anonymousSecondId]);
+                    if ($state->fetchColumn() !== 'pending') $anonymousSecondId = null;
+                }
+                if ($anonymousFirstId && $anonymousSecondId && $limit['cooldown_until']) {
+                    $wait = $db->prepare('SELECT GREATEST(0,TIMESTAMPDIFF(SECOND,NOW(),?))');
+                    $wait->execute([$limit['cooldown_until']]);
+                    $retryAfter = (int)$wait->fetchColumn();
+                    if ($retryAfter > 0) {
+                        $db->rollBack();
+                        header('Retry-After: '.$retryAfter);
+                        fail(429, 'IP này đã tạo 2 mã QR ẩn danh chưa donate. Vui lòng chờ '.ceil($retryAfter/60).' phút hoặc đăng nhập Google.');
+                    }
+                }
+                if (!$anonymousFirstId || !$anonymousSecondId || !$limit['cooldown_until'] || $retryAfter === 0) {
+                    if (!$anonymousFirstId || $anonymousSecondId) $anonymousFirstId = null;
+                    $anonymousSecondId = null;
+                }
+            }
+            if (!$isTestAccount && $user) {
                 // Serialize requests for the same verified account, including requests from different sessions.
                 $lock = $db->prepare('SELECT id FROM donor_users WHERE id=? FOR UPDATE');
                 $lock->execute([$user['id']]);
@@ -146,12 +187,21 @@ try {
             }
             if ($hasVoiceCols) {
                 $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar,selected_voice_id,voice_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
-                   ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
+                   ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'] ?? null, $deviceHash, $avatar, $selectedVoiceId, $voiceName]);
             } else {
                 $db->prepare('INSERT INTO donations(code,name,message,expected_amount,ip,status_token,user_id,device_hash,donor_avatar) VALUES(?,?,?,?,?,?,?,?,?)')
-                   ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'], $deviceHash, $avatar]);
+                   ->execute([$code, $name, $msg, $amount, $ip, $statusToken, $user['id'] ?? null, $deviceHash, $avatar]);
             }
             $donationId = (int)$db->lastInsertId();
+            if (!$user) {
+                if ($anonymousFirstId) {
+                    $db->prepare('UPDATE anonymous_qr_limits SET first_id=?,second_id=?,cooldown_until=DATE_ADD(NOW(),INTERVAL 5 MINUTE) WHERE ip_hash=?')
+                       ->execute([$anonymousFirstId,$donationId,$ipHash]);
+                } else {
+                    $db->prepare('UPDATE anonymous_qr_limits SET first_id=?,second_id=NULL,cooldown_until=NULL WHERE ip_hash=?')
+                       ->execute([$donationId,$ipHash]);
+                }
+            }
             $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$donationId]);
             if ($spin !== null) {
                 $db->prepare('INSERT INTO roulette_spins(donation_id,snapshot) VALUES(?,?)')

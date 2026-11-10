@@ -13,6 +13,21 @@ CREATE TABLE donor_users (
   INDEX donor_email (email(191))
 ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
+CREATE TABLE IF NOT EXISTS donor_remember_tokens (
+  token_hash CHAR(64) PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  expires_at DATETIME NOT NULL,
+  INDEX (expires_at),
+  FOREIGN KEY (user_id) REFERENCES donor_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS anonymous_qr_limits (
+  ip_hash CHAR(64) PRIMARY KEY,
+  first_id INT NULL,
+  second_id INT NULL,
+  cooldown_until DATETIME NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS donor_skins (
   user_id BIGINT UNSIGNED PRIMARY KEY,
   unlocked_json TEXT NOT NULL,
