@@ -70,7 +70,14 @@
       }
       progress.value = data.percent;
       percent.textContent = data.percent + '%';
-      total.textContent = data.target ? `${money.format(data.total)}đ / ${money.format(data.target)}đ` : 'Chưa đặt mục tiêu';
+      if (!data.target) {
+        total.textContent = 'Chưa đặt mục tiêu';
+      } else {
+        const remainingAmount = Math.max(data.target - data.total, 0);
+        total.textContent = remainingAmount > 0
+          ? `Còn thiếu ${money.format(remainingAmount)}đ để đạt KPI`
+          : 'Đã đạt KPI';
+      }
       [...marks.children].forEach((mark, index) => mark.classList.toggle('is-reached', index < data.stage));
       if (overlay) {
         hideTimer = setTimeout(() => { widget.hidden = true; }, data.remaining * 1000);
