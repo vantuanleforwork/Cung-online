@@ -43,7 +43,7 @@ $kpi = kpi_progress($db);
       </div>
       <label>Xem trước<select name="music_preview_state"><option value="playing">Đang phát nhạc</option><option value="idle">Chờ order nhạc</option></select></label>
       <div class="preview-iframe-wrapper"><iframe id="musicPositionPreview" src="music-preview.html?v=36" title="Preview vị trí và kích thước trình phát nhạc"></iframe></div>
-      <p class="muted">Nhạc chỉ xếp hàng khi thanh toán đủ mức tối thiểu và chỉ phát sau khi quản trị viên duyệt quyền sử dụng. Video bị chặn nhúng hoặc lỗi sẽ được bỏ qua. Bài đang phát hoàn tất trước khi áp dụng thứ tự mới.</p>
+      <p class="muted">Nhạc chỉ xếp hàng khi thanh toán đủ mức tối thiểu. Chọn tự động phát hoặc phê duyệt từng bài tại <a href="admin.php?view=music">Hàng đợi nhạc</a>. Video bị chặn nhúng hoặc lỗi sẽ được bỏ qua. Bài đang phát hoàn tất trước khi áp dụng thứ tự mới.</p>
     </section>
     <button type="submit">Lưu cài đặt donate</button>
   </form>

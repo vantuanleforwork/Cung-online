@@ -16,7 +16,7 @@ function ensure_music_schema(PDO $db): void {
         music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1
     ) ENGINE=InnoDB CHARACTER SET utf8mb4");
     $settingsColumns = array_column($db->query('SHOW COLUMNS FROM donation_settings')->fetchAll(PDO::FETCH_ASSOC), 'Field');
-    foreach (['music_idle_enabled' => 'TINYINT NOT NULL DEFAULT 0', 'music_idle_message' => "VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'"] as $name => $definition) {
+    foreach (['music_require_approval' => 'TINYINT NOT NULL DEFAULT 1', 'music_idle_enabled' => 'TINYINT NOT NULL DEFAULT 0', 'music_idle_message' => "VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'"] as $name => $definition) {
         if (!in_array($name, $settingsColumns, true)) $db->exec("ALTER TABLE donation_settings ADD COLUMN $name $definition");
     }
     $db->exec('INSERT IGNORE INTO donation_settings(id) VALUES(1)');
@@ -43,12 +43,12 @@ function donation_settings(?PDO $db = null): array {
     try {
         $settings = ($db ?? db())->query('SELECT * FROM donation_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
         if (!$settings) throw new RuntimeException('Missing donation settings.');
-        return $settings + ['music_idle_enabled'=>0, 'music_idle_message'=>'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'];
+        return $settings + ['music_require_approval'=>1, 'music_idle_enabled'=>0, 'music_idle_message'=>'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'];
     } catch (PDOException $error) {
         // Keep legacy bank notifications working while the administrator installs the migration.
         if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
         return ['message_min'=>MIN_AMOUNT,'tier2_min'=>50000,'tier3_min'=>200000,
-            'music_min'=>50000,'music_seconds'=>180,'music_order'=>'time','music_volume'=>50,
+            'music_min'=>50000,'music_seconds'=>180,'music_order'=>'time','music_volume'=>50,'music_require_approval'=>1,
             'music_opacity'=>90,'music_x'=>48,'music_y'=>740,'music_width'=>360,'music_height'=>160,'music_enabled'=>1,'music_idle_enabled'=>0,'music_idle_message'=>'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'];
     }
 }
@@ -87,12 +87,12 @@ function enqueue_paid_music(PDO $db, array $donation, int $paid): void {
 function music_visible_sql(): string {
     return "(q.donation_id IS NULL OR (d.status='paid' AND d.queue_state='queued'))";
 }
-function music_playable_sql(): string {
-    return 'q.approved=1 AND ' . music_visible_sql();
+function music_playable_sql(array $settings): string {
+    return (!empty($settings['music_require_approval']) ? 'q.approved=1 AND ' : '') . music_visible_sql();
 }
-function music_song_columns(): string {
+function music_song_columns(array $settings): string {
     return "q.*,COALESCE(d.name,'Quản trị viên') AS name,COALESCE(d.message,'') AS message,
-        COALESCE(d.paid_amount,0) AS paid_amount,CASE WHEN " . music_playable_sql() . " THEN 'queued' ELSE 'skipped' END AS queue_state";
+        COALESCE(d.paid_amount,0) AS paid_amount,CASE WHEN " . music_playable_sql($settings) . " THEN 'queued' ELSE 'skipped' END AS queue_state";
 }
 function music_order_sql(array $settings): string {
     return $settings['music_order'] === 'amount' ? 'COALESCE(d.paid_amount,0) DESC, q.id ASC' : 'q.id ASC';
@@ -146,6 +146,20 @@ function refresh_music_title(PDO $db, int $id, bool $fromHistory = false): ?stri
 
 function music_admin_action(PDO $db, array $in): void {
     $action = $in['action'];
+    if ($action === 'save_music_approval') {
+        $required = isset($in['music_require_approval']) ? 1 : 0;
+        $db->beginTransaction();
+        try {
+            // Serialize mode changes with the player's next-track selection.
+            $db->query('SELECT id FROM music_state WHERE id=1 FOR UPDATE')->fetchColumn();
+            $db->prepare('UPDATE donation_settings SET music_require_approval=? WHERE id=1')->execute([$required]);
+            $db->prepare('INSERT INTO admin_audit(action,detail,ip) VALUES(?,?,?)')->execute([
+                $action,json_encode(['music_require_approval'=>$required]),$_SERVER['REMOTE_ADDR'] ?? ''
+            ]);
+            $db->commit();
+        } catch (Throwable $error) { if ($db->inTransaction()) $db->rollBack(); throw $error; }
+        return;
+    }
     if ($action === 'save_donation_settings') {
         $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000],
             'music_min'=>[1000,50000000], 'music_seconds'=>[10,3600], 'music_volume'=>[0,100], 'music_opacity'=>[0,100],
@@ -230,7 +244,7 @@ function music_heartbeat(PDO $db, array $in): array {
         $db->prepare('UPDATE music_state SET owner=?,lease_until=DATE_ADD(NOW(),INTERVAL 12 SECOND) WHERE id=1')->execute([$owner]);
         $current = null;
         if ($state['current_id']) {
-            $query = $db->prepare("SELECT " . music_song_columns() . " FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id WHERE q.id=? FOR UPDATE");
+            $query = $db->prepare("SELECT " . music_song_columns($settings) . " FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id WHERE q.id=? FOR UPDATE");
             $query->execute([$state['current_id']]);
             $current = $query->fetch(PDO::FETCH_ASSOC) ?: null;
         }
@@ -254,17 +268,20 @@ function music_heartbeat(PDO $db, array $in): array {
             $current = null;
         }
         if (!$current && !$state['paused'] && $settings['music_enabled']) {
-            $query = $db->query("SELECT " . music_song_columns() . " FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
-                WHERE q.state='waiting' AND " . music_playable_sql() . " ORDER BY " . music_order_sql($settings) . ' LIMIT 1 FOR UPDATE');
+            $query = $db->query("SELECT " . music_song_columns($settings) . " FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
+                WHERE q.state='waiting' AND " . music_playable_sql($settings) . " ORDER BY " . music_order_sql($settings) . ' LIMIT 1 FOR UPDATE');
             $current = $query->fetch(PDO::FETCH_ASSOC) ?: null;
             if ($current) {
-                $db->prepare("UPDATE music_requests SET state='playing' WHERE id=?")->execute([$current['id']]);
+                // Accept only the selected song in automatic mode. Other waiting
+                // songs still need review if the administrator switches back.
+                $db->prepare("UPDATE music_requests SET state='playing',approved=1 WHERE id=?")->execute([$current['id']]);
                 $current['state'] = 'playing';
+                $current['approved'] = 1;
             }
         }
         $db->prepare('UPDATE music_state SET current_id=? WHERE id=1')->execute([$current ? $current['id'] : null]);
         $nextQuery = $db->query("SELECT q.id,q.video_id,q.title,COALESCE(d.name,'Quản trị viên') AS name FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
-            WHERE q.state='waiting' AND " . music_playable_sql() . " ORDER BY " . music_order_sql($settings) . ' LIMIT 1');
+            WHERE q.state='waiting' AND " . music_playable_sql($settings) . " ORDER BY " . music_order_sql($settings) . ' LIMIT 1');
         $next = $nextQuery->fetch(PDO::FETCH_ASSOC) ?: null;
         $db->commit();
         return ['untitled_id'=>music_untitled_id($db),'next'=>$next,'owner'=>true, 'paused'=>(bool)$state['paused'] || !$settings['music_enabled'], 'item'=>$current, 'settings'=>$settings];

@@ -44,8 +44,8 @@ def run():
                     except subprocess.CalledProcessError: time.sleep(.1)
                 sql('CREATE DATABASE layout_test CHARACTER SET utf8mb4',None)
                 sql((ROOT/'schema.sql').read_text(encoding='utf-8'))
-                # Emulate an installed version 12 without the new idle settings.
-                sql("ALTER TABLE donation_settings DROP COLUMN music_idle_enabled,DROP COLUMN music_idle_message; ALTER TABLE music_requests MODIFY donation_id INT NOT NULL,DROP COLUMN title_retry_at; UPDATE app_settings SET speech_schema_version=12,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
+                # Emulate v14 before configurable approval, with older optional fields missing.
+                sql("ALTER TABLE donation_settings DROP COLUMN music_require_approval,DROP COLUMN music_idle_enabled,DROP COLUMN music_idle_message; ALTER TABLE music_requests MODIFY donation_id INT NOT NULL,DROP COLUMN title_retry_at; UPDATE app_settings SET speech_schema_version=14,paused=1,speech_volume=.65,speech_template='{user}: {message}'")
                 for pattern in ['*.php','*.js','*.mjs','*.css','*.html']:
                     for source in ROOT.glob(pattern):
                         if source.name != 'config.php': shutil.copy2(source,site/source.name)
@@ -56,7 +56,8 @@ def run():
                 music_source=music_source.replace('function youtube_song_title(string $videoId): string {', "function youtube_song_title(string $videoId): string {\n    return $videoId === 'FWYrRSWabIs' ? '' : 'Fixture metadata ' . $videoId;")
                 (site/'music.php').write_text(music_source,encoding='utf-8')
                 speech_source=(site/'speech.php').read_text(encoding='utf-8')
-                provider_signature='function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null) {'
+                provider_signature='function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null, bool $refreshAudio = false) {'
+                assert provider_signature in speech_source, 'TTS fixture stub must match before starting tests'
                 (site/'speech.php').write_text(speech_source.replace(provider_signature,
                     provider_signature + '\n    return "/fixture-audio?text=" . rawurlencode($text);'), encoding='utf-8')
 
@@ -85,7 +86,8 @@ def run():
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 assert admin(dict(action='login',csrf=csrf,password=password))[0]==200
                 code,html=admin();assert code==200 and 'overlayPositionForm' in html
-                assert sql('SELECT speech_schema_version FROM app_settings')=='14'
+                assert sql('SELECT speech_schema_version FROM app_settings')=='15'
+                assert sql('SELECT music_require_approval FROM donation_settings')=='1'
                 assert sql('SELECT music_idle_enabled FROM donation_settings')=='0'
                 csrf=re.search(r'name="csrf" value="([a-f0-9]+)"',html)[1]
                 def request(path,body=None,headers=None):
@@ -163,6 +165,26 @@ def run():
                 sql("UPDATE music_requests SET title_retry_at=NOW()-INTERVAL 1 SECOND,video_id='9bZkp7q19f0' WHERE id="+str(missing['id']))
                 assert request('music-queue.php')[1]['items'][0]['title']=='Fixture metadata 9bZkp7q19f0'
                 assert admin(dict(action='music_remove',csrf=csrf,id=missing['id']))[0]==200
+                # Switching modes applies to waiting manual tracks without pre-approving them all.
+                mode=dict(action='save_music_approval',csrf=csrf)
+                assert admin(mode|dict(csrf='wrong'))[0]==403
+                assert sql('SELECT music_require_approval FROM donation_settings')=='1'
+                for video in ['dQw4w9WgXcQ','9bZkp7q19f0']:
+                    assert admin(dict(action='music_add',csrf=csrf,music_url='https://youtu.be/'+video))[0]==200
+                assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]['item'] is None
+                assert admin(mode)[0]==200
+                assert request('music-queue.php')[1]['approval_required'] is False
+                automatic=request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]
+                assert automatic['item']['video_id']=='dQw4w9WgXcQ' and automatic['next']['video_id']=='9bZkp7q19f0'
+                assert admin(mode|dict(music_require_approval='1'))[0]==200
+                continued=request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]
+                assert continued['item']['id']==automatic['item']['id'] and continued['next'] is None
+                waiting=request('music-queue.php')[1]['items'][1]
+                assert int(waiting['approved'])==0
+                assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32,id=automatic['item']['id'],event='ended'))[1]['item'] is None
+                assert admin(dict(action='music_approve',csrf=csrf,id=waiting['id']))[0]==200
+                assert request('music-overlay.php?k=layout-fixture-key',dict(owner='a'*32))[1]['item']['id']==waiting['id']
+                assert admin(dict(action='music_remove',csrf=csrf,id=waiting['id']))[0]==200
                 fixture="<?php require 'common.php'; donor_session(); $_SESSION['donor_id']=1; db()->prepare(\"INSERT IGNORE INTO donor_users(id,google_sub,email,email_hash,display_name) VALUES(1,'fixture','music@example.test',?,'Music donor')\")->execute([donor_hash('music@example.test')]); echo json_encode(['csrf'=>$_SESSION['donor_csrf']]);"
                 (site/'fixture.php').write_text(fixture,encoding='utf-8')
                 donor_csrf=request('fixture.php')[1]['csrf']
@@ -219,6 +241,17 @@ def run():
                 assert admin(dict(action='music_next',csrf=csrf))[0]==200
                 low=beat()['item'];assert low['paid_amount']==60000,low
                 assert beat(id=low['id'],event='error')['item'] is None
+                # Paid music also follows the mode, including switching while paused.
+                assert admin(dict(action='music_pause',csrf=csrf))[0]==200
+                assert admin(mode)[0]==200
+                auto_paid=create(60000)[1];assert pay(auto_paid,'music-auto',60000)[0]==200
+                assert beat()['item'] is None
+                assert admin(dict(action='music_resume',csrf=csrf))[0]==200
+                auto_song=beat()['item']
+                assert str(auto_song['donation_id'])==sql("SELECT id FROM donations WHERE tx_id='music-auto'")
+                assert admin(mode|dict(music_require_approval='1'))[0]==200
+                assert beat()['item']['id']==auto_song['id']
+                assert beat(id=auto_song['id'],event='ended')['item'] is None
                 under=create(60000)[1];assert pay(under,'music-under',30000)[0]==200
                 assert request('music-queue.php')[1]['items']==[]
                 assert sql("SELECT queue_state FROM donations WHERE tx_id='music-under'")=='held'
@@ -438,7 +471,7 @@ def run():
                 assert result.returncode == 1 and b'removed 1 unpaid' in result.stdout, result.stderr
                 assert sql('SELECT GROUP_CONCAT(id ORDER BY id) FROM donations WHERE id IN (779,780,781)') == '780,781'
                 print(browser.stdout.strip())
-                print('PASS: v12 migration, manual music without payment records, title caching/retry, music alerts, idle settings, payment queue, order, lease fencing, playback controls and duration limit')
+                print('PASS: v14 migration, approval/automatic modes for manual and paid music, CSRF, switching while playing/paused, title caching/retry, music alerts, payment queue, order, leases and controls')
             finally:
                 for process in reversed(processes):
                     process.terminate();process.wait(timeout=20)

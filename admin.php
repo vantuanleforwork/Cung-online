@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 roulette_save(db(), $_POST);
                 $_SESSION['flash'] = 'Đã lưu vòng quay.';
                 redirect_admin('roulette');
-            } elseif (in_array($action, ['save_donation_settings','music_pause','music_resume','music_next','music_remove','music_add','music_approve'], true)) {
+            } elseif (in_array($action, ['save_donation_settings','save_music_approval','music_pause','music_resume','music_next','music_remove','music_add','music_approve'], true)) {
                 music_admin_action(db(), $_POST);
                 $_SESSION['flash'] = 'Đã cập nhật cài đặt / hàng đợi nhạc.';
                 redirect_admin($action === 'save_donation_settings' ? 'donate' : 'music');

@@ -91,7 +91,7 @@
       const response = await fetch('music-queue.php',{cache:'no-store'});
       if (!response.ok) throw new Error('Chưa tải được hàng đợi nhạc.');
       const data = await response.json();
-      const items = JSON.stringify(data.items);
+      const items = JSON.stringify([data.items,data.approval_required]);
       if (items !== queueItems) {
         const list = document.getElementById('musicQueueList');
         const rows = data.items.map(song => {
@@ -100,7 +100,7 @@
           const link = state.musicLink(song.video_id, song.title || 'Đang lấy tên bài…');
           const person = document.createElement('small'); person.textContent = song.donation_id === null ? 'Thêm bởi quản trị viên' : song.name+' · '+Number(song.paid_amount).toLocaleString('vi-VN')+'đ';
           text.append(link,person);
-          const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : (!Number(song.approved) ? 'Chờ duyệt' : 'Chờ phát');
+          const badge = document.createElement('span'); badge.textContent = song.state === 'playing' ? 'Đang phát' : (data.approval_required!==false&&!Number(song.approved) ? 'Chờ duyệt' : 'Chờ phát');
           row.append(text,badge);
           return row;
         });

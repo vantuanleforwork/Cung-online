@@ -39,6 +39,18 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
   assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
   const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'music-admin-'+width+'-033.png'),Buffer.from(shot.data,'base64'));
  }
+ await send('Page.navigate',{url:base+'/admin.php?view=music'});
+ for(let i=0;i<100;i++){if(await evaluate('!!document.querySelector("[name=music_require_approval]")'))break;await wait(50)}
+ assert.equal(await evaluate('document.querySelector("[name=music_require_approval]").checked'),true);
+ assert(await evaluate('document.querySelector("[name=music_require_approval]").labels[0].textContent.includes("Phê duyệt trước khi phát nhạc")'));
+ await evaluate('(()=>{const control=document.querySelector("[name=music_require_approval]");control.click();control.form.querySelector("button[type=submit]").click()})()');
+ for(let i=0;i<100;i++){if(await evaluate('document.body.textContent.includes("Chế độ hiện tại: Tự động phát")'))break;await wait(50)}
+ assert.equal(await evaluate('document.querySelector("[name=music_require_approval]").checked'),false);
+ assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
+ const approvalShot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'music-approval-mobile.png'),Buffer.from(approvalShot.data,'base64'));
+ await evaluate('(()=>{const control=document.querySelector("[name=music_require_approval]");control.click();control.form.querySelector("button[type=submit]").click()})()');
+ for(let i=0;i<100;i++){if(await evaluate('document.body.textContent.includes("Chế độ hiện tại: Cần phê duyệt")'))break;await wait(50)}
+ assert.equal(await evaluate('document.querySelector("[name=music_require_approval]").checked'),true);
  await send('Page.navigate',{url:base+'/index.html'});
  for(let i=0;i<100;i++){if(await evaluate('!!window.CungDonate?.ready'))break;await wait(50)}
  assert(await evaluate('CungDonate.ready'));
@@ -151,7 +163,8 @@ process.on('beforeExit',()=>{if(!completed)process.exitCode=1});
  assert.deepEqual(await evaluate('alertEvents'),[{url:'uploads/donate-sound.mp3?v=0123456789abcdef',stage:false,wheel:false},'ended']);
  assert.deepEqual(await evaluate('fixtureBells'),[0.4]);
  assert.equal(await evaluate('Math.round(playedVolume*100)'),28);
- assert(await evaluate('ttsRequests.length===1&&ttsRequests[0].alertEnded&&ttsRequests[0].payload.roulette_preview===true&&!ttsRequests[0].reveal.includes("Ô trúng")'));
+ // Speech preparation overlaps the alert; actual reading still waits for the wheel result.
+ assert(await evaluate('ttsRequests.length===1&&!ttsRequests[0].alertEnded&&ttsRequests[0].payload.roulette_preview===true&&!ttsRequests[0].reveal.includes("Ô trúng")'));
  assert(await evaluate('reads[0].text.includes("và nhận được Thêm một thử thách")&&reads[0].reveal==="Ô trúng · Thêm một thử thách"&&reads[0].audio==="/fixture-audio"&&reads[0].stage&&!reads[0].wheel'));
  assert(await evaluate('(()=>{const img=document.querySelector("blockquote + #donorSkin");return !img.hidden&&img.alt==="Naruto"&&img.src.endsWith("/assets/skins/naruto.gif")})()'));
  assert.deepEqual(errors,[]);completed=true;console.log('PASS: real admin music settings tab, live idle preview, mobile layout, idle-to-manual playback transition, music alerts and index validation');await send('Browser.close').catch(()=>{});

@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS donation_settings (
         music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
         music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
         music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1,
+        music_require_approval TINYINT NOT NULL DEFAULT 1,
         music_idle_enabled TINYINT NOT NULL DEFAULT 0,
         music_idle_message VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;
