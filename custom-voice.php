@@ -132,7 +132,7 @@ function custom_audio_result(array $data) {
     }
     return $url;
 }
-function custom_audio(PDO $db, string $text, array $options, ?string $overrideKey = null, ?callable $transport = null) {
+function custom_audio(PDO $db, string $text, array $options, ?string $overrideKey = null, ?callable $transport = null, bool $refreshAudio = false) {
     $apiKey = $overrideKey ?: custom_api_key($db, $options['custom_api_url']);
     if ($apiKey === '') throw new SpeechProviderException('Nhập API key cho Custom API Voice trong admin. Khi đổi API URL, cần nhập lại key.');
     if (mb_strlen($text) > 4500) throw new SpeechProviderException('Câu đọc quá dài. Rút gọn mẫu câu trước khi tạo giọng.');
@@ -164,15 +164,18 @@ function custom_audio(PDO $db, string $text, array $options, ?string $overrideKe
             return null;
         }
         $s = $db->prepare('SELECT state,audio_url,task_id,(created_at<NOW()-INTERVAL 5 MINUTE) AS timed_out FROM tts_audio_cache WHERE cache_key=?'); $s->execute([$cache]); $row = $s->fetch(PDO::FETCH_ASSOC);
-        if ($row['state'] === 'ready') return $row['audio_url'];
+        // A provider URL may expire while the completed task remains cached.
+        // Fetch its existing history again; never submit another paid task.
+        $refreshReady = $refreshAudio && $row['state'] === 'ready' && !empty($row['task_id']);
+        if ($row['state'] === 'ready' && !$refreshReady) return $row['audio_url'];
         if ($row['state'] === 'failed') {
             $db->prepare("DELETE FROM tts_audio_cache WHERE cache_key=? AND state='failed'")->execute([$cache]);
             return null;
         }
-        if ($row['timed_out']) throw new SpeechProviderException('Tác vụ Custom API chờ quá 5 phút. Kiểm tra lịch sử dịch vụ trước khi thử lại.');
-        if ($row['state'] !== 'pending' || !$row['task_id']) return null;
-        $s = $db->prepare("UPDATE tts_audio_cache SET next_poll_at=NOW()+INTERVAL 1 SECOND WHERE cache_key=? AND state='pending' AND next_poll_at<=NOW()"); $s->execute([$cache]);
-        if ($s->rowCount() === 0) return null;
+        if (!$refreshReady && $row['timed_out']) throw new SpeechProviderException('Tác vụ Custom API chờ quá 5 phút. Kiểm tra lịch sử dịch vụ trước khi thử lại.');
+        if (!$refreshReady && ($row['state'] !== 'pending' || !$row['task_id'])) return null;
+        $s = $db->prepare("UPDATE tts_audio_cache SET next_poll_at=NOW()+INTERVAL 1 SECOND WHERE cache_key=? AND state IN ('pending','ready') AND (next_poll_at IS NULL OR next_poll_at<=NOW())"); $s->execute([$cache]);
+        if ($s->rowCount() === 0) return $refreshReady ? $row['audio_url'] : null;
         // Only GET history here. Repeated polling must never create a second paid task.
         [$status, $data] = $http($options['custom_api_url'], '/history/' . rawurlencode($row['task_id']), $apiKey, 'GET', null);
         $url = custom_audio_result($data);
@@ -181,7 +184,7 @@ function custom_audio(PDO $db, string $text, array $options, ?string $overrideKe
         return $url;
     } catch (Throwable $e) {
         // Transient GET errors retain the existing task so the next request can resume polling.
-        if ($owner || isset($data) && ($data['status'] ?? '') === 'failed' || isset($row) && $row['timed_out']) {
+        if ($owner || isset($data) && ($data['status'] ?? '') === 'failed' || isset($row) && $row['timed_out'] && empty($refreshReady)) {
             $db->prepare("UPDATE tts_audio_cache SET state='failed' WHERE cache_key=?")->execute([$cache]);
         }
         throw $e;

@@ -49,17 +49,22 @@
       });
     }
   }
-  async function audioRead(data,signal){
+  async function audioRead(data,signal,loadTimeoutMs,refreshAudio){
     if(!data.audio_url)throw new Error('File giọng đọc chưa sẵn sàng. Hãy thử lại sau vài giây.');
     const base=new URL(global.location?.href||'https://localhost/');
-    const url=new URL(data.audio_url,base);
-    if(url.protocol!=='https:'&&!(url.protocol==='http:'&&url.origin===base.origin))throw new Error('Đường dẫn âm thanh không hợp lệ.');
-    const deadline=Date.now()+120000;
+    function audioUrl(){
+      const url=new URL(data.audio_url,base);
+      if(url.protocol!=='https:'&&!(url.protocol==='http:'&&url.origin===base.origin))throw new Error('Đường dẫn âm thanh không hợp lệ.');
+      return url.href;
+    }
+    audioUrl();
+    const deadline=Date.now()+loadTimeoutMs;
+    let refreshed=false;
     while(Date.now()<deadline){
       if(signal.aborted)throw aborted();
       try{
         await new Promise((resolve,reject)=>{
-          const audio=new Audio(url.href);audio.volume=data.speech.volume;
+          const audio=new Audio(audioUrl());audio.volume=data.speech.volume;
           let playing=false,settled=false;
           const done=error=>{
             if(settled)return;settled=true;clearTimeout(timer);signal.removeEventListener('abort',cancel);
@@ -67,7 +72,7 @@
             if(error){error.playing=playing;reject(error)}else resolve();
           };
           const cancel=()=>done(aborted());
-          let timer=setTimeout(()=>done(new Error('Âm thanh chưa tải xong.')),15000);
+          let timer=setTimeout(()=>done(new Error('Âm thanh chưa tải xong.')),Math.min(8000,Math.max(1,deadline-Date.now())));
           audio.onplaying=()=>{playing=true;clearTimeout(timer);timer=setTimeout(()=>done(new Error('File giọng đọc quá dài hoặc bị gián đoạn.')),180000)};
           audio.onended=()=>done();audio.onerror=()=>done(new Error('File giọng đọc đang được tạo hoặc không tải được.'));
           signal.addEventListener('abort',cancel,{once:true});
@@ -78,18 +83,23 @@
         if(error.name==='AbortError'||error.playing)throw error;
         if(error.name==='NotAllowedError')throw new Error('Âm thanh đang bị chặn. Bấm Bật tiếng / nghe thử trong trang overlay.');
         if(Date.now()+2000>=deadline)throw new Error('Chưa tải được file giọng đọc. Kiểm tra kết nối và dịch vụ TTS trong admin.');
+        if(!refreshed&&refreshAudio){
+          refreshed=true;
+          try{await refreshAudio(deadline-Date.now())}catch(refreshError){if(signal.aborted)throw aborted()}
+        }
+        if(Date.now()+2000>=deadline)throw new Error('Chưa tải được file giọng đọc. Kiểm tra kết nối và dịch vụ TTS trong admin.');
         await wait(2000,signal);
       }
     }
   }
-  async function read(data,{signal}={}){
+  async function read(data,{signal,loadTimeoutMs=12000,refreshAudio}={}){
     stop();
     if(!data.speech?.enabled||data.speech.volume===0)return;
     const controller=new AbortController();active=controller;
     const cancel=()=>controller.abort();signal?.addEventListener('abort',cancel,{once:true});
     try{
       if(signal?.aborted)throw aborted();
-      if(['fpt','elevenlabs','custom_api'].includes(data.speech.provider))await audioRead(data,controller.signal);
+      if(['fpt','elevenlabs','custom_api'].includes(data.speech.provider))await audioRead(data,controller.signal,Math.max(1000,Math.min(30000,Number(loadTimeoutMs)||12000)),refreshAudio);
       else await browserRead(data,controller.signal);
     }finally{signal?.removeEventListener('abort',cancel);if(active===controller)active=null}
   }

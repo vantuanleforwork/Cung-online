@@ -35,6 +35,10 @@ $db->prepare('UPDATE tts_audio_cache SET next_poll_at=NOW()-INTERVAL 1 SECOND WH
 check(custom_audio($db,$text,$options,'mock-custom-key',$transport)==='https://api.vibi.pro/audio/task-123.mp3','Nested result URL');
 custom_audio($db,$text,$options,'mock-custom-key',$transport);
 check(count($calls)===3 && count(array_filter($calls,function($call){return $call[2]==='POST';}))===1,'Completed task cache');
+// An old cached URL can be renewed from the existing task without billing another POST.
+$db->prepare("UPDATE tts_audio_cache SET created_at=NOW()-INTERVAL 1 DAY,next_poll_at=NOW()-INTERVAL 1 SECOND,audio_url='https://api.vibi.pro/audio/expired.mp3' WHERE cache_key=?")->execute([$key]);
+check(custom_audio($db,$text,$options,'mock-custom-key',$transport,true)==='https://api.vibi.pro/audio/task-123.mp3','Refresh expired URL from completed history');
+check(count($calls)===4 && count(array_filter($calls,function($call){return $call[2]==='POST';}))===1,'Refresh must not create another paid task');
 check($calls[0][1]==='/text-to-speech/FixtureVoice' && $calls[1][1]==='/history/task-123','Documented routes');
 check(custom_audio_result(['status'=>'completed','audio_url'=>'https://api.vibi.pro/audio/root.mp3'])!==null,'Top-level URL compatibility');
 foreach([['status'=>'failed'],['status'=>'completed','result'=>['audio_url'=>'javascript:bad']]] as $bad) {

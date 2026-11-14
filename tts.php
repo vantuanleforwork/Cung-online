@@ -50,7 +50,7 @@ try {
             $row['roulette'] = roulette_spin($db, (int)$row['id']);
         }
     }
-    $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row));
+    $url = provider_audio($db, speech_text($row, $settings), speech_options_for_donation($settings, $row), null, null, ($in['refresh_audio'] ?? false) === true);
     respond($url === null ? 202 : 200, ['audio_url' => $url]);
 } catch (Throwable $e) {
     error_log('TTS: ' . $e->getMessage());

@@ -10,15 +10,20 @@ function sleep(ms,signal){
     signal?.addEventListener('abort',cancel,{once:true});
   });
 }
-function notice(text){$('audioTools').hidden=false;$('notice').textContent=text}
-function noticeError(error,fallback){
+let noticeKind='';
+function notice(text,kind='general'){noticeKind=kind;$('audioTools').hidden=false;$('notice').textContent=text}
+function clearNotice(kind){
+  if(noticeKind!==kind)return;
+  noticeKind='';$('notice').textContent='';$('audioTools').hidden=params.get('controls')!=='1';
+}
+function noticeError(error,fallback,kind='general'){
   const message=String(error?.message||'');
   const text=error?.name==='AbortError'||/signal is aborted|aborted without reason/i.test(message)?fallback:(message||fallback);
-  notice(text);
+  notice(text,kind);
 }
-async function request(url,body={},signal){
+async function request(url,body={},signal,timeoutMs=25000){
   const started=Date.now();
-  const controller=new AbortController(),cancel=()=>controller.abort(),timer=setTimeout(cancel,25000);
+  const controller=new AbortController(),cancel=()=>controller.abort(),timer=setTimeout(cancel,timeoutMs);
   signal?.addEventListener('abort',cancel,{once:true});
   try{
     if(signal?.aborted)cancel();
@@ -113,16 +118,16 @@ async function prepareSpeech(d,signal){
     throw new Error('Chọn giọng đọc qua API trong quản trị để đọc lượt quay trên OBS.');
   }
   if(apiSpeech(d)){
-    const deadline=Date.now()+(d.speech.provider==='custom_api'?180000:45000);
+    const deadline=Date.now()+(preview?180000:20000);
     while(!d.audio_url){
       if(Date.now()>deadline)throw new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
       const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
       if(preview&&d.roulette)ttsPayload.roulette_preview=true;
-      const {response,data}=await request('tts.php',ttsPayload,signal);
+      const {response,data}=await request('tts.php',ttsPayload,signal,Math.max(1,Math.min(25000,deadline-Date.now())));
       if(data.disabled)return false;
       if(!response.ok)throw new Error(data.error||'Không tạo được giọng đọc.');
       d.audio_url=data.audio_url;
-      if(!d.audio_url)await sleep(600,signal);
+      if(!d.audio_url)await sleep(1000,signal);
     }
   }
   return true;
@@ -130,9 +135,12 @@ async function prepareSpeech(d,signal){
 async function speak(d,signal,ready){
   if(!d.speech?.enabled||d.speech.volume===0)return;
   $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
-  if(!await (ready ?? prepareSpeech(d,signal)))return;
+  if(!await (ready ?? prepareSpeech(d,signal))){$('speechLabel').textContent='LỜI NHẮN';return}
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
-  try{await CungSpeech.read(d,{signal})}
+  try{await CungSpeech.read(d,{signal,loadTimeoutMs:preview?30000:12000,refreshAudio:preview?null:async remaining=>{
+    const {response,data}=await request('tts.php',{id:d.id,claim_token:d.claim_token,refresh_audio:true},signal,Math.min(5000,remaining));
+    if(response.ok&&data.audio_url)d.audio_url=data.audio_url;
+  }});clearNotice('speech')}
   finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI NHẮN'}
 }
 async function play(d){
@@ -140,26 +148,18 @@ async function play(d){
   $('stage').classList.remove('is-visible');
   if(!d.roulette)render(d);
 
-  // Nạp trước giọng đọc chạy ngầm song song với hoạt ảnh mở đầu (intro fx) để không phải chờ đợi
-  if(!d.roulette&&!d.audio_url&&d.speech?.enabled&&d.speech.volume>0&&apiSpeech(d)){
-    const preloadPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
-    request('tts.php',preloadPayload,lease.signal).then(({response,data})=>{
-      if(response?.ok&&data?.audio_url)d.audio_url=data.audio_url;
-    }).catch(()=>{});
-  }
-
   try{
+    // One preparation task per donation, shared by preload and playback.
+    const ready=prepareSpeech(d,lease.signal).catch(error=>{
+      if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc donate. Bỏ qua giọng để tiếp tục hàng đợi.','speech');
+      return false;
+    });
     await globalThis.CungSFX?.donateAlert?.(d.donate_sound_url,lease.signal,{
       useTing:!!d.roulette||donationTier(d)===1,
       bellAllowed:Number(d.paid_amount)>=50000,
       level:Number(d.donate_sound_volume??100)/100
     });
-    let ready;
     if(d.roulette){
-      ready=prepareSpeech(d,lease.signal).catch(error=>{
-        if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc donate.');
-        return false;
-      });
       await globalThis.CungRoulette.play(d.roulette,lease.signal);
     }else{
       await (globalThis.playTierIntro||playTierIntro)(d,lease.signal);
@@ -172,27 +172,47 @@ async function play(d){
     await sleep(700,lease.signal);
     const reading=speak(d,lease.signal,ready).catch(error=>{
       if(lease.signal.aborted)throw error;
-      noticeError(error,'Không phát được giọng đọc.');
+      noticeError(error,'Không phát được giọng đọc.','speech');
     });
     await Promise.all([sleep(displaySeconds(d)*1000,lease.signal),reading]);
     if(lease.signal.aborted)return false;
     if(!preview){$('stage').classList.remove('is-visible');await sleep(700,lease.signal)}
+    // Keep renewing the claim during acknowledgement retries, otherwise an
+    // expired lease can let another OBS source replay an already completed alert.
+    if(!preview){rememberCompletion(d);await acknowledge(d,lease.signal)}
     return true;
   }catch(error){
     $('stage').classList.remove('is-visible');
-    if(!preview)notice('Kết nối giữ lượt bị gián đoạn. Lượt chưa xác nhận sẽ được phát lại.');
+    if(!preview)notice('Kết nối giữ lượt bị gián đoạn. Đang kết nối lại hàng đợi.','queue');
     return false;
   }finally{if(!preview)showDonorSkin(null);lease.close();CungSpeech.stop();$('speechState').classList.remove('is-speaking')}
 }
 globalThis.play=play;
-async function acknowledge(d){
+const completionKey='cung-overlay-completed:'+K;
+let completedDonation=null;
+function rememberCompletion(d){
+  completedDonation={id:d.id,claim_token:d.claim_token};
+  try{sessionStorage.setItem(completionKey,JSON.stringify(completedDonation))}catch(error){}
+}
+function pendingCompletion(){
+  try{return completedDonation||JSON.parse(sessionStorage.getItem(completionKey)||'null')}catch(error){return completedDonation}
+}
+async function acknowledge(d,signal){
   for(;;){
+    let result;
     try{
-      const {response,data}=await request('ack.php',{id:d.id,claim_token:d.claim_token});
-      if((response.ok&&data.success)||response.status===409)return;
-      if(response.status===403){notice('Khóa overlay không đúng. Kiểm tra lại đường dẫn trong OBS.');return}
-    }catch(error){}
-    await sleep(2000);
+      result=await request('ack.php',{id:d.id,claim_token:d.claim_token},signal);
+    }catch(error){if(signal?.aborted)throw error}
+    if(result){
+      const {response,data}=result;
+      if((response.ok&&data.success)||response.status===409){
+        completedDonation=null;
+        try{sessionStorage.removeItem(completionKey)}catch(error){}
+        return;
+      }
+      if(response.status===403)throw new Error('Khóa overlay không đúng. Kiểm tra lại đường dẫn trong OBS.');
+    }
+    await sleep(2000,signal);
   }
 }
 async function getDemo(){
@@ -253,11 +273,15 @@ async function loop(){
     if(busy){await sleep(250);continue}
     busy=true;
     try{
+      // Recover a completed alert after an OBS reload before claiming any item.
+      const completed=pendingCompletion();
+      if(completed)await acknowledge(completed);
       const {response,data,elapsed}=await request('poll.php');
       if(response.status===403){notice('Khóa overlay không đúng. Kiểm tra OVERLAY_KEY trong đường dẫn.');return}
       if(!response.ok)throw new Error('Chưa kết nối được hàng đợi. Kiểm tra cấu hình và migration 003.');
-      for(const d of data){d.lease_remaining_ms=Math.max(0,(Number(d.lease_seconds)||60)*1000-elapsed);if(await (globalThis.play||play)(d))await acknowledge(d)}
-    }catch(error){noticeError(error,'Mất kết nối hàng đợi, đang thử lại…')}
+      clearNotice('queue');
+      for(const d of data){d.lease_remaining_ms=Math.max(0,(Number(d.lease_seconds)||60)*1000-elapsed);await (globalThis.play||play)(d)}
+    }catch(error){noticeError(error,'Mất kết nối hàng đợi, đang thử lại…','queue')}
     finally{busy=false}
     await sleep(2000);
   }

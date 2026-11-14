@@ -331,11 +331,12 @@ def run():
             assert 'năm mươi nghìn đồng' in playing['speech_text']
             assert 'Safe message' in playing['speech_text']
             assert 'API_KEY' not in json.dumps(playing)
-            assert request('renew.php',playing) == (200,{'success':True})
-            invalid_claim = dict(playing,claim_token='a'*64)
+            claim = {key: playing[key] for key in ('id','claim_token')}
+            assert request('renew.php',claim) == (200,{'success':True})
+            invalid_claim = dict(claim,claim_token='a'*64)
             assert request('renew.php',invalid_claim)[0] == 409
             sql(f"UPDATE donations SET claimed_until=NOW()-INTERVAL 1 SECOND WHERE id={donation_id}")
-            assert request('renew.php',playing)[0] == 409
+            assert request('renew.php',claim)[0] == 409
             # Reclaim and continue the existing state checks with the new token.
             playing = request('poll.php', {})[1][0]
             assert api('status.php', {'status_token':order['status_token']})[1]['state'] == 'playing'

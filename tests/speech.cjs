@@ -5,17 +5,18 @@ const speechSource=fs.readFileSync(path.join(root,'speech-runtime.js'),'utf8');
 const overlaySource=fs.readFileSync(path.join(root,'overlay.js'),'utf8');
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve()};
 
-function engine({voices=[{lang:'vi-VN',name:'Vietnamese'}],automatic=true,blockedAudio=false}={}){
+function engine({voices=[{lang:'vi-VN',name:'Vietnamese'}],automatic=true,blockedAudio=false,clock,failedAudio=false,staleAudio=false}={}){
   const spoken=[];let cancelled=0;
   class Utterance{constructor(text){this.text=text}}
   class Audio{
     constructor(url){this.url=url}
     play(){if(blockedAudio)return Promise.reject(new DOMException('blocked','NotAllowedError'));
-      queueMicrotask(()=>{this.onplaying?.();this.onended?.()});return Promise.resolve()}
+      queueMicrotask(()=>{if(failedAudio||staleAudio&&this.url.includes('stale'))this.onerror?.();else{this.onplaying?.();this.onended?.()}});return Promise.resolve()}
     pause(){}removeAttribute(){}load(){}
   }
   const context=vm.createContext({AbortController,DOMException,URL,Audio,SpeechSynthesisUtterance:Utterance,
-    setTimeout:(fn,ms)=>setTimeout(fn,ms===150?0:ms),clearTimeout,
+    Date:clock?{now:()=>clock.now}:Date,
+    setTimeout:clock?clock.setTimeout.bind(clock):(fn,ms)=>setTimeout(fn,ms===150?0:ms),clearTimeout:clock?clock.clearTimeout.bind(clock):clearTimeout,
     speechSynthesis:{getVoices:()=>voices,cancel:()=>cancelled++,speak:utterance=>{
       spoken.push(utterance);if(automatic)queueMicrotask(()=>utterance.onend?.());
     }}});
@@ -35,7 +36,7 @@ class Clock{
     this.now=end;await flush();
   }
 }
-function overlay(search){
+function overlay(search,{ttsPending=false}={}){
   const clock=new Clock(),elements=new Map(),calls=[];
   const get=id=>{
     if(!elements.has(id)){
@@ -44,18 +45,28 @@ function overlay(search){
         replaceChildren(){this.children=[]},append(child){this.children.push(child)},setAttribute(){},removeAttribute(){},addEventListener(){}});
     }return elements.get(id);
   };
-  let finishReading,renewStatus=200,stopped=0;
+  let finishReading,renewStatus=200,ackFailures=0,stopped=0,ttsCalls=0;
+  const stored=new Map();
   const context=vm.createContext({URLSearchParams,AbortController,DOMException,location:{search},Date:{now:()=>clock.now},
     document:{getElementById:get,body:get('body'),querySelectorAll:()=>[]},window:{addEventListener(){}},
     setTimeout:clock.setTimeout.bind(clock),clearTimeout:clock.clearTimeout.bind(clock),
+    sessionStorage:{getItem:key=>stored.get(key)||null,setItem:(key,value)=>stored.set(key,value),removeItem:key=>stored.delete(key)},
     CungSpeech:{stop:()=>stopped++,read:(data,{signal}={})=>new Promise((resolve,reject)=>{
       finishReading=resolve;signal?.addEventListener('abort',()=>reject(new DOMException('lost','AbortError')),{once:true});
     })},
-    fetch:async(url)=>{calls.push(url);return {ok:renewStatus===200,status:renewStatus,json:async()=>({success:renewStatus===200})}}});
+    fetch:async(url)=>{
+      calls.push(url);
+      let status=200,data={success:true};
+      if(url.startsWith('renew.php')){status=renewStatus;data={success:status===200}}
+      if(url.startsWith('ack.php')&&ackFailures-->0){status=503;data={success:false}}
+      if(url.startsWith('tts.php')){ttsCalls++;data=ttsPending||ttsCalls===1?{audio_url:null}:{audio_url:'https://example.org/voice.mp3'}}
+      return {ok:status===200,status,headers:new Headers({'Content-Type':'application/json'}),json:async()=>data};
+    }});
   vm.runInContext(overlaySource,context);
-  return {context,get,clock,calls,setRenew:status=>{renewStatus=status},finish:()=>finishReading(),get stopped(){return stopped}};
+  return {context,get,clock,calls,stored,setAckFailures:count=>{ackFailures=count},setRenew:status=>{renewStatus=status},finish:()=>finishReading(),get stopped(){return stopped}};
 }
 
+const watchdog=setTimeout(()=>{throw new Error('Speech test did not complete; unresolved playback or ACK promise')},15000);
 (async()=>{
   const data={speech_text:'Nguyễn Văn An đã thắp hương mười nghìn đồng. Với lời nhắn: Bình an.',
     speech:{enabled:true,provider:'browser',rate:.9,volume:.7}};
@@ -74,6 +85,16 @@ function overlay(search){
   await engine().api.read({...audioData,speech:{...audioData.speech,provider:'custom_api'}});
   await assert.rejects(engine({blockedAudio:true}).api.read(audioData),/âm thanh đang bị chặn/i);
   await assert.rejects(engine().api.read({...audioData,audio_url:'http://unsafe.example/test.mp3'}),/không hợp lệ/);
+  const failedClock=new Clock(),failed=engine({clock:failedClock,failedAudio:true});
+  let failedError;
+  const failedRead=failed.api.read(audioData).catch(error=>{failedError=error});
+  await flush();await failedClock.advance(12000);await failedRead;
+  assert.match(failedError.message,/Chưa tải được file giọng đọc/);
+  assert(failedClock.now<=12000);assert.equal(failedClock.tasks.size,0);
+  const refreshClock=new Clock(),stale=engine({clock:refreshClock,staleAudio:true});
+  const freshData={...audioData,audio_url:'https://example.org/stale.mp3'};let refreshed=0;
+  const recovered=stale.api.read(freshData,{refreshAudio:async()=>{refreshed++;freshData.audio_url='https://example.org/fresh.mp3'}});
+  await flush();await refreshClock.advance(2000);await recovered;assert.equal(refreshed,1);
 
   const preview=overlay('?preview=1');await flush();
   assert.equal(preview.calls.length,0); // Preview does not touch queue APIs.
@@ -98,5 +119,29 @@ function overlay(search){
   const delayed=overlay('');delayed.context.testDonation={...donation,lease_remaining_ms:2000};
   const expired=vm.runInContext('play(testDonation)',delayed.context);
   await flush();assert.equal(await expired,false);assert.equal(delayed.calls.length,0);
-  console.log('PASS: Vietnamese voice/chunks, mute, cancellation, MP3/autoplay errors, preview isolation, wait for speech, heartbeat loss stops playback');
-})().catch(error=>{console.error(error);process.exitCode=1});
+  const retry=overlay('');retry.setAckFailures(10);retry.context.testDonation=donation;
+  const confirmed=vm.runInContext('play(testDonation)',retry.context);
+  await flush();await retry.clock.advance(700);retry.finish();await flush();await retry.clock.advance(8700);
+  assert.equal(retry.stored.size,1); // Completed alert survives an OBS reload before ACK.
+  await retry.clock.advance(22000);
+  assert.equal(await confirmed,true);
+  assert(retry.calls.some(url=>url.startsWith('renew.php'))); // Lease stays alive while ACK fails.
+  assert.equal(retry.stored.size,0);
+  const restored=overlay('');restored.stored.set('cung-overlay-completed:',JSON.stringify({id:1,claim_token:donation.claim_token}));
+  const pending=vm.runInContext('pendingCompletion()',restored.context);
+  await restored.context.acknowledge(pending);
+  assert.equal(restored.stored.size,0);assert.equal(restored.calls.length,1);assert(restored.calls[0].startsWith('ack.php'));
+  const slow=overlay('',{ttsPending:true});slow.context.testDonation={...donation,speech:{...donation.speech,provider:'custom_api'}};
+  const skipped=vm.runInContext('play(testDonation)',slow.context);
+  await flush();await slow.clock.advance(22000);
+  assert.equal(await skipped,true);assert(slow.calls.some(url=>url.startsWith('ack.php')));
+  assert.equal(slow.get('speechLabel').textContent,'LỜI NHẮN');
+  assert(slow.calls.filter(url=>url.startsWith('tts.php')).length<=21);
+  assert.equal(slow.clock.tasks.size,0);
+  const preload=overlay('?preview=1');preload.context.testDonation={...donation,speech:{...donation.speech,provider:'custom_api'}};
+  const prepared=vm.runInContext('play(testDonation)',preload.context);
+  await flush();assert.equal(preload.calls.filter(url=>url.startsWith('tts.php')).length,1);
+  await preload.clock.advance(1000);preload.finish();await flush();await preload.clock.advance(8000);
+  assert.equal(await prepared,true);assert.equal(preload.calls.filter(url=>url.startsWith('tts.php')).length,2);
+  console.log('PASS: Vietnamese voice, MP3 retry deadline and stale URL recovery, shared TTS preload, slow TTS skips speech, preview isolation, lease loss, ACK retries with heartbeat and reload recovery');
+})().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>clearTimeout(watchdog));

@@ -22,6 +22,7 @@ try {
     $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,d.user_id,{$voiceSelect}
         (d.paid_amount >= d.required_amount) AS spin_eligible,
         (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
+        (SELECT q.title FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_title,
         COALESCE(NULLIF(u.custom_avatar_path,''),NULLIF(u.google_avatar_url,''),NULLIF(d.donor_avatar,'')) AS donor_avatar,
         (d.claimed_until > NOW()) AS active_claim FROM donations d LEFT JOIN donor_users u ON u.id=d.user_id
         WHERE d.status='paid' AND d.shown=0 AND d.queue_state='queued' ORDER BY d.id LIMIT 1 FOR UPDATE")
@@ -33,10 +34,6 @@ try {
        ->execute([$token, $row['id']]);
     $db->commit();
     unset($row['active_claim']);
-    if ($row['donation_kind'] === 'music' && $row['music_request_id']) {
-        try { $row['music_title'] = refresh_music_title($db,(int)$row['music_request_id']); }
-        catch (Throwable $ignore) { $row['music_title'] = ''; }
-    }
 
     $row['donor_level'] = 0;
     if ($row['user_id']) {
@@ -64,14 +61,9 @@ try {
     unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
-    if (empty($row['roulette']) && $settings['speech_enabled'] && in_array($row['speech']['provider'], ['fpt','elevenlabs','custom_api'], true)) {
-        try {
-            $audioUrl = provider_audio($db, $row['speech_text'], $row['speech']);
-            if ($audioUrl) {
-                $row['audio_url'] = $audioUrl;
-            }
-        } catch (Throwable $ignore) {}
-    }
+    // Return the claim immediately. External TTS/title requests can outlive the
+    // OBS request timeout, leaving an unseen claim blocking the whole queue.
+    // The overlay prepares speech via tts.php while it displays the donation.
     echo json_encode([$row], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     if ($db->inTransaction()) $db->rollBack();

@@ -118,7 +118,7 @@ function speech_options_for_donation(array $settings, array $donation) {
     }
     return $options;
 }
-function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null) {
+function provider_audio(PDO $db, string $text, array $options, ?string $elevenKey = null, ?string $customKey = null, bool $refreshAudio = false) {
     $voiceId = trim((string)($options['custom_voice_id'] ?: $options['eleven_voice_id'] ?: ''));
     $isUuid = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $voiceId);
     $isMinimaxNumeric = (bool)preg_match('/^\d{10,25}$/', $voiceId);
@@ -130,7 +130,7 @@ function provider_audio(PDO $db, string $text, array $options, ?string $elevenKe
         if ($vibiKey !== '') {
             $options['provider'] = 'custom_api';
             $options['custom_voice_id'] = $voiceId;
-            return custom_audio($db, $text, $options, $vibiKey);
+            return custom_audio($db, $text, $options, $vibiKey, null, $refreshAudio);
         }
     }
 
@@ -151,7 +151,7 @@ function provider_audio(PDO $db, string $text, array $options, ?string $elevenKe
 
     if ($options['provider'] === 'custom_api') {
         if (empty($options['custom_voice_id'])) throw new SpeechProviderException('Cần chọn Voice ID cho Custom API Voice trước khi tạo giọng.');
-        return custom_audio($db, $text, $options, $customKey);
+        return custom_audio($db, $text, $options, $customKey, null, $refreshAudio);
     }
     if ($options['provider'] === 'elevenlabs') {
         if (empty($options['eleven_voice_id'])) throw new SpeechProviderException('Cần chọn Voice ID ElevenLabs trước khi tạo giọng.');
