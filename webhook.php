@@ -112,7 +112,7 @@ try {
             attach_payment($db, $payment, $row);
             if (empty($row['is_test'])) $kpiPaid += (int)$payment['paid_amount'];
         } elseif (ANON_FALLBACK) {
-            $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Ẩn danh','paid',?,?,?)")
+            $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Giấu tên','paid',?,?,?)")
                ->execute([$payment['paid_amount'], $payment['tx_id'], review_state()]);
             $donationId = $db->lastInsertId();
             $db->prepare("UPDATE payment_transactions SET donation_id=?,decision='anonymous' WHERE tx_id=?")

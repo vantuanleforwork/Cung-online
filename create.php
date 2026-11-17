@@ -82,7 +82,7 @@ try {
     }
 
 
-    $name = $user ? (clean($user['display_name'], 40) ?: 'Người gửi donate') : 'Ẩn danh';
+    $name = $user ? (clean($user['display_name'], 40) ?: 'Người gửi donate') : 'Giấu tên';
     $avatar = $user ? ($user['custom_avatar_path'] ?: $user['google_avatar_url']) : null;
     $msg  = clean($in['message'] ?? '', donation_message_limit($amount));
 
@@ -155,7 +155,7 @@ try {
                     if ($retryAfter > 0) {
                         $db->rollBack();
                         header('Retry-After: '.$retryAfter);
-                        fail(429, 'IP này đã tạo 2 mã QR ẩn danh chưa donate. Vui lòng chờ '.ceil($retryAfter/60).' phút hoặc đăng nhập Google.');
+                        fail(429, 'IP này đã tạo 2 mã QR giấu tên chưa donate. Vui lòng chờ '.ceil($retryAfter/60).' phút hoặc đăng nhập Google.');
                     }
                 }
                 // Keep the remaining unpaid QR when the other one is paid.

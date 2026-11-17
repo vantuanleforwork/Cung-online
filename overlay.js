@@ -71,8 +71,8 @@ async function playTierIntro(d,signal){
 globalThis.playTierIntro=playTierIntro;
 function render(d){
   const tier=donationTier(d);
-  $('donorName').textContent=d.name||'Ẩn danh';
-  const avatar=$('avatar'),initial=Array.from((d.name||'Ẩn danh').trim())[0]?.toLocaleUpperCase('vi-VN')||'A';
+  $('donorName').textContent=d.name||'Giấu tên';
+  const avatar=$('avatar'),initial=Array.from((d.name||'Giấu tên').trim())[0]?.toLocaleUpperCase('vi-VN')||'A';
   avatar.replaceChildren();
   let avatarUrl='';
   if(typeof d.donor_avatar==='string'&&d.donor_avatar.trim())try{

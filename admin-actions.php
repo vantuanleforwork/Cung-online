@@ -151,7 +151,7 @@ function admin_action(PDO $db, array $in, string $ip) {
                     if (empty($donation['is_test'])) record_kpi_payment($db, (int)$payment['paid_amount']);
                     $audit['donation_id'] = $donation['id'];
                 } else {
-                    $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Ẩn danh','paid',?,?,?)")
+                    $db->prepare("INSERT INTO donations(name,status,paid_amount,tx_id,queue_state) VALUES('Giấu tên','paid',?,?,?)")
                        ->execute([$payment['paid_amount'], $tx, review_state()]);
                     $id = $db->lastInsertId();
                     $db->prepare("UPDATE payment_transactions SET donation_id=?,decision='anonymous' WHERE tx_id=?")->execute([$id, $tx]);
@@ -206,7 +206,7 @@ function admin_action(PDO $db, array $in, string $ip) {
                 if ($row['shown'] || $row['queue_state'] === 'skipped') throw new InvalidArgumentException('Lượt đã hoàn tất. Dùng phát lại nếu cần.');
                 if ($action === 'edit') {
                     if (!is_string($in['name'] ?? null) || !is_string($in['message'] ?? null)) throw new InvalidArgumentException('Tên/lời nhắn không hợp lệ.');
-                    $name = clean($in['name'], 40) ?: 'Ẩn danh';
+                    $name = clean($in['name'], 40) ?: 'Giấu tên';
                     $message = clean($in['message'], donation_message_limit((int)$row['paid_amount']));
                     $db->prepare('UPDATE donations SET name=?,message=?,claim_token=NULL,claimed_until=NULL WHERE id=?')->execute([$name, $message, $id]);
                     $audit['after'] = ['name' => $name, 'message' => $message];

@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=41">
+<link rel="stylesheet" href="site.css?v=42">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=3" defer></script>
 <script>
@@ -70,7 +70,7 @@ if (location.pathname.endsWith('/index.html')) {
     <section class="account" id="account">
       <div id="signedOut">
         <strong>Donate nhanh, không cần đăng nhập</strong>
-        <p class="sub">Donate ẩn danh ngay bên cạnh. Đăng nhập Google để lưu tên, avatar và tích lũy cấp độ.</p>
+        <p class="sub">Donate giấu tên ngay bên cạnh. Đăng nhập Google để lưu tên, avatar và tích lũy cấp độ.</p>
         <a class="account-button" href="google-auth.php?action=login">Tiếp tục với Google</a>
       </div>
       <div id="signedIn" hidden>
@@ -187,7 +187,7 @@ if (location.pathname.endsWith('/index.html')) {
         <dl id="rouletteOddsList" aria-live="polite"></dl>
       </section>
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
-      <p class="privacy-note" id="donatePrivacy">Donate ẩn danh hiển thị tên “Ẩn danh” và lời nhắn trên livestream. Sau 2 mã QR chưa thanh toán, IP cần chờ 5 phút hoặc đăng nhập Google.</p>
+      <p class="privacy-note" id="donatePrivacy"><span id="privacyGuest"><a class="privacy-login" href="google-auth.php?action=login">Đăng nhập</a> để hiển thị tên donate. Không đăng nhập sẽ hiển thị Giấu tên.</span><span id="privacyMember" hidden>Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</span></p>
       <div id="err" role="alert"></div>
       <div class="profile-skin-status" id="donateTestStatus" role="status"></div>
       </div>
@@ -559,7 +559,7 @@ async function loadProfile(){
     }
     CungDonate.testAccount=allowed&&!!d.user?.is_test_account;
     $('go').textContent=CungDonate.testAccount?'Gửi donate test ↗':'Tạo mã QR donate ↗';
-    $('donatePrivacy').textContent=allowed?'Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.':'Donate ẩn danh hiển thị tên “Ẩn danh” và lời nhắn trên livestream. Sau 2 mã QR chưa thanh toán, IP cần chờ 5 phút hoặc đăng nhập Google.';
+    $('privacyGuest').hidden=allowed;$('privacyMember').hidden=!allowed;
     upd();
   }catch(e){
     loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.';

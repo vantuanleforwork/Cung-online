@@ -57,6 +57,7 @@ try {
 
     $items = array_map(static function (array $row) use ($donorId, $spins): array {
         $name = trim((string)($row['name'] ?? '')) ?: 'Người ủng hộ';
+        if (empty($row['user_id']) && $name === 'Ẩn danh') $name = 'Giấu tên';
         $state = 'Thành công';
         if ($row['queue_state'] === 'held') $state = 'Chờ duyệt';
         elseif ($row['queue_state'] === 'skipped') $state = 'Đã bỏ qua';

@@ -292,7 +292,7 @@ if ($loggedIn) {
     }
 }
 $stateLabels = ['held' => 'Chờ duyệt', 'queued' => 'Chờ phát', 'skipped' => 'Đã bỏ qua'];
-$decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Donate ẩn danh',
+$decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Donate giấu tên',
     'below_min' => 'Dưới 10.000đ', 'wrong_account' => 'Sai tài khoản nhận', 'ignored_out' => 'Tiền ra',
     'ignored_manual' => 'Không thuộc dự án', 'legacy_review' => 'Dữ liệu cũ thiếu thông tin'];
 ?>
@@ -344,7 +344,7 @@ foreach ($options as $key=>$label): ?><option value="<?=h($key)?>" <?=$filter===
 <?php if ($view === 'queue'): ?>
 <tr><th>Đơn / thời gian</th><th>Thanh toán</th><th>Tên / lời nhắn</th><th>Trạng thái / thao tác</th></tr>
 <?php foreach ($rows as $row): ?>
-<tr><td>#<?=h($row['id'])?> · <code><?=h($row['code'] ?: 'Ẩn danh')?></code><br><span class="muted"><?=h($row['created_at'])?></span></td>
+<tr><td>#<?=h($row['id'])?> · <code><?=h($row['code'] ?: 'Giấu tên')?></code><br><span class="muted"><?=h($row['created_at'])?></span></td>
 <td>Đăng ký: <?=number_format((int)$row['expected_amount'])?>đ<br>Nhận: <?=number_format((int)$row['paid_amount'])?>đ<br><code><?=h($row['tx_id'])?></code></td>
 <td class="message"><strong><?=h($row['name'])?></strong><?php if(!empty($row['voice_name'])): ?><span class="muted" style="color:var(--accent);font-weight:600"> · 🎙 <?=h($row['voice_name'])?></span><?php endif ?><p><?=nl2br(h($row['message']))?></p>
 <?php if ($row['status']==='paid' && !$row['shown'] && !$row['playing'] && $row['queue_state']!=='skipped'): ?>
@@ -370,7 +370,7 @@ action_form('skip',['id'=>$row['id']],'Bỏ qua'); endif ?>
 <?php if ($row['decision']==='unmatched' && $row['donation_id']===null): ?>
 <form method="post"><?php csrf_field() ?><input type="hidden" name="action" value="match"><input type="hidden" name="tx_id" value="<?=h($row['tx_id'])?>">
 <label>Mã đơn <input name="code" required maxlength="12" placeholder="CHUA..."></label><button>Ghép với đơn</button></form>
-<details><summary>Cách xử lý khác</summary><?php action_form('anonymous',['tx_id'=>$row['tx_id']],'Tạo lễ ẩn danh'); action_form('ignore',['tx_id'=>$row['tx_id']],'Đánh dấu không thuộc dự án'); ?></details>
+<details><summary>Cách xử lý khác</summary><?php action_form('anonymous',['tx_id'=>$row['tx_id']],'Tạo lễ giấu tên'); action_form('ignore',['tx_id'=>$row['tx_id']],'Đánh dấu không thuộc dự án'); ?></details>
 <?php endif ?></td></tr><?php endforeach ?>
 <?php elseif ($view === 'logs'): ?>
 <tr><th>Lần gọi / thời gian</th><th>Kết quả</th><th>Số giao dịch</th><th>Chi tiết</th></tr>

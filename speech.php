@@ -38,7 +38,8 @@ function money_words(int $amount) {
 function speech_text(array $donation, array $settings) {
     $amount = (int)$donation['paid_amount'];
     $message = trim((string)($donation['message'] ?? ''));
-    $name = trim((string)($donation['name'] ?? '')) ?: 'Ẩn danh';
+    $name = trim((string)($donation['name'] ?? '')) ?: 'Giấu tên';
+    if ($name === 'Ẩn danh') $name = 'Giấu tên';
     $amountFormatted = number_format($amount, 0, ',', '.') . ' đồng';
     $amountNum = number_format($amount, 0, ',', '.');
     $amountWords = money_words($amount);

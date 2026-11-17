@@ -35,6 +35,7 @@ try {
     $db->commit();
     unset($row['active_claim']);
 
+    if (empty($row['user_id']) && trim((string)$row['name']) === 'Ẩn danh') $row['name'] = 'Giấu tên';
     $row['donor_level'] = 0;
     if ($row['user_id']) {
         try {
