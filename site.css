@@ -153,7 +153,7 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   .intro-copy { order: 2; margin-bottom: var(--space-6); }
   .donation-panel { order: 3; margin-bottom: var(--space-6); }
   .intro .account { order: 4; margin: 0 0 var(--space-6); }
-  #history { order: 5; margin: 0 0 var(--space-6); }
+  #history { order: 5; width: 100%; margin: 0 0 var(--space-6); }
   .intro .music-queue { order: 6; margin: 0 0 var(--space-6); }
   .donate-site .leaderboard { order: 7; margin: 0 0 var(--space-6); }
   .intro .daily-kpi { order: 8; }
