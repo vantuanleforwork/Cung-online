@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=39">
+<link rel="stylesheet" href="site.css?v=40">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=3" defer></script>
 <script>
@@ -52,6 +52,13 @@ if (location.pathname.endsWith('/index.html')) {
 <header class="site-header">
   <a class="site-wordmark" href="./" aria-label="Van Tuan Le, trang chủ"><img class="site-logo" src="assets/van-tuan-le-logo.png" width="40" height="40" alt=""> VAN TUAN LE</a>
   <a class="header-caption" href="#site-contact">CỘNG ĐỒNG</a>
+  <a class="header-account" id="headerAccount" href="google-auth.php?action=login">
+    <span id="headerLogin">Đăng nhập</span>
+    <span class="header-avatar" id="headerAvatar" hidden>
+      <img id="headerAvatarImage" alt="" referrerpolicy="no-referrer" hidden>
+      <span id="headerAvatarInitial" aria-hidden="true"></span>
+    </span>
+  </a>
 </header>
 
 <div class="site-shell">
@@ -485,7 +492,23 @@ async function saveSkin(id){
   }catch(error){status.textContent=error.message}
   finally{skinSaving=false;grid.removeAttribute('aria-busy')}
 }
+function renderHeaderAccount(user){
+  const link=$('headerAccount'),image=$('headerAvatarImage');
+  link.href=user?'#account':'google-auth.php?action=login';
+  if(user)link.setAttribute('aria-label','Hồ sơ của '+user.name);
+  else link.removeAttribute('aria-label');
+  $('headerLogin').hidden=!!user;
+  $('headerAvatar').hidden=!user;
+  $('headerAvatarInitial').textContent=(user?.name||'U').trim().charAt(0).toUpperCase()||'U';
+  $('headerAvatarInitial').hidden=false;
+  image.hidden=true;
+  image.onload=()=>{image.hidden=false;$('headerAvatarInitial').hidden=true};
+  image.onerror=()=>{image.hidden=true;$('headerAvatarInitial').hidden=false};
+  if(user?.avatar)image.src=user.avatar;
+  else image.removeAttribute('src');
+}
 function renderProfile(user){
+  renderHeaderAccount(user);
   profile=user;$('profileName').textContent=user.name;$('profileNameInput').value=user.name;
   CungDonate.testAccount=!!user.is_test_account;
   if(CungDonate.testAccount)$('go').textContent='Gửi donate test ↗';
@@ -529,6 +552,7 @@ async function loadProfile(){
     csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
     const allowed=!!d.logged_in;loggedIn=allowed;
     $('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
+    if(!allowed)renderHeaderAccount(null);
     $('tabMe').hidden=!allowed;
     if(allowed){
       renderProfile(d.user);
