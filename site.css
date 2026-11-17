@@ -146,16 +146,17 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   .site-wordmark { display: none; }
   .header-account { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: var(--space-4); flex-shrink: 0; }
   .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 20px; gap: 0; }
-  .intro { display: contents; }
+  .intro, .donation-column { display: contents; }
   .site-shell > .intro > :is(.brand,h1,.intro-copy,.account,.leaderboard,.music-queue,.daily-kpi), .donation-column, main { width: 100%; }
   .intro .brand { order: 0; }
   .intro h1 { order: 1; }
   .intro-copy { order: 2; margin-bottom: var(--space-6); }
-  .donation-column { order: 3; margin-bottom: var(--space-6); }
+  .donation-panel { order: 3; margin-bottom: var(--space-6); }
   .intro .account { order: 4; margin: 0 0 var(--space-6); }
-  .donate-site .leaderboard { order: 5; margin: 0 0 var(--space-6); }
+  #history { order: 5; margin: 0 0 var(--space-6); }
   .intro .music-queue { order: 6; margin: 0 0 var(--space-6); }
-  .intro .daily-kpi { order: 7; }
+  .donate-site .leaderboard { order: 7; margin: 0 0 var(--space-6); }
+  .intro .daily-kpi { order: 8; }
   .intro h1 { font-size: 42px; letter-spacing: -2px; }
   main, .history { padding: 22px 18px; }
   .intro .account, .donate-site .leaderboard { padding: 20px; }
