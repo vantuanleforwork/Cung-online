@@ -127,7 +127,7 @@ async function prepareSpeech(d,signal){
     throw new Error('Chọn giọng đọc qua API trong quản trị để đọc lượt quay trên OBS.');
   }
   if((!needsAudio&&!needsTitle)||d.audio_url)return enabled;
-  const deadline=Date.now()+(preview?180000:(needsAudio?35000:6000));
+  const deadline=Date.now()+(needsAudio?180000:6000);
   const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
   if(preview&&d.roulette)ttsPayload.roulette_preview=true;
   let lastError;
@@ -159,8 +159,10 @@ async function speak(d,signal,ready){
   if(!d.speech?.enabled||d.speech.volume===0)return;
   if(!await (ready ?? prepareSpeech(d,signal)))return;
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
-  try{await CungSpeech.read(d,{signal,loadTimeoutMs:preview?30000:12000,refreshAudio:preview?null:async remaining=>{
-    const {response,data}=await request('tts.php',{id:d.id,claim_token:d.claim_token,refresh_audio:true},signal,Math.min(5000,remaining));
+  try{await CungSpeech.read(d,{signal,loadTimeoutMs:30000,refreshAudio:async remaining=>{
+    const payload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||'',refresh_audio:true}:{id:d.id,claim_token:d.claim_token,refresh_audio:true};
+    if(preview&&d.roulette)payload.roulette_preview=true;
+    const {response,data}=await request('tts.php',payload,signal,Math.min(25000,remaining));
     if(response.ok&&data.audio_url)d.audio_url=data.audio_url;
   }});clearNotice('speech')}
   finally{$('speechState').classList.remove('is-speaking');$('speechLabel').textContent='LỜI NHẮN'}
