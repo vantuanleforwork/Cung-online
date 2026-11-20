@@ -31,8 +31,21 @@ if ($revenuePeriod === 'range') {
     $revenueEnd = $revenueStart->modify(['day'=>'+1 day','month'=>'+1 month','year'=>'+1 year'][$revenuePeriod]);
     $revenueGrouping = ['day'=>'hour','month'=>'day','year'=>'month'][$revenuePeriod];
 }
-$sqlFormat = ['hour'=>'%Y-%m-%d %H','day'=>'%Y-%m-%d','month'=>'%Y-%m'][$revenueGrouping];
-$query = $db->prepare("SELECT DATE_FORMAT(DATE_ADD('1970-01-01', INTERVAL (UNIX_TIMESTAMP(COALESCE(p.created_at,d.created_at))+25200) SECOND), '$sqlFormat') AS bucket_key,
+$revenueBreakdown = $_GET['group'] ?? 'default';
+if (!is_string($revenueBreakdown) || !in_array($revenueBreakdown, ['default','weekday','hour_of_day'], true)) {
+    throw new InvalidArgumentException('Cách nhóm doanh thu không hợp lệ.');
+}
+if ($revenueBreakdown !== 'default') $revenueGrouping = $revenueBreakdown;
+$localPaidTime = "DATE_ADD('1970-01-01', INTERVAL (UNIX_TIMESTAMP(COALESCE(p.created_at,d.created_at))+25200) SECOND)";
+if ($revenueGrouping === 'weekday') {
+    $bucketExpression = "WEEKDAY($localPaidTime)";
+} elseif ($revenueGrouping === 'hour_of_day') {
+    $bucketExpression = "HOUR($localPaidTime)";
+} else {
+    $sqlFormat = ['hour'=>'%Y-%m-%d %H','day'=>'%Y-%m-%d','month'=>'%Y-%m'][$revenueGrouping];
+    $bucketExpression = "DATE_FORMAT($localPaidTime, '$sqlFormat')";
+}
+$query = $db->prepare("SELECT $bucketExpression AS bucket_key,
     SUM(d.paid_amount) AS amount, COUNT(*) AS donations
     FROM donations d LEFT JOIN payment_transactions p ON p.tx_id=d.tx_id
     WHERE d.status='paid' AND d.is_test=0 AND d.paid_amount>0
@@ -41,18 +54,30 @@ $query = $db->prepare("SELECT DATE_FORMAT(DATE_ADD('1970-01-01', INTERVAL (UNIX_
 $query->execute([$revenueStart->getTimestamp(),$revenueEnd->getTimestamp()]);
 $paidBuckets = array_column($query->fetchAll(PDO::FETCH_ASSOC),null,'bucket_key');
 $revenueRows = [];
-$cursor = $revenueGrouping==='month' ? $revenueStart->modify('first day of this month') : $revenueStart;
-$keyFormat = ['hour'=>'Y-m-d H','day'=>'Y-m-d','month'=>'Y-m'][$revenueGrouping];
-$labelFormat = ['hour'=>'H:00','day'=>'d/m/Y','month'=>'m/Y'][$revenueGrouping];
-while ($cursor < $revenueEnd) {
-    $key = $cursor->format($keyFormat);
-    $row = $paidBuckets[$key] ?? ['amount'=>0,'donations'=>0];
-    $revenueRows[] = [
-        'bucket'=>$cursor->format($labelFormat),
-        'short_label'=>$cursor->format(['hour'=>'H:00','day'=>'d/m','month'=>'m/Y'][$revenueGrouping]),
-        'amount'=>(int)$row['amount'], 'donations'=>(int)$row['donations']
-    ];
-    $cursor = $cursor->modify(['hour'=>'+1 hour','day'=>'+1 day','month'=>'+1 month'][$revenueGrouping]);
+if (in_array($revenueGrouping, ['weekday','hour_of_day'], true)) {
+    $weekdays = ['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ nhật'];
+    $bucketCount = $revenueGrouping === 'weekday' ? 7 : 24;
+    for ($bucket = 0; $bucket < $bucketCount; $bucket++) {
+        $row = $paidBuckets[$bucket] ?? ['amount'=>0,'donations'=>0];
+        $label = $revenueGrouping === 'weekday' ? $weekdays[$bucket] : sprintf('%02d:00 – %02d:59', $bucket, $bucket);
+        $revenueRows[] = ['bucket'=>$label,
+            'short_label'=>$revenueGrouping === 'weekday' ? $label : sprintf('%02d:00', $bucket),
+            'amount'=>(int)$row['amount'], 'donations'=>(int)$row['donations']];
+    }
+} else {
+    $cursor = $revenueGrouping==='month' ? $revenueStart->modify('first day of this month') : $revenueStart;
+    $keyFormat = ['hour'=>'Y-m-d H','day'=>'Y-m-d','month'=>'Y-m'][$revenueGrouping];
+    $labelFormat = ['hour'=>'H:00','day'=>'d/m/Y','month'=>'m/Y'][$revenueGrouping];
+    while ($cursor < $revenueEnd) {
+        $key = $cursor->format($keyFormat);
+        $row = $paidBuckets[$key] ?? ['amount'=>0,'donations'=>0];
+        $revenueRows[] = [
+            'bucket'=>$cursor->format($labelFormat),
+            'short_label'=>$cursor->format(['hour'=>'H:00','day'=>'d/m','month'=>'m/Y'][$revenueGrouping]),
+            'amount'=>(int)$row['amount'], 'donations'=>(int)$row['donations']
+        ];
+        $cursor = $cursor->modify(['hour'=>'+1 hour','day'=>'+1 day','month'=>'+1 month'][$revenueGrouping]);
+    }
 }
 $revenueTotal = array_sum(array_column($revenueRows,'amount'));
 $revenueCount = array_sum(array_column($revenueRows,'donations'));

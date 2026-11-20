@@ -3,7 +3,7 @@
   <h2 id="revenueTitle">Doanh thu donate</h2>
   <nav class="revenue-tabs" aria-label="Khoảng thống kê">
     <?php foreach (['day'=>'Ngày','month'=>'Tháng','year'=>'Năm','range'=>'Khoảng ngày'] as $periodKey=>$periodLabel): ?>
-      <a href="?view=revenue&amp;period=<?=h($periodKey)?>" <?=$periodKey===$revenuePeriod ? 'aria-current="page"' : ''?>><?=h($periodLabel)?></a>
+      <a href="?view=revenue&amp;period=<?=h($periodKey)?>&amp;group=<?=h($revenueBreakdown)?>" <?=$periodKey===$revenuePeriod ? 'aria-current="page"' : ''?>><?=h($periodLabel)?></a>
     <?php endforeach ?>
   </nav>
   <form method="get" class="bar revenue-filter">
@@ -15,7 +15,15 @@
       <label>Chọn <?=h(['day'=>'ngày','month'=>'tháng','year'=>'năm'][$revenuePeriod])?>
         <input type="<?=h(['day'=>'date','month'=>'month','year'=>'number'][$revenuePeriod])?>" name="date" value="<?=h($revenueDate)?>" <?=$revenuePeriod==='year' ? 'min="2000" max="2100"' : ''?> required>
       </label>
-    <?php endif ?><button type="submit">Xem thống kê</button>
+    <?php endif ?>
+    <label>Xem theo
+      <select name="group">
+        <?php foreach (['default'=>'Thời gian đang chọn','weekday'=>'Thứ trong tuần','hour_of_day'=>'Giờ trong ngày (24h)'] as $groupKey=>$groupLabel): ?>
+          <option value="<?=h($groupKey)?>" <?=$revenueBreakdown===$groupKey ? 'selected' : ''?>><?=h($groupLabel)?></option>
+        <?php endforeach ?>
+      </select>
+    </label>
+    <button type="submit">Xem thống kê</button>
   </form>
   <div class="revenue-summary"><p class="muted">Tổng doanh thu · <?=h($revenueDate)?></p>
     <strong id="revenueTotal"><?=number_format($revenueTotal,0,',','.')?><small> đ</small></strong>
@@ -43,7 +51,7 @@
     <div id="revenueChartTooltip" class="revenue-chart-tooltip" role="tooltip" hidden></div>
     <?php if (!$revenueCount): ?><p class="muted">Chưa có doanh thu trong thời gian này.</p><?php endif ?>
   </section>
-  <div class="scroll"><table><thead><tr><th><?=h(['hour'=>'Giờ','day'=>'Ngày','month'=>'Tháng'][$revenueGrouping])?></th><th>Số lượt</th><th>Doanh thu</th></tr></thead><tbody>
+  <div class="scroll"><table><thead><tr><th><?=h(['hour'=>'Giờ','day'=>'Ngày','month'=>'Tháng','weekday'=>'Thứ trong tuần','hour_of_day'=>'Giờ trong ngày'][$revenueGrouping])?></th><th>Số lượt</th><th>Doanh thu</th></tr></thead><tbody>
   <?php foreach ($revenueRows as $revenueRow): ?><tr><td><?=h($revenueRow['bucket'])?></td><td><?=h($revenueRow['donations'])?></td><td><?=number_format((int)$revenueRow['amount'],0,',','.')?>đ</td></tr><?php endforeach ?>
   <?php if (!$revenueCount): ?><tr><td colspan="3" class="muted">Chưa có doanh thu trong thời gian này.</td></tr><?php endif ?>
   </tbody></table></div>

@@ -85,8 +85,15 @@ def run():
                 assert 'id="revenueTotal">70.000' in html,html[-3000:]
                 amounts=re.findall(r'data-label="([^"]+)" data-amount="(\d+)"',html)
                 assert amounts==[('01/05/2025','10000'),('02/05/2025','0'),('03/05/2025','60000')],amounts
+                for grouping, expected in [
+                    ('weekday', [('Thứ Hai','0'),('Thứ Ba','0'),('Thứ Tư','0'),('Thứ Năm','10000'),('Thứ Sáu','0'),('Thứ Bảy','60000'),('Chủ nhật','0')]),
+                    ('hour_of_day', [(f'{hour:02}:00 – {hour:02}:59', str({0:10000,12:40000,23:20000}.get(hour,0))) for hour in range(24)])
+                ]:
+                    grouped_code,grouped=report(query+'&group='+grouping)
+                    assert grouped_code==200 and 'id="revenueTotal">70.000' in grouped
+                    assert re.findall(r'data-label="([^"]+)" data-amount="(\d+)"',grouped)==expected
                 assert report('period=range&from=2025-05-03&to=2025-05-03')[1].count('class="revenue-chart-bar"')==1
-                for invalid in ['period=range&from=2025-05-04&to=2025-05-03','period=range&from=2025-02-30&to=2025-05-03','period=range&from[]=x&to=2025-05-03','period=bad']:
+                for invalid in ['period=range&from=2025-05-04&to=2025-05-03','period=range&from=2025-02-30&to=2025-05-03','period=range&from[]=x&to=2025-05-03','period=bad','group=bad','group[]=weekday']:
                     assert report(invalid)[0]==400,invalid
                 _,empty=report('period=range&from=2023-01-01&to=2023-01-03')
                 assert 'id="revenueTotal">0' in empty
