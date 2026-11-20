@@ -125,18 +125,6 @@ try {
        ->execute([$duplicates, $logId]);
     $db->commit();
 
-    if (!empty($row) && $row['donation_kind'] !== 'roulette') {
-        try {
-            $settings = $db->query('SELECT * FROM app_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
-            if ($settings && $settings['speech_enabled']) {
-                $opts = speech_options_for_donation($settings, $row);
-                if (in_array($opts['provider'], ['fpt','elevenlabs','custom_api'], true)) {
-                    provider_audio($db, speech_text($row, $settings), $opts);
-                }
-            }
-        } catch (Throwable $ignore) {}
-    }
-
     respond(200, ['success' => true]);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

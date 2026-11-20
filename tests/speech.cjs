@@ -36,11 +36,11 @@ class Clock{
     this.now=end;await flush();
   }
 }
-function overlay(search,{ttsPending=false}={}){
+function overlay(search,{ttsPending=false,ttsFailures=0}={}){
   const clock=new Clock(),elements=new Map(),calls=[];
   const get=id=>{
     if(!elements.has(id)){
-      const classes=new Set();elements.set(id,{textContent:'',hidden:true,disabled:false,offsetWidth:720,
+      const classes=new Set();elements.set(id,{textContent:id==='speechLabel'?'LỜI NHẮN':'',hidden:true,disabled:false,offsetWidth:720,
         style:{setProperty(){}},dataset:{},children:[],classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},
         replaceChildren(){this.children=[]},append(child){this.children.push(child)},setAttribute(){},removeAttribute(){},addEventListener(){}});
     }return elements.get(id);
@@ -59,8 +59,13 @@ function overlay(search,{ttsPending=false}={}){
       let status=200,data={success:true};
       if(url.startsWith('renew.php')){status=renewStatus;data={success:status===200}}
       if(url.startsWith('ack.php')&&ackFailures-->0){status=503;data={success:false}}
-      if(url.startsWith('tts.php')){ttsCalls++;data=ttsPending||ttsCalls===1?{audio_url:null}:{audio_url:'https://example.org/voice.mp3'}}
-      return {ok:status===200,status,headers:new Headers({'Content-Type':'application/json'}),json:async()=>data};
+      if(url.startsWith('tts.php')){
+        ttsCalls++;
+        if(ttsCalls<=ttsFailures)return {ok:false,status:502,headers:new Headers({'Content-Type':'text/html'})};
+        const pending=ttsPending||ttsCalls===1;
+        status=pending?202:200;data={audio_url:pending?null:'https://example.org/voice.mp3'};
+      }
+      return {ok:status>=200&&status<300,status,headers:new Headers({'Content-Type':'application/json'}),json:async()=>data};
     }});
   vm.runInContext(overlaySource,context);
   return {context,get,clock,calls,stored,setAckFailures:count=>{ackFailures=count},setRenew:status=>{renewStatus=status},finish:()=>finishReading(),get stopped(){return stopped}};
@@ -116,6 +121,7 @@ const watchdog=setTimeout(()=>{throw new Error('Speech test did not complete; un
   assert.equal(await lost,false);assert(live.stopped>0);
   assert(live.calls.some(url=>url.startsWith('renew.php')));
   assert(!live.calls.some(url=>/ack|poll/.test(url)));
+  assert.equal(live.get('audioTools').hidden,true);
   const delayed=overlay('');delayed.context.testDonation={...donation,lease_remaining_ms:2000};
   const expired=vm.runInContext('play(testDonation)',delayed.context);
   await flush();assert.equal(await expired,false);assert.equal(delayed.calls.length,0);
@@ -133,11 +139,22 @@ const watchdog=setTimeout(()=>{throw new Error('Speech test did not complete; un
   assert.equal(restored.stored.size,0);assert.equal(restored.calls.length,1);assert(restored.calls[0].startsWith('ack.php'));
   const slow=overlay('',{ttsPending:true});slow.context.testDonation={...donation,speech:{...donation.speech,provider:'custom_api'}};
   const skipped=vm.runInContext('play(testDonation)',slow.context);
-  await flush();await slow.clock.advance(22000);
+  await flush();await slow.clock.advance(36000);
   assert.equal(await skipped,true);assert(slow.calls.some(url=>url.startsWith('ack.php')));
   assert.equal(slow.get('speechLabel').textContent,'LỜI NHẮN');
-  assert(slow.calls.filter(url=>url.startsWith('tts.php')).length<=21);
+  assert.equal(slow.get('audioTools').hidden,true);
+  assert(slow.calls.filter(url=>url.startsWith('tts.php')).length<=35);
   assert.equal(slow.clock.tasks.size,0);
+  const gateway=overlay('',{ttsFailures:1});gateway.context.testDonation=slow.context.testDonation;
+  const recoveredSpeech=vm.runInContext('play(testDonation)',gateway.context);
+  await flush();await gateway.clock.advance(2000);gateway.finish();await gateway.clock.advance(8000);
+  assert.equal(await recoveredSpeech,true);
+  assert.equal(gateway.calls.filter(url=>url.startsWith('tts.php')).length,2);
+  assert.equal(gateway.get('audioTools').hidden,true);
+  const debug=overlay('?controls=1');
+  debug.context.notice('Âm thanh chưa tải xong.', 'speech');
+  assert.equal(debug.get('audioTools').hidden,false);
+  assert.equal(debug.get('notice').textContent,'Âm thanh chưa tải xong.');
   const preload=overlay('?preview=1');preload.context.testDonation={...donation,speech:{...donation.speech,provider:'custom_api'}};
   const prepared=vm.runInContext('play(testDonation)',preload.context);
   await flush();assert.equal(preload.calls.filter(url=>url.startsWith('tts.php')).length,1);

@@ -1,5 +1,6 @@
 'use strict';
 const params=new URLSearchParams(location.search),K=params.get('k')||'',preview=params.get('preview')==='1';
+const controls=params.get('controls')==='1';
 const $=id=>document.getElementById(id);
 let busy=false,demo=null,selectedPreviewTier=[1,2,3].includes(Number(params.get('tier')))?Number(params.get('tier')):1;
 function sleep(ms,signal){
@@ -11,10 +12,13 @@ function sleep(ms,signal){
   });
 }
 let noticeKind='';
-function notice(text,kind='general'){noticeKind=kind;$('audioTools').hidden=false;$('notice').textContent=text}
+function notice(text,kind='general'){
+  if(!preview&&!controls){console.warn('Donate overlay:',text);return}
+  noticeKind=kind;$('audioTools').hidden=false;$('notice').textContent=text;
+}
 function clearNotice(kind){
   if(noticeKind!==kind)return;
-  noticeKind='';$('notice').textContent='';$('audioTools').hidden=params.get('controls')!=='1';
+  noticeKind='';$('notice').textContent='';$('audioTools').hidden=!controls;
 }
 function noticeError(error,fallback,kind='general'){
   const message=String(error?.message||'');
@@ -29,7 +33,7 @@ async function request(url,body={},signal,timeoutMs=25000){
     if(signal?.aborted)cancel();
     const response=await fetch(url+'?k='+encodeURIComponent(K),{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
     if(!response.headers.get('Content-Type')?.includes('application/json')){
-      throw new Error(`Máy chủ trả trang HTML cho ${url} (HTTP ${response.status}). Kiểm tra cPanel/Cloudflare và đường dẫn OBS.`);
+      throw Object.assign(new Error(`Máy chủ trả trang HTML cho ${url} (HTTP ${response.status}). Kiểm tra cPanel/Cloudflare và đường dẫn overlay.`),{status:response.status});
     }
     let data;
     try{data=await response.json()}catch(error){
@@ -93,11 +97,14 @@ function render(d){
     $('donorMessage').textContent='Đã mua vòng quay '+d.roulette.name+
       (winner?' và nhận được '+winner:'')+(d.message?'\n'+d.message:'');
   }else if(d.donation_kind==='music'){
-    const order=d.music_title?'Đã order bài '+d.music_title:'Đã order nhạc YouTube';
-    $('donorMessage').textContent=order+(d.message?'\n'+d.message:'');
+    renderMusicMessage(d);
   }else $('donorMessage').textContent=d.message||'Cảm ơn bạn đã ủng hộ kênh!';
   $('stage').dataset.tier=String(tier);$('stage').style.setProperty('--duration',displaySeconds(d)+'s');
   globalThis.CungLayout?.apply(d.speech?.overlay);
+}
+function renderMusicMessage(d){
+  const order=d.music_title?'Đã order bài '+d.music_title:'Đã order nhạc YouTube';
+  $('donorMessage').textContent=order+(d.message?'\n'+d.message:'');
 }
 function displaySeconds(d){return Math.max(8,Math.min(30,Number(d.speech?.display_seconds)||8))}
 function showDonorSkin(skin){
@@ -112,30 +119,45 @@ function showDonorSkin(skin){
 }
 const apiSpeech=d=>['fpt','elevenlabs','custom_api'].includes(d.speech?.provider);
 async function prepareSpeech(d,signal){
-  if(!d.speech?.enabled||d.speech.volume===0)return false;
-  if(d.roulette&&!apiSpeech(d)){
+  const enabled=d.speech?.enabled&&d.speech.volume!==0;
+  const needsAudio=enabled&&apiSpeech(d);
+  const needsTitle=!preview&&d.donation_kind==='music'&&d.music_request_id&&!d.music_title;
+  if(enabled&&d.roulette&&!needsAudio){
     if(preview)return false;
     throw new Error('Chọn giọng đọc qua API trong quản trị để đọc lượt quay trên OBS.');
   }
-  if(apiSpeech(d)){
-    const deadline=Date.now()+(preview?180000:20000);
-    while(!d.audio_url){
-      if(Date.now()>deadline)throw new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
-      const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
-      if(preview&&d.roulette)ttsPayload.roulette_preview=true;
-      const {response,data}=await request('tts.php',ttsPayload,signal,Math.max(1,Math.min(25000,deadline-Date.now())));
+  if((!needsAudio&&!needsTitle)||d.audio_url)return enabled;
+  const deadline=Date.now()+(preview?180000:(needsAudio?35000:6000));
+  const ttsPayload=preview?{preview:true,tier:d.tier,amount:d.paid_amount,voice_id:d.selected_voice_id||d.speech?.custom_voice_id||d.speech?.eleven_voice_id||'',message:d.message||'',name:d.name||''}:{id:d.id,claim_token:d.claim_token};
+  if(preview&&d.roulette)ttsPayload.roulette_preview=true;
+  let lastError;
+  while(Date.now()<deadline){
+    try{
+      const {response,data}=await request('tts.php',ttsPayload,signal,Math.min(33000,deadline-Date.now()));
+      if(signal?.aborted)throw new DOMException('Lease lost','AbortError');
+      if(d.donation_kind==='music'&&typeof data.speech_text==='string'){
+        d.speech_text=data.speech_text;
+        d.music_title=data.music_title;
+        renderMusicMessage(d);
+      }
       if(data.disabled)return false;
-      if(!response.ok)throw new Error(data.error||'Không tạo được giọng đọc.');
-      d.audio_url=data.audio_url;
-      if(!d.audio_url)await sleep(1000,signal);
+      if(!response.ok)throw Object.assign(new Error(data.error||'Không tạo được giọng đọc.'),{status:response.status});
+      if(!needsAudio&&response.status!==202)return enabled;
+      if(data.audio_url){d.audio_url=data.audio_url;return true}
+      lastError=null;
+    }catch(error){
+      const transient=['AbortError','TypeError'].includes(error.name)||[408,429,502,504].includes(error.status);
+      if(signal?.aborted||!transient)throw error;
+      lastError=error;
     }
+    const remaining=deadline-Date.now();
+    if(remaining>0)await sleep(Math.min(lastError?2000:1000,remaining),signal);
   }
-  return true;
+  throw lastError||new Error('Giọng đọc chưa sẵn sàng. Kiểm tra kết nối hoặc bộ nhớ giọng trong admin.');
 }
 async function speak(d,signal,ready){
   if(!d.speech?.enabled||d.speech.volume===0)return;
-  $('speechLabel').textContent='ĐANG CHUẨN BỊ GIỌNG';
-  if(!await (ready ?? prepareSpeech(d,signal))){$('speechLabel').textContent='LỜI NHẮN';return}
+  if(!await (ready ?? prepareSpeech(d,signal)))return;
   $('speechState').classList.add('is-speaking');$('speechLabel').textContent='ĐANG ĐỌC LỜI NHẮN';
   try{await CungSpeech.read(d,{signal,loadTimeoutMs:preview?30000:12000,refreshAudio:preview?null:async remaining=>{
     const {response,data}=await request('tts.php',{id:d.id,claim_token:d.claim_token,refresh_audio:true},signal,Math.min(5000,remaining));
@@ -152,7 +174,7 @@ async function play(d){
     // One preparation task per donation, shared by preload and playback.
     const ready=prepareSpeech(d,lease.signal).catch(error=>{
       if(!lease.signal.aborted)noticeError(error,'Không chuẩn bị được giọng đọc donate. Bỏ qua giọng để tiếp tục hàng đợi.','speech');
-      return false;
+      return !lease.signal.aborted&&d.donation_kind==='music'&&!apiSpeech(d)&&d.speech?.enabled&&d.speech.volume!==0;
     });
     await globalThis.CungSFX?.donateAlert?.(d.donate_sound_url,lease.signal,{
       useTing:!!d.roulette||donationTier(d)===1,
@@ -183,7 +205,7 @@ async function play(d){
     return true;
   }catch(error){
     $('stage').classList.remove('is-visible');
-    if(!preview)notice('Kết nối giữ lượt bị gián đoạn. Đang kết nối lại hàng đợi.','queue');
+    noticeError(error,'Kết nối giữ lượt bị gián đoạn. Đang kết nối lại hàng đợi.','queue');
     return false;
   }finally{if(!preview)showDonorSkin(null);lease.close();CungSpeech.stop();$('speechState').classList.remove('is-speaking')}
 }
@@ -297,4 +319,4 @@ if(preview){
   if(params.get('autoplay')==='1'){$('previewTools').hidden=true;test()}
   else getDemo().then(d=>{demo=d;render(d);$('stage').classList.add('is-visible')}).catch(error=>noticeError(error,'Không đọc được cấu hình overlay.'));
 }else if(!K)notice('Thiếu khóa overlay. Thêm ?k=OVERLAY_KEY vào đường dẫn.');
-else{document.body.classList.add('force-motion');if(params.get('controls')==='1')notice('Bấm nghe thử trước khi phát live.');loop()}
+else{document.body.classList.add('force-motion');if(controls)notice('Bấm nghe thử trước khi phát live.');loop()}

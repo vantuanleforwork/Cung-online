@@ -126,9 +126,10 @@ function music_untitled_id(PDO $db): int {
         WHERE q.state IN ('waiting','playing') AND q.title='' AND (q.title_retry_at IS NULL OR q.title_retry_at<=NOW())
         AND " . music_visible_sql() . " ORDER BY (q.state='playing') DESC,q.id LIMIT 1")->fetchColumn();
 }
-function refresh_music_title(PDO $db, int $id, bool $fromHistory = false): ?string {
+function refresh_music_title(PDO $db, int $id, bool $fromHistory = false, ?bool &$pending = null): ?string {
     $eligible = $fromHistory ? "d.status='paid' AND d.is_test=0" : music_visible_sql();
-    $query = $db->prepare("SELECT q.video_id,q.title FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
+    $query = $db->prepare("SELECT q.video_id,q.title,(q.title_retry_at>NOW()+INTERVAL 55 SECOND) AS recent_lookup
+        FROM music_requests q LEFT JOIN donations d ON d.id=q.donation_id
         WHERE q.id=? AND " . $eligible);
     $query->execute([$id]);
     $song = $query->fetch(PDO::FETCH_ASSOC);
@@ -138,10 +139,19 @@ function refresh_music_title(PDO $db, int $id, bool $fromHistory = false): ?stri
     $claim = $db->prepare("UPDATE music_requests SET title_retry_at=DATE_ADD(NOW(),INTERVAL 60 SECOND)
         WHERE id=? AND title='' AND (title_retry_at IS NULL OR title_retry_at<=NOW())");
     $claim->execute([$id]);
-    if (!$claim->rowCount()) return '';
+    if (!$claim->rowCount()) {
+        // A concurrent oEmbed request can take up to 4 seconds. Let callers
+        // that need the title before playback retry while that lookup settles.
+        $query->execute([$id]);
+        $song = $query->fetch(PDO::FETCH_ASSOC);
+        $pending = $song && $song['title'] === '' && (bool)$song['recent_lookup'];
+        return $song['title'] ?? null;
+    }
     $title = youtube_song_title($song['video_id']);
     if ($title !== '') $db->prepare("UPDATE music_requests SET title=? WHERE id=? AND title=''")->execute([$title,$id]);
-    return $title;
+    $query->execute([$id]);
+    $song = $query->fetch(PDO::FETCH_ASSOC);
+    return $song['title'] ?? null;
 }
 
 function music_admin_action(PDO $db, array $in): void {

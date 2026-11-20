@@ -213,11 +213,36 @@ def run():
                 for song in request('music-queue.php')[1]['items']:
                     assert int(song['approved'])==0
                     assert admin(dict(action='music_approve',csrf=csrf,id=song['id']))[0]==200
-                sql("UPDATE donations SET message='' WHERE tx_id='music-one'; UPDATE app_settings SET paused=0,speech_enabled=0")
+                sql("UPDATE donations SET message='https://youtu.be/dQw4w9WgXcQ Chúc buổi live vui!' WHERE tx_id='music-one'; UPDATE app_settings SET paused=0,speech_enabled=1,speech_provider='fpt'")
                 alert=request('poll.php?k=layout-fixture-key',{})[1][0]
                 assert alert['donation_kind']=='music' and alert['music_title']=='Fixture metadata dQw4w9WgXcQ'
+                assert alert['message']=='Chúc buổi live vui!'
+                assert alert['speech_text'].endswith('bài Fixture metadata dQw4w9WgXcQ. Với lời nhắn: Chúc buổi live vui!')
+                tts_path='tts.php?k=layout-fixture-key'
+                claim=dict(id=alert['id'],claim_token=alert['claim_token'])
+                code,voice=request(tts_path,claim)
+                assert code==200 and voice['speech_text']==alert['speech_text']
+                assert urllib.parse.unquote(voice['audio_url']).endswith(alert['speech_text'])
                 assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0]==200
-                sql("UPDATE app_settings SET paused=1")
+                alert=request('poll.php?k=layout-fixture-key',{})[1][0]
+                assert alert['donation_kind']=='message' and alert['speech_text']=='Music donor: Music request'
+                assert request('ack.php?k=layout-fixture-key',dict(id=alert['id'],claim_token=alert['claim_token']))[0]==200
+                second_music_id=sql("SELECT q.id FROM music_requests q JOIN donations d ON d.id=q.donation_id WHERE d.tx_id='music-two'")
+                sql(f"UPDATE music_requests SET title='',title_retry_at=NOW()+INTERVAL 60 SECOND WHERE id={second_music_id}; UPDATE app_settings SET speech_provider='browser'")
+                alert=request('poll.php?k=layout-fixture-key',{})[1][0]
+                assert alert['music_title']=='' and 'một bài nhạc' in alert['speech_text']
+                claim=dict(id=alert['id'],claim_token=alert['claim_token'])
+                assert request(tts_path,claim)[0]==202
+                sql(f"UPDATE music_requests SET video_id='FWYrRSWabIs',title_retry_at=NULL WHERE id={second_music_id}")
+                code,voice=request(tts_path,claim)
+                assert code==200 and voice['music_title']=='' and 'một bài nhạc' in voice['speech_text']
+                sql(f"UPDATE music_requests SET video_id='9bZkp7q19f0',title_retry_at=NULL WHERE id={second_music_id}")
+                code,voice=request(tts_path,claim)
+                assert code==200 and voice['music_title']=='Fixture metadata 9bZkp7q19f0'
+                assert 'bài Fixture metadata 9bZkp7q19f0' in voice['speech_text'] and 'audio_url' not in voice
+                assert sql(f'SELECT title FROM music_requests WHERE id={second_music_id}')==voice['music_title']
+                assert request('ack.php?k=layout-fixture-key',claim)[0]==200
+                sql("UPDATE app_settings SET paused=1,speech_enabled=0")
 
                 owner='a'*32
                 def beat(**extra):return request('music-overlay.php?k=layout-fixture-key',dict(owner=owner,**extra))[1]

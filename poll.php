@@ -62,6 +62,7 @@ try {
     unset($row['spin_eligible']);
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
+    if ($row['donation_kind'] === 'music') $row['message'] = music_donation_message((string)$row['message']);
     // Return the claim immediately. External TTS/title requests can outlive the
     // OBS request timeout, leaving an unseen claim blocking the whole queue.
     // The overlay prepares speech via tts.php while it displays the donation.

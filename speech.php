@@ -35,6 +35,10 @@ function money_words(int $amount) {
     return implode(' ', $parts) . ' đồng';
 }
 
+function music_donation_message(string $message): string {
+    return trim(preg_replace('~\b(?:https?://)?(?:(?:www\.|m\.)?youtube\.com|youtu\.be)/[^\s<>"“”]+~iu', '', $message));
+}
+
 function speech_text(array $donation, array $settings) {
     $amount = (int)$donation['paid_amount'];
     $message = trim((string)($donation['message'] ?? ''));
@@ -43,6 +47,12 @@ function speech_text(array $donation, array $settings) {
     $amountFormatted = number_format($amount, 0, ',', '.') . ' đồng';
     $amountNum = number_format($amount, 0, ',', '.');
     $amountWords = money_words($amount);
+    if (($donation['donation_kind'] ?? '') === 'music') {
+        $title = trim((string)($donation['music_title'] ?? ''));
+        $message = music_donation_message($message);
+        $text = "$name đã donate $amountWords để yêu cầu " . ($title === '' ? 'một bài nhạc' : 'bài ' . $title);
+        return $text . '.' . ($message === '' ? '' : ' Với lời nhắn: ' . $message);
+    }
     $messageClause = $message === '' ? '' : 'Với lời nhắn: ' . $message;
     if (!empty($donation['roulette']['name'])) {
         $spin = $donation['roulette'];
