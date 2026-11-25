@@ -16,10 +16,10 @@ function send_payment_code(string $code, string $statusToken, int $amount): void
     respond(200, ['code'=>$code, 'qr'=>$qr, 'status_token'=>$statusToken, 'test_paid'=>false]);
 }
 
-function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string $statusToken, int $amount): void {
+function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string $statusToken, int $amount, float $cryptoAmount): void {
     $data = nowpayments_request('invoice', [
-        'price_amount' => $amount,
-        'price_currency' => NOWPAYMENTS_PRICE_CURRENCY,
+        'price_amount' => $cryptoAmount,
+        'price_currency' => 'usd',
         'pay_currency' => NOWPAYMENTS_PAY_CURRENCY,
         'is_fixed_rate' => true,
         'order_id' => $code,
@@ -50,19 +50,27 @@ try {
     $paymentMethod = $in['payment_method'] ?? 'bank';
     if (!is_string($paymentMethod) || !in_array($paymentMethod, ['bank','nowpayments'], true)) fail(400, 'Phương thức thanh toán không hợp lệ.');
     if ($paymentMethod === 'nowpayments' && !nowpayments_enabled()) fail(503, 'Cổng USDT chưa được cấu hình.');
-    if (!is_string($in['message'] ?? '') ||
-        (!is_int($in['amount'] ?? null) && !is_string($in['amount'] ?? null)) ||
-        filter_var($in['amount'], FILTER_VALIDATE_INT) === false) {
+    if (!is_string($in['message'] ?? '') || (!is_int($in['amount'] ?? null) && !is_string($in['amount'] ?? null))) {
         fail(400, 'Dữ liệu số tiền không hợp lệ.');
     }
-    
-    $amount = (int)$in['amount'];
+    $cryptoAmount = null;
+    if ($paymentMethod === 'nowpayments') {
+        $rawCrypto = trim((string)$in['amount']);
+        if (!preg_match('/^\d+(?:\.\d)?$/D', $rawCrypto)) fail(400, 'USDT chỉ nhận số tiền có tối đa 1 chữ số thập phân.');
+        $cryptoAmount = round((float)$rawCrypto, 1);
+        $minUsdt = (float)(defined('NOWPAYMENTS_MIN_USDT') ? NOWPAYMENTS_MIN_USDT : 7.5);
+        if ($cryptoAmount < $minUsdt) fail(400, 'Donate USDT tối thiểu là ' . rtrim(rtrim(number_format($minUsdt, 1, '.', ''), '0'), '.') . ' USDT.');
+        $rate = (float)(defined('NOWPAYMENTS_USDT_VND_RATE') ? NOWPAYMENTS_USDT_VND_RATE : 26000);
+        if ($rate <= 0) fail(500, 'Chưa cấu hình tỷ giá USDT/VNĐ.');
+        $amount = (int)round($cryptoAmount * $rate);
+    } else {
+        if (filter_var($in['amount'], FILTER_VALIDATE_INT) === false) fail(400, 'Dữ liệu số tiền không hợp lệ.');
+        $amount = (int)$in['amount'];
+    }
     if ($amount < 1000 || $amount > 50000000) {
         fail(400, 'Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ');
     }
-    if ($paymentMethod === 'nowpayments' && $amount < (defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 200000)) {
-        fail(400, 'Donate USDT tối thiểu là ' . number_format((int)(defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 200000), 0, ',', '.') . 'đ để đạt mức tối thiểu của mạng thanh toán.');
-    }
+    if ($paymentMethod === 'nowpayments' && $cryptoAmount === null) fail(400, 'Dữ liệu USDT không hợp lệ.');
 
     $db = db();
     $context = donor_context();
@@ -260,7 +268,7 @@ try {
 
     if ($isTestAccount) respond(200, ['test_paid' => true]);
 
-    if ($paymentMethod === 'nowpayments') send_nowpayments_invoice($db, $donationId, $code, $statusToken, $amount);
+    if ($paymentMethod === 'nowpayments') send_nowpayments_invoice($db, $donationId, $code, $statusToken, $amount, (float)$cryptoAmount);
     send_payment_code($code, $statusToken, $amount);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

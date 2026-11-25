@@ -79,7 +79,7 @@ Hosting cần PHP cURL, kết nối HTTPS ra ElevenLabs, quyền database CREATE
 
 ### NOWPayments USDT BSC
 
-Luồng USDT BSC dùng invoice NOWPayments song song với QR ngân hàng. Chạy `migrate-005.sql` một lần trên cơ sở dữ liệu production, sau đó thêm các hằng số `NOWPAYMENTS_API_KEY` và `NOWPAYMENTS_IPN_SECRET` vào `config.php` (không commit file này). `NOWPAYMENTS_WEBHOOK_URL` phải trỏ tới `https://donate.vantuanle.com/nowpayments-ipn.php` và URL này cần được lưu trong Payments Settings → Instant payment notifications. Hệ thống tạo invoice tỷ giá cố định theo số tiền VNĐ, nhận IPN HMAC-SHA512, chỉ ghi nhận trạng thái `finished`, rồi đưa lượt donate vào cùng hàng đợi OBS hiện có.
+Luồng USDT BSC dùng invoice NOWPayments song song với QR ngân hàng. Chạy `migrate-005.sql` một lần trên cơ sở dữ liệu production, sau đó thêm các hằng số `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET` và `NOWPAYMENTS_USDT_VND_RATE` vào `config.php` (không commit file này). Website nhận USDT với một chữ số thập phân, dùng USD làm giá invoice cố định, rồi quy đổi số USDT thực nhận sang VNĐ theo `NOWPAYMENTS_USDT_VND_RATE` để đồng bộ doanh thu và hàng đợi OBS. `NOWPAYMENTS_WEBHOOK_URL` phải trỏ tới `https://donate.vantuanle.com/nowpayments-ipn.php` và URL này cần được lưu trong Payments Settings → Instant payment notifications. Hệ thống nhận IPN HMAC-SHA512 và chỉ ghi nhận trạng thái `finished`.
 
 ### Tài khoản Google và hồ sơ donate
 

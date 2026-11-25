@@ -23,10 +23,13 @@ try {
     $paymentId = trim((string)($data['payment_id'] ?? ''));
     if ($orderId === '' || $paymentId === '' || !in_array($status, ['finished','partially_paid'], true)) respond(200, ['success'=>true]);
     if ($status !== 'finished') respond(200, ['success'=>true]);
-    if (strtolower((string)($data['price_currency'] ?? '')) !== strtolower((string)NOWPAYMENTS_PRICE_CURRENCY)
+    if (strtolower((string)($data['price_currency'] ?? '')) !== 'usd'
         || strtolower((string)($data['pay_currency'] ?? '')) !== strtolower((string)NOWPAYMENTS_PAY_CURRENCY)) respond(400, ['success'=>false]);
-    $amount = $data['price_amount'] ?? null;
-    if (!is_numeric($amount) || (float)$amount <= 0) respond(400, ['success'=>false]);
+    $cryptoPaid = $data['actually_paid'] ?? $data['pay_amount'] ?? $data['price_amount'] ?? null;
+    if (!is_numeric($cryptoPaid) || (float)$cryptoPaid <= 0) respond(400, ['success'=>false]);
+    $rate = (float)(defined('NOWPAYMENTS_USDT_VND_RATE') ? NOWPAYMENTS_USDT_VND_RATE : 26000);
+    if ($rate <= 0) respond(500, ['success'=>false]);
+    $amount = (int)round((float)$cryptoPaid * $rate);
     $db = db();
     $db->beginTransaction();
     $s = $db->prepare("SELECT * FROM donations WHERE code=? AND payment_method='nowpayments' FOR UPDATE");
@@ -35,7 +38,7 @@ try {
     if (!$donation) { $db->commit(); respond(200, ['success'=>true]); }
     if ($donation['status'] === 'paid') { $db->commit(); respond(200, ['success'=>true]); }
     $txId = 'NP_' . substr(preg_replace('/[^A-Za-z0-9_-]/', '', $paymentId), 0, 58);
-    $content = 'NOWPayments ' . $orderId . ' ' . (string)($data['pay_currency'] ?? NOWPAYMENTS_PAY_CURRENCY);
+    $content = 'NOWPayments ' . $orderId . ' ' . (string)($data['pay_currency'] ?? NOWPAYMENTS_PAY_CURRENCY) . ' ' . number_format((float)$cryptoPaid, 1, '.', '');
     $insert = $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id");
     $insert->execute([$txId, (int)round((float)$amount), $content, '', 'NOWPAYMENTS', 'IN', 'unmatched']);
     if ($insert->rowCount() !== 0) {

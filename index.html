@@ -146,7 +146,7 @@ if (location.pathname.endsWith('/index.html')) {
 
       <label for="amt"><span class="step">01</span>Số tiền ủng hộ (VNĐ)</label>
       <div class="amount-field">
-        <input id="amt" type="number" min="10000" max="50000000" step="1000" value="50000" inputmode="numeric" aria-describedby="amountError amountPreview">
+        <input id="amt" type="number" min="10000" max="50000000" step="1000" value="50000" inputmode="decimal" aria-describedby="amountError amountPreview">
         <span>VNĐ</span>
       </div>
       <fieldset class="payment-method" aria-describedby="paymentMethodHint">
@@ -556,12 +556,16 @@ function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const minimum=CungDonate.minimum();
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?200000:minimum;
-  const validAmount=raw!==''&&Number.isInteger(a)&&a>=paymentMinimum&&a<=50000000;
-  $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(paymentMinimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<paymentMinimum?'Số tiền tối thiểu là '+money(paymentMinimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
-  $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
+  const cryptoMode=paymentMethod==='nowpayments';
+  const paymentMinimum=cryptoMode?7.5:minimum;
+  const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(raw):Number.isInteger(a);
+  const validAmount=raw!==''&&Number.isFinite(a)&&validFormat&&a>=paymentMinimum&&(cryptoMode||a<=50000000);
+  const shownAmount=cryptoMode&&Number.isFinite(a)?a.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+' USDT':money(a);
+  const minimumLabel=cryptoMode?'7,5 USDT':money(paymentMinimum);
+  $('amountError').textContent=raw===''?'Nhập số tiền từ '+minimumLabel+'.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<paymentMinimum?'Số tiền tối thiểu là '+minimumLabel+'.':!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?shownAmount:'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(200000)+'; trang thanh toán sẽ mở ở tab mới.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu 7,5; doanh thu sẽ quy đổi sang VNĐ trong hệ thống.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -570,10 +574,22 @@ function upd(){
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
 
+function syncPaymentMethodInput(method){
+  const input=$('amt'), crypto=method==='nowpayments';
+  input.min=crypto?'7.5':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
+  const current=Number(input.value);
+  if(crypto){
+    if(!Number.isFinite(current)||current<7.5||Number.isInteger(current)&&current>1000) input.value='7.5';
+    document.querySelectorAll('.q button').forEach((b,i)=>{const v=['7.5','10','20'][i];b.dataset.v=v;b.textContent=v+' USDT';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
+  }else{
+    if(!Number.isFinite(current)||current<10000||!Number.isInteger(current)) input.value='50000';
+    document.querySelectorAll('.q button').forEach((b,i)=>{const v=['10000','50000','200000'][i];b.dataset.v=v;b.textContent=Number(v).toLocaleString('vi-VN')+'đ';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
+  }
+}
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
 $('historyMore').onclick=()=>loadHistory(false);
 $('amt').oninput=$('msg').oninput=upd;
-document.querySelectorAll('input[name="payment_method"]').forEach(el=>el.onchange=upd);
+document.querySelectorAll('input[name="payment_method"]').forEach(el=>el.onchange=()=>{syncPaymentMethodInput(el.value);upd()});
 
 async function loadProfile(){
   try{
@@ -614,8 +630,11 @@ $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?200000:CungDonate.minimum();
-  if(!Number.isInteger(amount)||amount<paymentMinimum||amount>50000000||!CungDonate.ready){upd();return}
+  const cryptoMode=paymentMethod==='nowpayments';
+  const paymentMinimum=cryptoMode?7.5:CungDonate.minimum();
+  const rawAmount=$('amt').value.trim();
+  const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(rawAmount):Number.isInteger(amount);
+  if(!validFormat||!Number.isFinite(amount)||amount<paymentMinimum||(!cryptoMode&&amount>50000000)||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
   creatingOrder=true;
@@ -649,6 +668,7 @@ $('go').onclick=async()=>{
 };
 
 upd();
+syncPaymentMethodInput(document.querySelector('input[name="payment_method"]:checked')?.value||'bank');
 updateResumeOrder();
 loadProfile();
 loadVoices();
