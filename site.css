@@ -191,8 +191,8 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .payment-option-card:hover{border-color:var(--accent)}
 .payment-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
 .payment-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
-.payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:#263c24;color:var(--accent);overflow:hidden}
-.payment-option-icon.crypto{background:#243d32}
+.payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:transparent;color:var(--accent);overflow:hidden}
+.payment-option-icon.crypto{background:transparent}
 .payment-option-icon img{width:36px;height:36px;object-fit:contain}
 .payment-option-glyph{font-size:22px;line-height:1;font-weight:750}
 .payment-option-copy{display:grid;gap:2px;min-width:0}
@@ -205,7 +205,7 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .crypto-network-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .crypto-network-option{cursor:pointer}
 .crypto-network-option .payment-option-card{min-height:54px;padding:9px 11px}
-.crypto-network-option .payment-option-icon{width:36px;height:36px;flex-basis:36px;border-radius:8px;background:#101a25}
+.crypto-network-option .payment-option-icon{width:36px;height:36px;flex-basis:36px;border-radius:8px;background:transparent}
 .crypto-network-option .payment-option-icon img{width:36px;height:36px}
 .crypto-network-option .payment-option-icon img[src*="solana"]{width:36px;height:36px}
 .crypto-network-option .payment-option-card:hover{border-color:var(--accent)}
