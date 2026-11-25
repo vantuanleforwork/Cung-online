@@ -144,10 +144,10 @@ if (location.pathname.endsWith('/index.html')) {
         <p class="sub">Nhập số tiền và viết lời nhắn gửi đến buổi livestream.</p>
       </div>
 
-      <label for="amt"><span class="step">01</span>Số tiền ủng hộ (VNĐ)</label>
+      <label for="amt"><span class="step">01</span><span id="amountLabel">Số tiền ủng hộ (VNĐ)</span></label>
       <div class="amount-field">
         <input id="amt" type="number" min="10000" max="50000000" step="1000" value="50000" inputmode="decimal" aria-describedby="amountError amountPreview">
-        <span>VNĐ</span>
+        <span id="amountUnit">VNĐ</span>
       </div>
       <fieldset class="payment-method" aria-describedby="paymentMethodHint">
         <legend><span class="step">02</span>Phương thức thanh toán</legend>
@@ -584,6 +584,8 @@ function upd(){
 function syncPaymentMethodInput(method){
   const input=$('amt'), crypto=method==='nowpayments';
   $('cryptoNetworkRow').hidden=!crypto;
+  $('amountLabel').textContent=crypto?'Số tiền ủng hộ (USDT)':'Số tiền ủng hộ (VNĐ)';
+  $('amountUnit').textContent=crypto?'USDT':'VNĐ';
   input.min=crypto?'7.5':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
   const current=Number(input.value);
   if(crypto){
