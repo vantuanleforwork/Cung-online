@@ -193,7 +193,8 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .payment-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
 .payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:#263c24;color:var(--accent)}
 .payment-option-icon.crypto{background:#243d32}
-.payment-option-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.payment-option-icon{overflow:hidden}
+.payment-option-icon svg{display:block;width:20px!important;height:20px!important}
 .payment-option-copy{display:grid;gap:2px;min-width:0}
 .payment-option-copy strong{font-size:14px}
 .payment-option-copy small{color:var(--muted);font-size:12px;line-height:1.35}
