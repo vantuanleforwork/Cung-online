@@ -1,4 +1,6 @@
 /* Public donation page. The form leads, community details stay secondary. */
+*,*::before,*::after{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
 .site-header { max-width: 1240px; margin: auto; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
 .site-wordmark { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font-weight: 750; font-size: 15px; letter-spacing: 1.4px; }
 .site-logo { display: block; object-fit: contain; padding: var(--space-1); background: var(--ink); border-radius: var(--radius-sm); }

@@ -573,7 +573,7 @@ function upd(){
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+minimumLabel+'.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<paymentMinimum?'Số tiền tối thiểu là '+minimumLabel+'.':!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?shownAmount:'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu '+paymentMinimum+' đô cho 1 lượt thanh toán qua mạng '+(paymentNetwork==='sol'?'SOL.':'BSC.'):'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu 7.5 đô cho 1 lượt thanh toán qua nền tảng.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -582,7 +582,7 @@ function upd(){
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
 
-function usdtMinimum(network){return network==='sol'?3:7.5}
+function usdtMinimum(network){return 7.5}
 function syncPaymentMethodInput(method){
   const input=$('amt'), crypto=method==='nowpayments';
   const network=document.querySelector('input[name="payment_network"]:checked')?.value||'sol';
@@ -594,7 +594,7 @@ function syncPaymentMethodInput(method){
   const current=Number(input.value);
   if(crypto){
     input.value=String(cryptoMin);
-    const quick=network==='sol'?['3','7.5','10']:['7.5','10','20'];
+    const quick=['7.5','10','20'];
     document.querySelectorAll('.q button').forEach((b,i)=>{const v=quick[i];b.dataset.v=v;b.textContent=v+' USDT';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
   }else{
     if(!Number.isFinite(current)||current<10000||!Number.isInteger(current)) input.value='50000';
