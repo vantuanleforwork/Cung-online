@@ -15,6 +15,7 @@ const NOWPAYMENTS_API_KEY = '';
 const NOWPAYMENTS_IPN_SECRET = '';
 const NOWPAYMENTS_PRICE_CURRENCY = 'vnd';
 const NOWPAYMENTS_PAY_CURRENCY = 'usdtbsc';
+const NOWPAYMENTS_MIN_VND = 200000;
 const NOWPAYMENTS_WEBHOOK_URL = 'https://donate.vantuanle.com/nowpayments-ipn.php';
 const OVERLAY_KEY = '';
 const PREFIX = 'DNTVTL';

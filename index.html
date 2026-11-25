@@ -541,10 +541,13 @@ function renderProfile(user){
 function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const minimum=CungDonate.minimum();
-  const validAmount=raw!==''&&Number.isInteger(a)&&a>=minimum&&a<=50000000;
-  $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(minimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<minimum?'Số tiền tối thiểu là '+money(minimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
+  const paymentMinimum=paymentMethod==='nowpayments'?200000:minimum;
+  const validAmount=raw!==''&&Number.isInteger(a)&&a>=paymentMinimum&&a<=50000000;
+  $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(paymentMinimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<paymentMinimum?'Số tiền tối thiểu là '+money(paymentMinimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(200000)+'; trang thanh toán sẽ khóa tỷ giá trong thời gian ngắn.':'USDT BSC sẽ mở trang thanh toán an toàn của NOWPayments.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -556,6 +559,7 @@ function upd(){
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
 $('historyMore').onclick=()=>loadHistory(false);
 $('amt').oninput=$('msg').oninput=upd;
+document.querySelectorAll('input[name="payment_method"]').forEach(el=>el.onchange=upd);
 
 async function loadProfile(){
   try{
@@ -595,14 +599,15 @@ let creatingOrder=false;
 $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
-  if(!Number.isInteger(amount)||amount<CungDonate.minimum()||amount>50000000||!CungDonate.ready){upd();return}
+  const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
+  const paymentMinimum=paymentMethod==='nowpayments'?200000:CungDonate.minimum();
+  if(!Number.isInteger(amount)||amount<paymentMinimum||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
   creatingOrder=true;
   $('go').disabled=true;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
     const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
