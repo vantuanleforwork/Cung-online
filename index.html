@@ -654,7 +654,7 @@ $('go').onclick=async()=>{
   if(checkoutWindow)checkoutWindow.opener=null;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,payment_network:paymentNetwork,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount:cryptoMode?rawAmount:amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,payment_network:paymentNetwork,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{
