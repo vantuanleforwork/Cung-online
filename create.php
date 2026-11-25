@@ -16,11 +16,11 @@ function send_payment_code(string $code, string $statusToken, int $amount): void
     respond(200, ['code'=>$code, 'qr'=>$qr, 'status_token'=>$statusToken, 'test_paid'=>false]);
 }
 
-function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string $statusToken, int $amount, float $cryptoAmount): void {
+function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string $statusToken, int $amount, float $cryptoAmount, string $payCurrency): void {
     $data = nowpayments_request('invoice', [
         'price_amount' => $cryptoAmount,
         'price_currency' => 'usd',
-        'pay_currency' => NOWPAYMENTS_PAY_CURRENCY,
+        'pay_currency' => $payCurrency,
         'is_fixed_rate' => true,
         'order_id' => $code,
         'order_description' => 'Donate Cung-online #' . $code,
@@ -33,10 +33,11 @@ function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string
     if ($url === '' || !preg_match('~^https://(account\.)?nowpayments\.io/~i', $url)) {
         throw new RuntimeException('NOWPayments không trả về link thanh toán hợp lệ.');
     }
-    $db->prepare("UPDATE donations SET payment_method='nowpayments',provider_payment_id=? WHERE id=?")
-       ->execute([$paymentId !== '' ? $paymentId : null, $donationId]);
+    $networkMethod = strtolower($payCurrency) === 'usdtsol' ? 'nowpayments_sol' : 'nowpayments_bsc';
+    $db->prepare('UPDATE donations SET payment_method=?,provider_payment_id=? WHERE id=?')
+       ->execute([$networkMethod, $paymentId !== '' ? $paymentId : null, $donationId]);
     respond(200, ['code'=>$code, 'status_token'=>$statusToken, 'checkout_url'=>$url,
-        'payment_method'=>'nowpayments', 'test_paid'=>false]);
+        'payment_method'=>'nowpayments', 'payment_network'=>$networkMethod === 'nowpayments_sol' ? 'sol' : 'bsc', 'test_paid'=>false]);
 }
 
 try {
@@ -50,6 +51,9 @@ try {
     $paymentMethod = $in['payment_method'] ?? 'bank';
     if (!is_string($paymentMethod) || !in_array($paymentMethod, ['bank','nowpayments'], true)) fail(400, 'Phương thức thanh toán không hợp lệ.');
     if ($paymentMethod === 'nowpayments' && !nowpayments_enabled()) fail(503, 'Cổng USDT chưa được cấu hình.');
+    $paymentNetwork = strtolower(trim((string)($in['payment_network'] ?? 'sol')));
+    if ($paymentMethod === 'nowpayments' && !in_array($paymentNetwork, ['sol','bsc'], true)) fail(400, 'Mạng USDT không hợp lệ.');
+    $payCurrency = $paymentNetwork === 'bsc' ? 'usdtbsc' : 'usdtsol';
     if (!is_string($in['message'] ?? '') || (!is_int($in['amount'] ?? null) && !is_string($in['amount'] ?? null))) {
         fail(400, 'Dữ liệu số tiền không hợp lệ.');
     }
@@ -268,7 +272,7 @@ try {
 
     if ($isTestAccount) respond(200, ['test_paid' => true]);
 
-    if ($paymentMethod === 'nowpayments') send_nowpayments_invoice($db, $donationId, $code, $statusToken, $amount, (float)$cryptoAmount);
+    if ($paymentMethod === 'nowpayments') send_nowpayments_invoice($db, $donationId, $code, $statusToken, $amount, (float)$cryptoAmount, $payCurrency);
     send_payment_code($code, $statusToken, $amount);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

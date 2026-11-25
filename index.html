@@ -163,9 +163,16 @@ if (location.pathname.endsWith('/index.html')) {
             <input type="radio" name="payment_method" value="nowpayments">
             <span class="payment-option-card">
               <span class="payment-option-icon crypto" aria-hidden="true"><span class="payment-option-glyph">₮</span></span>
-              <span class="payment-option-copy"><strong>USDT BSC</strong><small>NOWPayments · tỷ giá cố định</small></span>
+              <span class="payment-option-copy"><strong>USDT</strong><small>NOWPayments · tỷ giá cố định</small></span>
             </span>
           </label>
+        </div>
+        <div id="cryptoNetworkRow" class="crypto-network" hidden>
+          <span class="crypto-network-label">Mạng nhận USDT</span>
+          <div class="crypto-network-options" role="radiogroup" aria-label="Mạng nhận USDT">
+            <label class="crypto-network-option"><input type="radio" name="payment_network" value="sol" checked><span><strong>SOL</strong><small>Solana</small></span></label>
+            <label class="crypto-network-option"><input type="radio" name="payment_network" value="bsc"><span><strong>BSC</strong><small>BEP20</small></span></label>
+          </div>
         </div>
         <p id="paymentMethodHint" class="voice-hint">Chọn một phương thức để tiếp tục.</p>
       </fieldset>
@@ -576,6 +583,7 @@ function upd(){
 
 function syncPaymentMethodInput(method){
   const input=$('amt'), crypto=method==='nowpayments';
+  $('cryptoNetworkRow').hidden=!crypto;
   input.min=crypto?'7.5':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
   const current=Number(input.value);
   if(crypto){
@@ -630,6 +638,7 @@ $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
+  const paymentNetwork=document.querySelector('input[name="payment_network"]:checked')?.value||'sol';
   const cryptoMode=paymentMethod==='nowpayments';
   const paymentMinimum=cryptoMode?7.5:CungDonate.minimum();
   const rawAmount=$('amt').value.trim();
@@ -643,7 +652,7 @@ $('go').onclick=async()=>{
   if(checkoutWindow)checkoutWindow.opener=null;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,payment_network:paymentNetwork,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{

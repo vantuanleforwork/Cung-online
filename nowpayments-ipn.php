@@ -23,8 +23,9 @@ try {
     $paymentId = trim((string)($data['payment_id'] ?? ''));
     if ($orderId === '' || $paymentId === '' || !in_array($status, ['finished','partially_paid'], true)) respond(200, ['success'=>true]);
     if ($status !== 'finished') respond(200, ['success'=>true]);
+    $incomingCurrency = strtolower((string)($data['pay_currency'] ?? ''));
     if (strtolower((string)($data['price_currency'] ?? '')) !== 'usd'
-        || strtolower((string)($data['pay_currency'] ?? '')) !== strtolower((string)NOWPAYMENTS_PAY_CURRENCY)) respond(400, ['success'=>false]);
+        || !in_array($incomingCurrency, ['usdtsol','usdtbsc'], true)) respond(400, ['success'=>false]);
     $cryptoPaid = $data['actually_paid'] ?? $data['pay_amount'] ?? $data['price_amount'] ?? null;
     if (!is_numeric($cryptoPaid) || (float)$cryptoPaid <= 0) respond(400, ['success'=>false]);
     $rate = (float)(defined('NOWPAYMENTS_USDT_VND_RATE') ? NOWPAYMENTS_USDT_VND_RATE : 26000);
@@ -32,11 +33,14 @@ try {
     $amount = (int)round((float)$cryptoPaid * $rate);
     $db = db();
     $db->beginTransaction();
-    $s = $db->prepare("SELECT * FROM donations WHERE code=? AND payment_method='nowpayments' FOR UPDATE");
+    $s = $db->prepare("SELECT * FROM donations WHERE code=? AND payment_method IN ('nowpayments','nowpayments_sol','nowpayments_bsc') FOR UPDATE");
     $s->execute([$orderId]);
     $donation = $s->fetch(PDO::FETCH_ASSOC);
     if (!$donation) { $db->commit(); respond(200, ['success'=>true]); }
     if ($donation['status'] === 'paid') { $db->commit(); respond(200, ['success'=>true]); }
+    $expectedCurrency = $donation['payment_method'] === 'nowpayments_sol' ? 'usdtsol'
+        : ($donation['payment_method'] === 'nowpayments_bsc' ? 'usdtbsc' : strtolower((string)NOWPAYMENTS_PAY_CURRENCY));
+    if ($incomingCurrency !== $expectedCurrency) { $db->rollBack(); respond(400, ['success'=>false]); }
     $txId = 'NP_' . substr(preg_replace('/[^A-Za-z0-9_-]/', '', $paymentId), 0, 58);
     $content = 'NOWPayments ' . $orderId . ' ' . (string)($data['pay_currency'] ?? NOWPAYMENTS_PAY_CURRENCY) . ' ' . number_format((float)$cryptoPaid, 1, '.', '');
     $insert = $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id");
