@@ -182,3 +182,8 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .music-queue-row > div { min-width: 0; overflow-wrap: anywhere; }
 .music-queue-row small { display: block; color: var(--muted); margin-top: 6px; }
 .music-queue-row > span { color: var(--accent); font-size: 12px; white-space: nowrap; }
+.payment-method{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:16px 0;background:rgba(255,255,255,.02)}
+.payment-method legend{padding:0 6px;font-weight:700;color:var(--text)}
+.payment-method label{display:inline-flex;align-items:center;gap:8px;margin:4px 16px 4px 0;color:var(--text)}
+.payment-method input{accent-color:var(--lime)}
+.checkout-link{display:block;text-align:center;text-decoration:none;margin:12px 0}

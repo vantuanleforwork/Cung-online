@@ -149,6 +149,12 @@ if (location.pathname.endsWith('/index.html')) {
         <input id="amt" type="number" min="10000" max="50000000" step="1000" value="50000" inputmode="numeric" aria-describedby="amountError amountPreview">
         <span>VNĐ</span>
       </div>
+      <fieldset class="payment-method" aria-describedby="paymentMethodHint">
+        <legend>Phương thức thanh toán</legend>
+        <label><input type="radio" name="payment_method" value="bank" checked> Chuyển khoản ngân hàng</label>
+        <label><input type="radio" name="payment_method" value="nowpayments"> USDT BSC</label>
+        <p id="paymentMethodHint" class="voice-hint">USDT BSC sẽ mở trang thanh toán an toàn của NOWPayments.</p>
+      </fieldset>
       <div id="amountError" role="alert" aria-live="polite"></div>
       <div id="amountPreview" class="amount-preview" aria-live="polite">Số tiền: <strong id="amountPreviewValue">50,000đ</strong></div>
       <div class="q">
@@ -199,6 +205,8 @@ if (location.pathname.endsWith('/index.html')) {
       <img id="qr" alt="Mã QR chuyển khoản ủng hộ Van Tuan Le">
       <p style="font-size:13px;color:var(--muted);margin:8px 0 4px">Giữ nguyên số tiền và nội dung chuyển khoản:</p>
       <code id="code"></code>
+      <p id="checkoutHint" class="sub" hidden>Mở trang NOWPayments để thanh toán USDT BSC:</p>
+      <a id="checkoutLink" class="go checkout-link" href="#" target="_blank" rel="noopener" hidden>Mở thanh toán USDT ↗</a>
       <p id="paymentStatus" role="status" aria-live="polite">Đang chờ nhận tiền chuyển khoản…</p>
       <p class="sub">Sau khi ngân hàng nhận tiền, màn hình livestream sẽ tự động phát thông báo và giọng đọc AI!</p>
       <button type="button" id="newOrder">Tạo lượt donate khác</button>
@@ -250,9 +258,11 @@ const storedOrderKey='cung_order',storedOrderMaxAge=24*60*60*1000;
 function storedOrder(){
   try{
     const saved=JSON.parse(localStorage.getItem(storedOrderKey)||'null');
-    const url=new URL(saved?.qr||'');
+    const url=new URL(saved?.qr||saved?.checkout_url||'');
+    const validCheckout=(url.protocol==='https:'&&url.hostname==='img.vietqr.io')
+      ||(url.protocol==='https:'&&/^(account\.)?nowpayments\.io$/i.test(url.hostname));
     if(saved&&/^[A-Z0-9]{5,16}$/.test(saved.code)&&/^[a-f0-9]{64}$/.test(saved.status_token)
-      &&url.protocol==='https:'&&url.hostname==='img.vietqr.io'
+      &&validCheckout
       &&Number.isFinite(saved.saved_at)&&saved.saved_at<=Date.now()&&Date.now()-saved.saved_at<storedOrderMaxAge)return saved;
     localStorage.removeItem(storedOrderKey);
   }catch(e){try{localStorage.removeItem(storedOrderKey)}catch(ignore){}}
@@ -302,7 +312,11 @@ function showOrder(value){
   try{localStorage.setItem(storedOrderKey,JSON.stringify({...value,saved_at:value.saved_at||Date.now()}))}catch(e){}
   updateResumeOrder();
   $('f').style.display='none';$('res').style.display='block';
-  $('qr').src=value.qr;$('code').textContent=value.code;refreshStatus(generation);
+  const crypto=value.payment_method==='nowpayments';
+  $('qr').hidden=crypto;$('checkoutHint').hidden=!crypto;$('checkoutLink').hidden=!crypto;
+  if(crypto){$('checkoutLink').href=value.checkout_url;$('code').textContent='Mã đơn '+value.code}
+  else{$('qr').src=value.qr;$('code').textContent=value.code}
+  refreshStatus(generation);
 }
 $('resumeOrderButton').onclick=()=>{const saved=storedOrder();if(saved)showOrder(saved);else updateResumeOrder()};
 $('dismissOrderButton').onclick=()=>{try{localStorage.removeItem(storedOrderKey)}catch(e){}updateResumeOrder()};
@@ -588,7 +602,8 @@ $('go').onclick=async()=>{
   $('go').disabled=true;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
+    const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{

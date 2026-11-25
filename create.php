@@ -16,6 +16,29 @@ function send_payment_code(string $code, string $statusToken, int $amount): void
     respond(200, ['code'=>$code, 'qr'=>$qr, 'status_token'=>$statusToken, 'test_paid'=>false]);
 }
 
+function send_nowpayments_invoice(PDO $db, int $donationId, string $code, string $statusToken, int $amount): void {
+    $data = nowpayments_request('invoice', [
+        'price_amount' => $amount,
+        'price_currency' => NOWPAYMENTS_PRICE_CURRENCY,
+        'pay_currency' => NOWPAYMENTS_PAY_CURRENCY,
+        'is_fixed_rate' => true,
+        'order_id' => $code,
+        'order_description' => 'Donate Cung-online #' . $code,
+        'ipn_callback_url' => NOWPAYMENTS_WEBHOOK_URL,
+        'success_url' => 'https://donate.vantuanle.com/',
+        'cancel_url' => 'https://donate.vantuanle.com/',
+    ]);
+    $url = (string)($data['invoice_url'] ?? '');
+    $paymentId = (string)($data['id'] ?? $data['payment_id'] ?? '');
+    if ($url === '' || !preg_match('~^https://(account\.)?nowpayments\.io/~i', $url)) {
+        throw new RuntimeException('NOWPayments không trả về link thanh toán hợp lệ.');
+    }
+    $db->prepare("UPDATE donations SET payment_method='nowpayments',provider_payment_id=? WHERE id=?")
+       ->execute([$paymentId !== '' ? $paymentId : null, $donationId]);
+    respond(200, ['code'=>$code, 'status_token'=>$statusToken, 'checkout_url'=>$url,
+        'payment_method'=>'nowpayments', 'test_paid'=>false]);
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Chỉ hỗ trợ POST.');
     donor_session();
@@ -24,6 +47,9 @@ try {
     }
     
     $in = input_json(8192);
+    $paymentMethod = $in['payment_method'] ?? 'bank';
+    if (!is_string($paymentMethod) || !in_array($paymentMethod, ['bank','nowpayments'], true)) fail(400, 'Phương thức thanh toán không hợp lệ.');
+    if ($paymentMethod === 'nowpayments' && !nowpayments_enabled()) fail(503, 'Cổng USDT chưa được cấu hình.');
     if (!is_string($in['message'] ?? '') ||
         (!is_int($in['amount'] ?? null) && !is_string($in['amount'] ?? null)) ||
         filter_var($in['amount'], FILTER_VALIDATE_INT) === false) {
@@ -208,7 +234,7 @@ try {
                        ->execute([$donationId,$ipHash]);
                 }
             }
-            $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$donationId]);
+            $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=?,payment_method=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$paymentMethod,$donationId]);
             if ($spin !== null) {
                 $db->prepare('INSERT INTO roulette_spins(donation_id,snapshot) VALUES(?,?)')
                    ->execute([$donationId,json_encode($spin, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
@@ -231,6 +257,7 @@ try {
 
     if ($isTestAccount) respond(200, ['test_paid' => true]);
 
+    if ($paymentMethod === 'nowpayments') send_nowpayments_invoice($db, $donationId, $code, $statusToken, $amount);
     send_payment_code($code, $statusToken, $amount);
 } catch (Throwable $e) {
     if (isset($db) && $db->inTransaction()) $db->rollBack();

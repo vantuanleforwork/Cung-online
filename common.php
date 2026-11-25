@@ -9,6 +9,35 @@ function respond(int $status, array $body) {
     exit;
 }
 
+function nowpayments_enabled(): bool {
+    return defined('NOWPAYMENTS_API_KEY') && trim((string)NOWPAYMENTS_API_KEY) !== ''
+        && defined('NOWPAYMENTS_IPN_SECRET') && trim((string)NOWPAYMENTS_IPN_SECRET) !== '';
+}
+
+function nowpayments_request(string $path, array $payload): array {
+    if (!nowpayments_enabled()) throw new RuntimeException('NOWPayments chưa được cấu hình.');
+    $ch = curl_init('https://api.nowpayments.io/v1/' . ltrim($path, '/'));
+    if ($ch === false) throw new RuntimeException('Không khởi tạo được kết nối NOWPayments.');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => ['x-api-key: ' . NOWPAYMENTS_API_KEY, 'Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+    ]);
+    $body = curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+    if ($body === false || $error !== '') throw new RuntimeException('Không kết nối được NOWPayments.');
+    $data = json_decode($body, true);
+    if ($code < 200 || $code >= 300 || !is_array($data)) {
+        error_log('NOWPayments API error ' . $code . ': ' . substr((string)$body, 0, 1000));
+        throw new RuntimeException('NOWPayments từ chối tạo thanh toán.');
+    }
+    return $data;
+}
+
 function input_json(int $limit = 131072) {
     $raw = file_get_contents('php://input', false, null, 0, $limit + 1);
     if (strlen($raw) > $limit) respond(413, ['error' => 'Dữ liệu quá lớn.']);

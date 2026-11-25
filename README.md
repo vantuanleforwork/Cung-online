@@ -77,6 +77,10 @@ Hosting cần PHP cURL, kết nối HTTPS ra ElevenLabs, quyền database CREATE
 
 ## Thanh toán
 
+### NOWPayments USDT BSC
+
+Luồng USDT BSC dùng invoice NOWPayments song song với QR ngân hàng. Chạy `migrate-005.sql` một lần trên cơ sở dữ liệu production, sau đó thêm các hằng số `NOWPAYMENTS_API_KEY` và `NOWPAYMENTS_IPN_SECRET` vào `config.php` (không commit file này). `NOWPAYMENTS_WEBHOOK_URL` phải trỏ tới `https://donate.vantuanle.com/nowpayments-ipn.php` và URL này cần được lưu trong Payments Settings → Instant payment notifications. Hệ thống tạo invoice tỷ giá cố định theo số tiền VNĐ, nhận IPN HMAC-SHA512, chỉ ghi nhận trạng thái `finished`, rồi đưa lượt donate vào cùng hàng đợi OBS hiện có.
+
 ### Tài khoản Google và hồ sơ donate
 
 Database đang chạy cần sao lưu rồi chạy `migrate-004.sql` đúng một lần. Bật Google Identity/OAuth client kiểu Web application trong Google Cloud Console. Thêm callback URI chính xác `https://TEN-MIEN-CUA-BAN/google-callback.php` làm Authorized redirect URI, rồi điền Client ID, Client Secret và URI đầy đủ vào `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` trong `config.php`. Cần HTTPS cùng PHP cURL, OpenSSL và GD.
