@@ -191,22 +191,26 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .payment-option-card:hover{border-color:var(--accent)}
 .payment-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
 .payment-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
-.payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:#263c24;color:var(--accent)}
+.payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:#263c24;color:var(--accent);overflow:hidden}
 .payment-option-icon.crypto{background:#243d32}
+.payment-option-icon img{width:26px;height:26px;object-fit:contain}
 .payment-option-glyph{font-size:22px;line-height:1;font-weight:750}
 .payment-option-copy{display:grid;gap:2px;min-width:0}
 .payment-option-copy strong{font-size:14px}
 .payment-option-copy small{color:var(--muted);font-size:12px;line-height:1.35}
-.crypto-network{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-md);background:#17231d}
-.crypto-network-label{color:var(--muted);font-size:12px;font-weight:650}
-.crypto-network-options{display:flex;gap:8px}
+.crypto-network{margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-md);background:#17231d}
+.crypto-network-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.crypto-network-heading strong{font-size:12px}
+.crypto-network-heading small{color:var(--muted);font-size:11px}
+.crypto-network-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .crypto-network-option{cursor:pointer}
-.crypto-network-option input{position:absolute;opacity:0;pointer-events:none}
-.crypto-network-option span{display:flex;align-items:baseline;gap:5px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--field);color:var(--ink);transition:border-color .16s,background-color .16s}
-.crypto-network-option span:hover{border-color:var(--accent)}
-.crypto-network-option input:checked + span{border-color:var(--accent);background:#263c24;color:var(--accent)}
-.crypto-network-option input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
-.crypto-network-option strong{font-size:12px}
-.crypto-network-option small{color:var(--muted);font-size:11px}
+.crypto-network-option .payment-option-card{min-height:54px;padding:9px 11px}
+.crypto-network-option .payment-option-icon{width:30px;height:30px;flex-basis:30px;border-radius:8px;background:#101a25}
+.crypto-network-option .payment-option-icon img{width:24px;height:24px}
+.crypto-network-option .payment-option-card:hover{border-color:var(--accent)}
+.crypto-network-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
+.crypto-network-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
+.crypto-network-option .payment-option-copy strong{font-size:13px}
+.crypto-network-option .payment-option-copy small{font-size:11px}
 .checkout-link{display:block;text-align:center;text-decoration:none;margin:12px 0}
-@media (max-width:420px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}.crypto-network{align-items:flex-start;flex-direction:column}.crypto-network-options{width:100%}.crypto-network-option{flex:1}.crypto-network-option span{justify-content:center}}
+@media (max-width:420px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}.crypto-network-heading{align-items:flex-start;flex-direction:column;gap:3px}.crypto-network-options{grid-template-columns:1fr}.crypto-network-option .payment-option-card{min-height:52px}}

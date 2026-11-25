@@ -155,23 +155,23 @@ if (location.pathname.endsWith('/index.html')) {
           <label class="payment-option">
             <input type="radio" name="payment_method" value="bank" checked>
             <span class="payment-option-card">
-              <span class="payment-option-icon" aria-hidden="true"><span class="payment-option-glyph">▥</span></span>
+              <span class="payment-option-icon" aria-hidden="true"><img src="assets/payment-icons/bank.svg" alt=""></span>
               <span class="payment-option-copy"><strong>Chuyển khoản</strong><small>QR ngân hàng · nhanh gọn</small></span>
             </span>
           </label>
           <label class="payment-option">
             <input type="radio" name="payment_method" value="nowpayments">
             <span class="payment-option-card">
-              <span class="payment-option-icon crypto" aria-hidden="true"><span class="payment-option-glyph">₮</span></span>
+              <span class="payment-option-icon crypto" aria-hidden="true"><img src="assets/payment-icons/usdt.svg" alt=""></span>
               <span class="payment-option-copy"><strong>USDT</strong><small>NOWPayments · tỷ giá cố định</small></span>
             </span>
           </label>
         </div>
         <div id="cryptoNetworkRow" class="crypto-network" hidden>
-          <span class="crypto-network-label">Mạng nhận USDT</span>
+          <div class="crypto-network-heading"><strong>Mạng nhận USDT</strong><small>Chọn mạng bạn muốn sử dụng</small></div>
           <div class="crypto-network-options" role="radiogroup" aria-label="Mạng nhận USDT">
-            <label class="crypto-network-option"><input type="radio" name="payment_network" value="sol" checked><span><strong>SOL</strong><small>Solana</small></span></label>
-            <label class="crypto-network-option"><input type="radio" name="payment_network" value="bsc"><span><strong>BSC</strong><small>BEP20</small></span></label>
+            <label class="payment-option crypto-network-option"><input type="radio" name="payment_network" value="sol" checked><span class="payment-option-card"><span class="payment-option-icon network-icon" aria-hidden="true"><img src="assets/payment-icons/solana.svg" alt=""></span><span class="payment-option-copy"><strong>SOL</strong><small>Solana</small></span></span></label>
+            <label class="payment-option crypto-network-option"><input type="radio" name="payment_network" value="bsc"><span class="payment-option-card"><span class="payment-option-icon network-icon" aria-hidden="true"><img src="assets/payment-icons/bsc.svg" alt=""></span><span class="payment-option-copy"><strong>BSC</strong><small>BEP20</small></span></span></label>
           </div>
         </div>
         <p id="paymentMethodHint" class="voice-hint">Chọn một phương thức để tiếp tục.</p>
@@ -564,15 +564,15 @@ function upd(){
   const minimum=CungDonate.minimum();
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
   const cryptoMode=paymentMethod==='nowpayments';
-  const paymentMinimum=cryptoMode?7.5:minimum;
+  const paymentMinimum=cryptoMode?0:minimum;
   const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(raw):Number.isInteger(a);
-  const validAmount=raw!==''&&Number.isFinite(a)&&validFormat&&a>=paymentMinimum&&(cryptoMode||a<=50000000);
+  const validAmount=raw!==''&&Number.isFinite(a)&&validFormat&&a>paymentMinimum&&(cryptoMode||a<=50000000);
   const shownAmount=cryptoMode&&Number.isFinite(a)?a.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+' USDT':money(a);
   const minimumLabel=cryptoMode?'7,5 USDT':money(paymentMinimum);
-  $('amountError').textContent=raw===''?'Nhập số tiền từ '+minimumLabel+'.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<paymentMinimum?'Số tiền tối thiểu là '+minimumLabel+'.':!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
+  $('amountError').textContent=raw===''?'Nhập số tiền USDT muốn gửi.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<=paymentMinimum?(cryptoMode?'Số USDT phải lớn hơn 0.':'Số tiền tối thiểu là '+minimumLabel+'.'):!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?shownAmount:'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu 7.5 đô cho 1 lượt thanh toán qua nền tảng.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'NOWPayments sẽ kiểm tra mức tối thiểu theo mạng USDT đã chọn.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -586,11 +586,11 @@ function syncPaymentMethodInput(method){
   $('cryptoNetworkRow').hidden=!crypto;
   $('amountLabel').textContent=crypto?'Số tiền ủng hộ (USDT)':'Số tiền ủng hộ (VNĐ)';
   $('amountUnit').textContent=crypto?'USDT':'VNĐ';
-  input.min=crypto?'7.5':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
+  input.min=crypto?'0.1':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
   const current=Number(input.value);
   if(crypto){
-    if(!Number.isFinite(current)||current<7.5||Number.isInteger(current)&&current>1000) input.value='7.5';
-    document.querySelectorAll('.q button').forEach((b,i)=>{const v=['7.5','10','20'][i];b.dataset.v=v;b.textContent=v+' USDT';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
+    if(!Number.isFinite(current)||current<=0||Number.isInteger(current)&&current>1000) input.value='0.1';
+    document.querySelectorAll('.q button').forEach((b,i)=>{const v=['0.1','1','7.5'][i];b.dataset.v=v;b.textContent=v+' USDT';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
   }else{
     if(!Number.isFinite(current)||current<10000||!Number.isInteger(current)) input.value='50000';
     document.querySelectorAll('.q button').forEach((b,i)=>{const v=['10000','50000','200000'][i];b.dataset.v=v;b.textContent=Number(v).toLocaleString('vi-VN')+'đ';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
@@ -642,10 +642,10 @@ $('go').onclick=async()=>{
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
   const paymentNetwork=document.querySelector('input[name="payment_network"]:checked')?.value||'sol';
   const cryptoMode=paymentMethod==='nowpayments';
-  const paymentMinimum=cryptoMode?7.5:CungDonate.minimum();
+  const paymentMinimum=cryptoMode?0:CungDonate.minimum();
   const rawAmount=$('amt').value.trim();
   const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(rawAmount):Number.isInteger(amount);
-  if(!validFormat||!Number.isFinite(amount)||amount<paymentMinimum||(!cryptoMode&&amount>50000000)||!CungDonate.ready){upd();return}
+  if(!validFormat||!Number.isFinite(amount)||amount<=paymentMinimum||(!cryptoMode&&amount>50000000)||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
   creatingOrder=true;
