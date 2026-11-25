@@ -207,6 +207,7 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .crypto-network-option .payment-option-card{min-height:54px;padding:9px 11px}
 .crypto-network-option .payment-option-icon{width:30px;height:30px;flex-basis:30px;border-radius:8px;background:#101a25}
 .crypto-network-option .payment-option-icon img{width:24px;height:24px}
+.crypto-network-option .payment-option-icon img[src*="solana"]{width:20px;height:20px}
 .crypto-network-option .payment-option-card:hover{border-color:var(--accent)}
 .crypto-network-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
 .crypto-network-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
