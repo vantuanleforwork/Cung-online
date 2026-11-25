@@ -60,8 +60,8 @@ try {
     if ($amount < 1000 || $amount > 50000000) {
         fail(400, 'Số tiền tối thiểu là ' . number_format(MIN_AMOUNT, 0, ',', '.') . 'đ');
     }
-    if ($paymentMethod === 'nowpayments' && $amount < (defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 200000)) {
-        fail(400, 'Donate USDT tối thiểu là ' . number_format((int)(defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 200000), 0, ',', '.') . 'đ để đạt mức tối thiểu của mạng thanh toán.');
+    if ($paymentMethod === 'nowpayments' && $amount < (defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 100000)) {
+        fail(400, 'Donate USDT tối thiểu là ' . number_format((int)(defined('NOWPAYMENTS_MIN_VND') ? NOWPAYMENTS_MIN_VND : 100000), 0, ',', '.') . 'đ để đạt mức tối thiểu của mạng thanh toán.');
     }
 
     $db = db();

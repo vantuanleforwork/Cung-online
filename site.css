@@ -182,8 +182,20 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .music-queue-row > div { min-width: 0; overflow-wrap: anywhere; }
 .music-queue-row small { display: block; color: var(--muted); margin-top: 6px; }
 .music-queue-row > span { color: var(--accent); font-size: 12px; white-space: nowrap; }
-.payment-method{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:16px 0;background:rgba(255,255,255,.02)}
-.payment-method legend{padding:0 6px;font-weight:700;color:var(--text)}
-.payment-method label{display:inline-flex;align-items:center;gap:8px;margin:4px 16px 4px 0;color:var(--text)}
-.payment-method input{accent-color:var(--lime)}
+.payment-method{border:0;padding:0;margin:22px 0 18px}
+.payment-method legend{padding:0;margin-bottom:10px;color:var(--ink);font-weight:700}
+.payment-method-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.payment-option{display:block;margin:0;cursor:pointer}
+.payment-option input{position:absolute;opacity:0;pointer-events:none}
+.payment-option-card{display:flex;align-items:center;gap:12px;min-height:66px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--field);color:var(--ink);transition:border-color .16s,background-color .16s,box-shadow .16s}
+.payment-option-card:hover{border-color:var(--accent)}
+.payment-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
+.payment-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
+.payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:#263c24;color:var(--accent)}
+.payment-option-icon.crypto{background:#243d32}
+.payment-option-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.payment-option-copy{display:grid;gap:2px;min-width:0}
+.payment-option-copy strong{font-size:14px}
+.payment-option-copy small{color:var(--muted);font-size:12px;line-height:1.35}
 .checkout-link{display:block;text-align:center;text-decoration:none;margin:12px 0}
+@media (max-width:640px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}}

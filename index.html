@@ -150,10 +150,24 @@ if (location.pathname.endsWith('/index.html')) {
         <span>VNĐ</span>
       </div>
       <fieldset class="payment-method" aria-describedby="paymentMethodHint">
-        <legend>Phương thức thanh toán</legend>
-        <label><input type="radio" name="payment_method" value="bank" checked> Chuyển khoản ngân hàng</label>
-        <label><input type="radio" name="payment_method" value="nowpayments"> USDT BSC</label>
-        <p id="paymentMethodHint" class="voice-hint">USDT BSC sẽ mở trang thanh toán an toàn của NOWPayments.</p>
+        <legend><span class="step">02</span>Phương thức thanh toán</legend>
+        <div class="payment-method-options">
+          <label class="payment-option">
+            <input type="radio" name="payment_method" value="bank" checked>
+            <span class="payment-option-card">
+              <span class="payment-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18L12 4 3 20Z"/></svg></span>
+              <span class="payment-option-copy"><strong>Chuyển khoản</strong><small>QR ngân hàng · nhanh gọn</small></span>
+            </span>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="payment_method" value="nowpayments">
+            <span class="payment-option-card">
+              <span class="payment-option-icon crypto" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M7 4h8.5a3.5 3.5 0 0 1 0 7H8m0 0h8.5a3.5 3.5 0 0 1 0 7H7m2-14v14m3-14v14"/></svg></span>
+              <span class="payment-option-copy"><strong>USDT BSC</strong><small>NOWPayments · tỷ giá cố định</small></span>
+            </span>
+          </label>
+        </div>
+        <p id="paymentMethodHint" class="voice-hint">Chọn một phương thức để tiếp tục.</p>
       </fieldset>
       <div id="amountError" role="alert" aria-live="polite"></div>
       <div id="amountPreview" class="amount-preview" aria-live="polite">Số tiền: <strong id="amountPreviewValue">50,000đ</strong></div>
@@ -163,7 +177,7 @@ if (location.pathname.endsWith('/index.html')) {
         <button type="button" data-v="200000">200,000đ</button>
       </div>
 
-      <label for="msg"><span class="step">02</span>Lời nhắn gửi Van Tuan Le</label>
+      <label for="msg"><span class="step">03</span>Lời nhắn gửi Van Tuan Le</label>
       <textarea id="msg" maxlength="225" placeholder="Viết lời nhắn gửi đến Van Tuan Le trên livestream…" aria-describedby="hint cnt"></textarea>
       <div class="row"><span id="hint">Từ 50k: Mở khóa Hỏa Long &amp; tự chọn giọng đọc</span><span id="cnt">0/225</span></div>
 
@@ -179,7 +193,7 @@ if (location.pathname.endsWith('/index.html')) {
       </div>
       <div class="voice-select-box">
         <div class="voice-head">
-          <label for="voiceSelect"><span class="step">03</span>Chọn giọng đọc AI</label>
+          <label for="voiceSelect"><span class="step">04</span>Chọn giọng đọc AI</label>
           <span id="voiceBadge" class="voice-badge unlocked">✦ Mở khóa 50k</span>
         </div>
         <select id="voiceSelect" class="voice-select">
@@ -542,12 +556,12 @@ function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const minimum=CungDonate.minimum();
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?200000:minimum;
+  const paymentMinimum=paymentMethod==='nowpayments'?100000:minimum;
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=paymentMinimum&&a<=50000000;
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(paymentMinimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<paymentMinimum?'Số tiền tối thiểu là '+money(paymentMinimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(200000)+'; trang thanh toán sẽ khóa tỷ giá trong thời gian ngắn.':'USDT BSC sẽ mở trang thanh toán an toàn của NOWPayments.';
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(100000)+'; trang thanh toán sẽ khóa tỷ giá trong thời gian ngắn.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -600,7 +614,7 @@ $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?200000:CungDonate.minimum();
+  const paymentMinimum=paymentMethod==='nowpayments'?100000:CungDonate.minimum();
   if(!Number.isInteger(amount)||amount<paymentMinimum||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
