@@ -62,7 +62,7 @@ try {
         $rawCrypto = trim((string)$in['amount']);
         if (!preg_match('/^\d+(?:\.\d)?$/D', $rawCrypto)) fail(400, 'USDT chỉ nhận số tiền có tối đa 1 chữ số thập phân.');
         $cryptoAmount = round((float)$rawCrypto, 1);
-        $minUsdt = (float)(defined('NOWPAYMENTS_MIN_USDT') ? NOWPAYMENTS_MIN_USDT : 7.5);
+        $minUsdt = $paymentNetwork === 'sol' ? 3.0 : (float)(defined('NOWPAYMENTS_MIN_USDT') ? NOWPAYMENTS_MIN_USDT : 7.5);
         if ($cryptoAmount < $minUsdt) fail(400, 'Donate USDT tối thiểu là ' . rtrim(rtrim(number_format($minUsdt, 1, '.', ''), '0'), '.') . ' USDT.');
         $rate = (float)(defined('NOWPAYMENTS_USDT_VND_RATE') ? NOWPAYMENTS_USDT_VND_RATE : 26000);
         if ($rate <= 0) fail(500, 'Chưa cấu hình tỷ giá USDT/VNĐ.');
