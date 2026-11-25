@@ -589,7 +589,7 @@ function syncPaymentMethodInput(method){
   input.min=crypto?'7.5':'10000'; input.step=crypto?'0.1':'1000'; input.inputMode=crypto?'decimal':'numeric';
   const current=Number(input.value);
   if(crypto){
-    if(!Number.isFinite(current)||current<7.5||Number.isInteger(current)&&current>1000) input.value='7.5';
+    input.value='7.5';
     document.querySelectorAll('.q button').forEach((b,i)=>{const v=['7.5','10','20'][i];b.dataset.v=v;b.textContent=v+' USDT';b.setAttribute('aria-pressed',String(Number(input.value)===Number(v)))});
   }else{
     if(!Number.isFinite(current)||current<10000||!Number.isInteger(current)) input.value='50000';
