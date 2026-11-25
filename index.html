@@ -556,12 +556,12 @@ function upd(){
   const raw=$('amt').value.trim(),a=Number(raw),l=lim(a),m=$('msg');
   const minimum=CungDonate.minimum();
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?100000:minimum;
+  const paymentMinimum=paymentMethod==='nowpayments'?200000:minimum;
   const validAmount=raw!==''&&Number.isInteger(a)&&a>=paymentMinimum&&a<=50000000;
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+money(paymentMinimum)+'.':!Number.isFinite(a)||!Number.isInteger(a)?'Số tiền phải là số nguyên.':a<paymentMinimum?'Số tiền tối thiểu là '+money(paymentMinimum)+'.':a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?money(a):'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(100000)+'; trang thanh toán sẽ khóa tỷ giá trong thời gian ngắn.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
+  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'USDT BSC tối thiểu '+money(200000)+'; trang thanh toán sẽ mở ở tab mới.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -614,12 +614,14 @@ $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
-  const paymentMinimum=paymentMethod==='nowpayments'?100000:CungDonate.minimum();
+  const paymentMinimum=paymentMethod==='nowpayments'?200000:CungDonate.minimum();
   if(!Number.isInteger(amount)||amount<paymentMinimum||amount>50000000||!CungDonate.ready){upd();return}
   $('err').textContent='';
   $('donateTestStatus').textContent='';
   creatingOrder=true;
   $('go').disabled=true;
+  const checkoutWindow=paymentMethod==='nowpayments'?window.open('about:blank','_blank'):null;
+  if(checkoutWindow)checkoutWindow.opener=null;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
     const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
@@ -639,6 +641,10 @@ $('go').onclick=async()=>{
       return;
     }
     showOrder(d);
+    if(paymentMethod==='nowpayments'&&d.checkout_url){
+      if(checkoutWindow&&!checkoutWindow.closed)checkoutWindow.location.href=d.checkout_url;
+      else window.open(d.checkout_url,'_blank','noopener');
+    }
   }catch(e){$('err').textContent=e.message||'Mất kết nối, hãy thử lại.'}finally{creatingOrder=false;upd()}
 };
 
