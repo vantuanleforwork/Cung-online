@@ -198,4 +198,4 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .payment-option-copy strong{font-size:14px}
 .payment-option-copy small{color:var(--muted);font-size:12px;line-height:1.35}
 .checkout-link{display:block;text-align:center;text-decoration:none;margin:12px 0}
-@media (max-width:480px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}}
+@media (max-width:420px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}}
