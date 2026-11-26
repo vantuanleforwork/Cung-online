@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=46">
+<link rel="stylesheet" href="site.css?v=47">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=3" defer></script>
 <script>
@@ -214,11 +214,22 @@ if (location.pathname.endsWith('/index.html')) {
         <dl id="rouletteOddsList" aria-live="polite"></dl>
       </section>
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
-      <p class="privacy-note" id="donatePrivacy"><span id="privacyGuest">Bạn có chắc muốn donate với tên <strong>Giấu tên</strong> không? Nếu muốn sử dụng tên hãy <a class="privacy-login" href="google-auth.php?action=login">Đăng nhập</a>.</span><span id="privacyMember" hidden>Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</span></p>
+      <p class="privacy-note" id="donatePrivacy" hidden><span id="privacyMember">Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</span></p>
       <div id="err" role="alert"></div>
       <div class="profile-skin-status" id="donateTestStatus" role="status"></div>
       </div>
     </div>
+
+    <dialog id="anonymousDialog" class="anonymous-dialog" aria-labelledby="anonymousDialogTitle">
+      <form method="dialog">
+        <h2 id="anonymousDialogTitle">Xác nhận tên donate</h2>
+        <p>Bạn có chắc muốn donate với tên <strong>Giấu tên</strong> không? Nếu muốn sử dụng tên hãy Đăng nhập.</p>
+        <div class="anonymous-dialog-actions">
+          <button type="button" id="anonymousContinue">Tôi muốn giấu tên</button>
+          <a class="account-button" href="google-auth.php?action=login">Đăng nhập</a>
+        </div>
+      </form>
+    </dialog>
 
     <div id="res">
       <h2>Quét mã để ủng hộ Van Tuan Le</h2>
@@ -641,7 +652,7 @@ async function loadProfile(){
     }
     CungDonate.testAccount=allowed&&!!d.user?.is_test_account;
     $('go').textContent=CungDonate.testAccount?'Gửi donate test ↗':'Tạo mã QR donate ↗';
-    $('privacyGuest').hidden=allowed;$('privacyMember').hidden=!allowed;
+    $('donatePrivacy').hidden=!allowed;
     upd();
   }catch(e){
     loggedIn=false;upd();$('err').textContent='Chưa tải được hồ sơ. Hãy tải lại trang.';
@@ -660,6 +671,26 @@ $('profileForm').onsubmit=async e=>{
 };
 
 let creatingOrder=false;
+let anonymousConfirmResolve=null;
+function requestAnonymousConfirmation(){
+  if(loggedIn)return Promise.resolve(true);
+  const dialog=$('anonymousDialog');
+  if(!dialog||typeof dialog.showModal!=='function')return Promise.resolve(true);
+  return new Promise(resolve=>{
+    anonymousConfirmResolve=resolve;
+    dialog.showModal();
+  });
+}
+function finishAnonymousConfirmation(confirmed){
+  const resolve=anonymousConfirmResolve;
+  anonymousConfirmResolve=null;
+  const dialog=$('anonymousDialog');
+  if(dialog?.open)dialog.close();
+  resolve?.(confirmed);
+}
+$('anonymousContinue').onclick=()=>finishAnonymousConfirmation(true);
+$('anonymousDialog').addEventListener?.('cancel',event=>{event.preventDefault();finishAnonymousConfirmation(false)});
+$('anonymousDialog').addEventListener?.('close',()=>{if(anonymousConfirmResolve)finishAnonymousConfirmation(false)});
 $('go').onclick=async()=>{
   if(creatingOrder)return;
   const amount=Number($('amt').value);
@@ -671,6 +702,7 @@ $('go').onclick=async()=>{
     document.querySelector('input[name="payment_method"][value="bank"]').checked=true;
     syncPaymentMethodInput('bank');upd();return;
   }
+  if(!await requestAnonymousConfirmation())return;
   const paymentMinimum=cryptoMode?usdtMinimum(paymentNetwork):CungDonate.minimum();
   const rawAmount=$('amt').value.trim();
   const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(rawAmount):Number.isInteger(amount);
