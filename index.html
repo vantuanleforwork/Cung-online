@@ -38,7 +38,7 @@
 
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="leaderboard.css?v=29">
-<link rel="stylesheet" href="site.css?v=45">
+<link rel="stylesheet" href="site.css?v=46">
 <link rel="stylesheet" href="kpi.css?v=2">
 <script src="kpi.js?v=3" defer></script>
 <script>
@@ -159,7 +159,7 @@ if (location.pathname.endsWith('/index.html')) {
               <span class="payment-option-copy"><strong>Chuyển khoản</strong><small>QR ngân hàng · nhanh gọn</small></span>
             </span>
           </label>
-          <label class="payment-option">
+          <label class="payment-option payment-option-usdt" id="paymentOptionUsdt">
             <input type="radio" name="payment_method" value="nowpayments">
             <span class="payment-option-card">
               <span class="payment-option-icon crypto" aria-hidden="true"><img src="assets/payment-icons/usdt.svg?v=2" alt=""></span>
@@ -214,7 +214,7 @@ if (location.pathname.endsWith('/index.html')) {
         <dl id="rouletteOddsList" aria-live="polite"></dl>
       </section>
       <button class="go" id="go" type="button">Tạo mã QR donate &nbsp; ↗</button>
-      <p class="privacy-note" id="donatePrivacy"><span id="privacyGuest"><a class="privacy-login" href="google-auth.php?action=login">Đăng nhập</a> để hiển thị tên donate. Không đăng nhập sẽ hiển thị Giấu tên.</span><span id="privacyMember" hidden>Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</span></p>
+      <p class="privacy-note" id="donatePrivacy"><span id="privacyGuest">Bạn có chắc muốn donate với tên <strong>Giấu tên</strong> không? Nếu muốn sử dụng tên hãy <a class="privacy-login" href="google-auth.php?action=login">Đăng nhập</a>.</span><span id="privacyMember" hidden>Tên, avatar, cấp donate và lời nhắn sẽ hiển thị trực tiếp trên livestream.</span></p>
       <div id="err" role="alert"></div>
       <div class="profile-skin-status" id="donateTestStatus" role="status"></div>
       </div>
@@ -272,7 +272,7 @@ if (location.pathname.endsWith('/index.html')) {
 <script src="donation-site.js?v=41"></script>
 <script>
 const $=i=>document.getElementById(i);
-let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false;
+let order=null,statusTimer=null,statusGeneration=0,csrfToken='',profile=null,loggedIn=false,paymentMethodMessage='';
 let historyOffset=0,historyLoading=false,currentScope='all';
 
 const storedOrderKey='cung_order',storedOrderMaxAge=24*60*60*1000;
@@ -573,7 +573,7 @@ function upd(){
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+minimumLabel+'.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<paymentMinimum?'Số tiền tối thiểu là '+minimumLabel+'.':!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?shownAmount:'—';
   $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
-  $('paymentMethodHint').textContent=paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu 7.5 đô cho 1 lượt thanh toán qua nền tảng.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.';
+  $('paymentMethodHint').textContent=paymentMethodMessage||(paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu 7.5 đô cho 1 lượt thanh toán qua nền tảng.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.');
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
@@ -583,6 +583,12 @@ function upd(){
 }
 
 function usdtMinimum(network){return 7.5}
+function syncPaymentAvailability(){
+  const option=$('paymentOptionUsdt');
+  if(!option)return;
+  option.classList.toggle('requires-login',!loggedIn);
+  option.setAttribute('aria-disabled',String(!loggedIn));
+}
 function syncPaymentMethodInput(method){
   const input=$('amt'), crypto=method==='nowpayments';
   const network=document.querySelector('input[name="payment_network"]:checked')?.value||'sol';
@@ -604,7 +610,18 @@ function syncPaymentMethodInput(method){
 document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{$('amt').value=b.dataset.v;upd()});
 $('historyMore').onclick=()=>loadHistory(false);
 $('amt').oninput=$('msg').oninput=upd;
-document.querySelectorAll('input[name="payment_method"]').forEach(el=>el.onchange=()=>{syncPaymentMethodInput(el.value);upd()});
+document.querySelectorAll('input[name="payment_method"]').forEach(el=>el.onchange=()=>{
+  if(el.value==='nowpayments'&&!loggedIn){
+    el.checked=false;
+    document.querySelector('input[name="payment_method"][value="bank"]').checked=true;
+    paymentMethodMessage='Đăng nhập để donate bằng USDT.';
+    syncPaymentMethodInput('bank');
+    upd();
+    return;
+  }
+  paymentMethodMessage='';
+  syncPaymentMethodInput(el.value);upd();
+});
 document.querySelectorAll('input[name="payment_network"]').forEach(el=>el.onchange=()=>{syncPaymentMethodInput(document.querySelector('input[name="payment_method"]:checked')?.value||'bank');upd()});
 
 async function loadProfile(){
@@ -615,6 +632,7 @@ async function loadProfile(){
     try{ d=JSON.parse(text); }catch(pe){ return; }
     csrfToken=d.csrf||'';$('logoutCsrf').value=csrfToken;
     const allowed=!!d.logged_in;loggedIn=allowed;
+    syncPaymentAvailability();
     $('signedOut').hidden=allowed;$('signedIn').hidden=!allowed;
     if(!allowed)renderHeaderAccount(null);
     $('tabMe').hidden=!allowed;
@@ -648,6 +666,11 @@ $('go').onclick=async()=>{
   const paymentMethod=document.querySelector('input[name="payment_method"]:checked')?.value||'bank';
   const paymentNetwork=document.querySelector('input[name="payment_network"]:checked')?.value||'sol';
   const cryptoMode=paymentMethod==='nowpayments';
+  if(cryptoMode&&!loggedIn){
+    paymentMethodMessage='Đăng nhập để donate bằng USDT.';
+    document.querySelector('input[name="payment_method"][value="bank"]').checked=true;
+    syncPaymentMethodInput('bank');upd();return;
+  }
   const paymentMinimum=cryptoMode?usdtMinimum(paymentNetwork):CungDonate.minimum();
   const rawAmount=$('amt').value.trim();
   const validFormat=cryptoMode?/^\d+(?:\.\d)?$/.test(rawAmount):Number.isInteger(amount);
@@ -686,6 +709,7 @@ $('go').onclick=async()=>{
 
 upd();
 syncPaymentMethodInput(document.querySelector('input[name="payment_method"]:checked')?.value||'bank');
+syncPaymentAvailability();
 updateResumeOrder();
 loadProfile();
 loadVoices();

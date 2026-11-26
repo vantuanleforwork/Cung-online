@@ -89,6 +89,9 @@ try {
         $user = $userStmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) fail(401, 'Phiên đăng nhập hết hạn. Hãy đăng nhập lại Google.');
     }
+    if ($paymentMethod === 'nowpayments' && !$user) {
+        fail(401, 'Đăng nhập để donate bằng USDT.');
+    }
     $emailHash = $user ? donor_hash(mb_strtolower(trim($user['email']))) : '';
     if (($user && !hash_equals($emailHash, $user['email_hash'])) || donor_blocked($db, $emailHash, $ip, $deviceHash)) {
         fail(403, 'Tài khoản hoặc địa chỉ mạng này đang bị tạm khóa tạo lượt donate.');

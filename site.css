@@ -1,6 +1,7 @@
 /* Public donation page. The form leads, community details stay secondary. */
 *,*::before,*::after{box-sizing:border-box}
-html,body{max-width:100%;overflow-x:hidden}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.site-header,.site-shell,.site-footer{width:100%;max-width:1240px}
 .site-header { max-width: 1240px; margin: auto; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
 .site-wordmark { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font-weight: 750; font-size: 15px; letter-spacing: 1.4px; }
 .site-logo { display: block; object-fit: contain; padding: var(--space-1); background: var(--ink); border-radius: var(--radius-sm); }
@@ -147,8 +148,9 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   .header-caption { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--text-xs); letter-spacing: 1px; }
   .site-wordmark { display: none; }
   .header-account { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: var(--space-4); flex-shrink: 0; }
-  .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 20px; gap: 0; }
+  .site-shell { display: flex; flex-direction: column; margin-top: 32px; padding: 0 16px; gap: 0; }
   .intro, .donation-column { display: contents; }
+  .site-shell > * { min-width: 0; max-width: 100%; }
   .site-shell > .intro > :is(.brand,h1,.intro-copy,.account,.leaderboard,.music-queue,.daily-kpi), .donation-column, main { width: 100%; }
   .intro .brand { order: 0; }
   .intro h1 { order: 1; }
@@ -163,6 +165,8 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
   main, .history { padding: 22px 18px; }
   .intro .account, .donate-site .leaderboard { padding: 20px; }
   .amount-field input { font-size: 34px; }
+  .payment-method, .payment-method-options, .crypto-network, .crypto-network-options, #donationFields, #f { min-width: 0; max-width: 100%; }
+  .row { flex-wrap: wrap; }
 }
 
 .donate-site .leaderboard-tab, .donate-site .leaderboard-toggle { font-size: 15px; }
@@ -191,6 +195,8 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .payment-option input{position:absolute;opacity:0;pointer-events:none}
 .payment-option-card{display:flex;align-items:center;gap:12px;min-height:66px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--field);color:var(--ink);transition:border-color .16s,background-color .16s,box-shadow .16s}
 .payment-option-card:hover{border-color:var(--accent)}
+.payment-option-usdt.requires-login .payment-option-card{opacity:.52;filter:saturate(.55)}
+.payment-option-usdt.requires-login .payment-option-card:hover{border-color:var(--border)}
 .payment-option input:checked + .payment-option-card{border-color:var(--accent);background:#263c24;box-shadow:0 0 0 1px #c5f46733}
 .payment-option input:focus-visible + .payment-option-card{outline:2px solid var(--accent);outline-offset:3px}
 .payment-option-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:transparent;color:var(--accent);overflow:hidden}
