@@ -138,6 +138,7 @@ if (location.pathname.endsWith('/index.html')) {
         <button type="button" role="tab" id="donation-tab-message" data-donation-kind="message" aria-controls="donationFields" aria-selected="true">Lời nhắn</button>
         <button type="button" role="tab" id="donation-tab-music" data-donation-kind="music" aria-controls="donationFields" aria-selected="false">Phát nhạc</button>
         <button type="button" role="tab" id="donation-tab-roulette" data-donation-kind="roulette" aria-controls="donationFields" aria-selected="false" hidden>Vòng quay</button>
+        <button type="button" role="tab" id="donation-tab-pk" data-donation-kind="pk" aria-controls="donationFields" aria-selected="false" hidden>PK</button>
       </div>
       <div id="donationFields" role="tabpanel" aria-labelledby="donation-tab-message">
       <div class="card-header">
@@ -197,6 +198,11 @@ if (location.pathname.endsWith('/index.html')) {
         <label for="rouletteWheel">Chọn vòng quay</label>
         <select id="rouletteWheel" aria-describedby="rouletteRule"></select>
         <p id="rouletteRule" class="voice-hint"></p>
+      </div>
+      <div id="pkField" hidden>
+        <label for="pkOption">Chọn option PK</label>
+        <select id="pkOption" aria-describedby="pkRule"></select>
+        <p id="pkRule" class="voice-hint"></p>
       </div>
       <div class="voice-select-box">
         <div class="voice-head">
@@ -584,12 +590,12 @@ function upd(){
   const minimumLabel=cryptoMode?'7,5 USDT':money(paymentMinimum);
   $('amountError').textContent=raw===''?'Nhập số tiền từ '+minimumLabel+'.':!Number.isFinite(a)||!validFormat?(cryptoMode?'USDT chỉ nhận tối đa 1 chữ số thập phân.':'Số tiền phải là số nguyên.'):a<paymentMinimum?'Số tiền tối thiểu là '+minimumLabel+'.':!cryptoMode&&a>50000000?'Số tiền tối đa là 50.000.000đ.':'';
   $('amountPreviewValue').textContent=Number.isFinite(a)&&a>0?shownAmount:'—';
-  $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount);
+  $('go').disabled=creatingOrder||!CungDonate.ready||!validAmount||(CungDonate.kind==='music'&&!CungDonate.settings.music_enabled&&!CungDonate.testAccount)||(CungDonate.kind==='pk'&&!CungDonate.settings.pk_enabled);
   $('paymentMethodHint').textContent=paymentMethodMessage||(paymentMethod==='nowpayments'?'NOWPayments yêu cầu tối thiểu 7.5 đô cho 1 lượt thanh toán qua nền tảng.':'QR ngân hàng sẽ nhận đúng số tiền và mã donate hiển thị.');
   m.maxLength=l;
   if(m.value.length>l)m.value=m.value.slice(0,l);
   $('cnt').textContent=m.value.length+'/'+l;
-  $('hint').textContent=CungDonate.kind==='roulette'?(CungDonate.testAccount?'OBS sẽ quay khi đến lượt donate test.':'OBS sẽ quay sau khi xác nhận chuyển khoản.'):hint(a);
+  $('hint').textContent=CungDonate.kind==='roulette'?(CungDonate.testAccount?'OBS sẽ quay khi đến lượt donate test.':'OBS sẽ quay sau khi xác nhận chuyển khoản.'):CungDonate.kind==='pk'?'OBS sẽ cập nhật tiến trình PK sau khi xác nhận chuyển khoản.':hint(a);
   syncVoiceOptions(a);
   document.querySelectorAll('.q button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===a)));
 }
@@ -716,7 +722,7 @@ $('go').onclick=async()=>{
   if(checkoutWindow)checkoutWindow.opener=null;
   try{
     if(CungDonate.kind==='music')CungDonate.videoID($('musicUrl').value);
-    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount:cryptoMode?rawAmount:amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,payment_network:paymentNetwork,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
+    const r=await fetch('create.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken},body:JSON.stringify({amount:cryptoMode?rawAmount:amount,message:$('msg').value,kind:CungDonate.kind,payment_method:paymentMethod,payment_network:paymentNetwork,music_url:$('musicUrl').value,wheel_id:$('rouletteWheel').value,pk_option_id:$('pkOption')?.value||'',voice_id:CungDonate.kind==='message'?($('voiceSelect')?.value||''):''})});
     const text=await r.text();
     let d;
     try{

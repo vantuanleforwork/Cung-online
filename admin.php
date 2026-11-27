@@ -172,6 +172,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 roulette_save(db(), $_POST);
                 $_SESSION['flash'] = 'Đã lưu vòng quay.';
                 redirect_admin('roulette');
+            } elseif ($action === 'save_pk_option') {
+                $id = (int)($_POST['id'] ?? 0);
+                if (!empty($_POST['delete'])) pk_delete_option(db(), $id);
+                else pk_save_option(db(), $_POST, $_FILES['image'] ?? []);
+                $_SESSION['flash'] = !empty($_POST['delete']) ? 'Đã xóa option PK.' : 'Đã lưu option PK.';
+                redirect_admin('pk');
             } elseif (in_array($action, ['save_donation_settings','save_music_approval','music_pause','music_resume','music_next','music_remove','music_add','music_approve'], true)) {
                 music_admin_action(db(), $_POST);
                 $_SESSION['flash'] = 'Đã cập nhật cài đặt / hàng đợi nhạc.';
@@ -205,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
 
 $loggedIn = !empty($_SESSION['admin']);
 $view = is_string($_GET['view'] ?? null) ? $_GET['view'] : 'queue';
-if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users', 'revenue', 'donate', 'music', 'roulette'], true)) $view = 'queue';
+if (!in_array($view, ['queue', 'payments', 'logs', 'audit', 'speech', 'users', 'revenue', 'donate', 'music', 'roulette', 'pk'], true)) $view = 'queue';
 $page = max(1, (int)($_GET['page'] ?? 1));
 $offset = min($page - 1, 1000000) * 30;
 $rows = []; $paused = false; $total = 0; $elevenConfigured = false; $customConfigured = false; $userDonations=[]; $blockedRows=[];
@@ -301,10 +307,10 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'underpaid' => 'USDT tha
 <link rel="stylesheet" href="ui-tokens.css?v=32">
 <link rel="stylesheet" href="admin-theme.css?v=43"></head>
 <body class="admin-site <?=$loggedIn ? 'is-authenticated' : 'is-login'?>">
-<?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
+<?php if ($loggedIn): ?><aside class="admin-sidebar"><a class="admin-brand" href="admin.php"><span class="monogram">VT</span><span>VAN TUAN LE<small>CREATOR CONSOLE</small></span></a><p class="nav-caption">KHÔNG GIAN QUẢN TRỊ</p><nav aria-label="Điều hướng quản trị"><?php foreach (['queue'=>'Hàng đợi','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','pk'=>'Cấu hình PK','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'] as $key=>$label): ?>
 <a href="?view=<?=h($key)?>" <?=$view===$key ? 'aria-current="page"' : ''?>><?=h($label)?></a><?php endforeach ?></nav><a class="back-to-site" href="./">↗ Mở trang donate</a></aside><?php endif ?>
 <main class="admin-main">
-<header class="admin-heading"><div><p class="nav-caption">VAN TUAN LE / QUẢN TRỊ</p><h1><?=h($loggedIn ? (['queue'=>'Hàng đợi donate','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'][$view] ?? 'Quản trị donate') : 'Creator console')?></h1></div></header>
+<header class="admin-heading"><div><p class="nav-caption">VAN TUAN LE / QUẢN TRỊ</p><h1><?=h($loggedIn ? (['queue'=>'Hàng đợi donate','payments'=>'Giao dịch','revenue'=>'Doanh thu','donate'=>'Cài đặt donate','music'=>'Hàng đợi nhạc','roulette'=>'Vòng quay','pk'=>'Cấu hình PK','users'=>'Người dùng','speech'=>'Giọng đọc & hiển thị','logs'=>'Webhook','audit'=>'Nhật ký quản trị'][$view] ?? 'Quản trị donate') : 'Creator console')?></h1></div></header>
 <?php if ($error): ?><p class="notice error" role="alert"><?=h($error)?></p><?php endif ?>
 <?php if ($flash): ?><p class="notice" role="status"><?=h($flash)?></p><?php endif ?>
 <?php if (!$loggedIn): ?>
@@ -323,6 +329,8 @@ $decisionLabels = ['unmatched' => 'Chờ đối soát', 'underpaid' => 'USDT tha
 <?php require __DIR__ . '/donation-admin-form.php'; ?>
 <?php elseif ($view === 'roulette'): ?>
 <?php require __DIR__ . '/roulette-admin.php'; ?>
+<?php elseif ($view === 'pk'): ?>
+<?php require __DIR__ . '/pk-admin.php'; ?>
 <?php elseif ($view === 'music'): ?>
 <?php require __DIR__ . '/music-admin-queue.php'; ?>
 <?php elseif ($view === 'speech' && isset($settings['speech_template'])): ?>

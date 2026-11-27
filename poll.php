@@ -19,7 +19,7 @@ try {
     $cols = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
     $hasVoiceCols = in_array('selected_voice_id', $cols, true) && in_array('voice_name', $cols, true);
     $voiceSelect = $hasVoiceCols ? "d.selected_voice_id,d.voice_name," : "NULL AS selected_voice_id,NULL AS voice_name,";
-    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,d.user_id,{$voiceSelect}
+    $row = $db->query("SELECT d.id,d.name,d.message,d.paid_amount,d.donation_kind,d.youtube_id,d.user_id,d.pk_option_id,d.pk_battle_id,{$voiceSelect}
         (d.paid_amount >= d.required_amount) AS spin_eligible,
         (SELECT q.id FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_request_id,
         (SELECT q.title FROM music_requests q WHERE q.donation_id=d.id LIMIT 1) AS music_title,
@@ -63,6 +63,7 @@ try {
     $row['speech'] = speech_options_for_donation($settings, $row);
     $row['speech_text'] = speech_text($row, $settings);
     if ($row['donation_kind'] === 'music') $row['message'] = music_donation_message((string)$row['message']);
+    if ($row['donation_kind'] === 'pk') $row['pk'] = pk_current($db);
     // Return the claim immediately. External TTS/title requests can outlive the
     // OBS request timeout, leaving an unseen claim blocking the whole queue.
     // The overlay prepares speech via tts.php while it displays the donation.

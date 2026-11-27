@@ -138,7 +138,7 @@ function music_admin_action(PDO $db, array $in): void {
         return;
     }
     if ($action === 'save_donation_settings') {
-        $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000],
+        $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000], 'pk_min'=>[1000,50000000], 'pk_duration'=>[30,86400],
             'music_min'=>[1000,50000000], 'music_seconds'=>[10,3600], 'music_volume'=>[0,100], 'music_opacity'=>[0,100],
             'music_x'=>[0,1680], 'music_y'=>[0,940], 'music_width'=>[240,960], 'music_height'=>[140,700]];
         $values = [];
@@ -152,6 +152,7 @@ function music_admin_action(PDO $db, array $in): void {
         if (!in_array($in['music_order'] ?? '', ['time','amount'], true)) throw new InvalidArgumentException('Thứ tự nhạc không hợp lệ.');
         $values['music_order'] = $in['music_order'];
         $values['music_enabled'] = isset($in['music_enabled']) ? 1 : 0;
+        $values['pk_enabled'] = isset($in['pk_enabled']) ? 1 : 0;
         $values['music_idle_enabled'] = isset($in['music_idle_enabled']) ? 1 : 0;
         $idleMessage = $in['music_idle_message'] ?? donation_settings($db)['music_idle_message'];
         if (!is_string($idleMessage) || !mb_check_encoding($idleMessage, 'UTF-8') || mb_strlen($idleMessage, 'UTF-8') > 300) {

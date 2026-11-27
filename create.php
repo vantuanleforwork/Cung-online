@@ -100,9 +100,10 @@ try {
     ensure_speech_schema($db);
     $donateSettings = donation_settings($db);
     $kind = $in['kind'] ?? 'message';
-    if (!is_string($kind) || !in_array($kind, ['message','music','roulette'], true)) fail(400, 'Loại donate không hợp lệ.');
+    if (!is_string($kind) || !in_array($kind, ['message','music','roulette','pk'], true)) fail(400, 'Loại donate không hợp lệ.');
     $minimum = (int)$donateSettings[$kind === 'music' ? 'music_min' : 'message_min'];
     $spin = null;
+    $pkOptionId = null;
     $isTestAccount = !empty($user['is_test_account']);
     if ($kind === 'roulette') {
         $wheelId = filter_var($in['wheel_id'] ?? null, FILTER_VALIDATE_INT);
@@ -115,6 +116,16 @@ try {
         $minimum = (int)$wheel['minimum'];
         $spin = roulette_snapshot($wheel);
         $spin['wheel_id'] = (int)$wheelId;
+    }
+    if ($kind === 'pk') {
+        if (empty($donateSettings['pk_enabled']) && !$isTestAccount) fail(400, 'Donate PK đang tạm đóng.');
+        $pkOptionId = filter_var($in['pk_option_id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$pkOptionId) fail(400, 'Hãy chọn một option PK.');
+        ensure_pk_schema($db);
+        $optionQuery = $db->prepare('SELECT id FROM pk_options WHERE id=? AND active=1');
+        $optionQuery->execute([$pkOptionId]);
+        if (!$optionQuery->fetchColumn()) fail(400, 'Option PK này đã đóng. Hãy tải lại trang.');
+        $minimum = (int)$donateSettings['pk_min'];
     }
     if ($amount < $minimum) fail(400, 'Số tiền tối thiểu là ' . number_format($minimum,0,',','.') . 'đ.');
     $youtubeId = null;
@@ -244,7 +255,7 @@ try {
                        ->execute([$donationId,$ipHash]);
                 }
             }
-            $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=?,payment_method=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$paymentMethod,$donationId]);
+            $db->prepare('UPDATE donations SET donation_kind=?,youtube_id=?,music_min_amount=?,required_amount=?,payment_method=?,pk_option_id=? WHERE id=?')->execute([$kind,$youtubeId,$kind === 'music' ? $minimum : null,$minimum,$paymentMethod,$pkOptionId,$donationId]);
             if ($spin !== null) {
                 $db->prepare('INSERT INTO roulette_spins(donation_id,snapshot) VALUES(?,?)')
                    ->execute([$donationId,json_encode($spin, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);

@@ -10,6 +10,7 @@ $kpi = kpi_progress($db);
   <div class="workspace-tabs" role="tablist" aria-label="Cài đặt donate">
     <button type="button" role="tab" data-tab="message">Lời nhắn</button>
     <button type="button" role="tab" data-tab="music">Phát nhạc</button>
+    <button type="button" role="tab" data-tab="pk">PK</button>
   </div>
   <form method="post" id="donationSettingsForm">
     <?php csrf_field() ?><input type="hidden" name="action" value="save_donation_settings">
@@ -20,6 +21,15 @@ $kpi = kpi_progress($db);
         <label><?=h($label)?><input type="number" name="<?=h($key)?>" min="1000" max="50000000" step="1" required value="<?=h($donate[$key])?>"></label>
       <?php endforeach ?>
       </div><p class="muted">Ba mức tăng dần. Thay đổi áp dụng cho đơn mới; mốc hiệu ứng được tính theo số tiền thực nhận.</p>
+    </section>
+    <section data-panel="pk" role="tabpanel">
+      <h3>Donate PK đối đầu</h3>
+      <label><input type="checkbox" name="pk_enabled" <?=$donate['pk_enabled']?'checked':''?>> Bật nhận donate PK</label>
+      <div class="speech-grid">
+        <label>Số tiền tối thiểu (đ)<input type="number" name="pk_min" min="1000" max="50000000" step="1" required value="<?=h($donate['pk_min'])?>"></label>
+        <label>Thời gian mỗi trận (giây)<input type="number" name="pk_duration" min="30" max="86400" step="1" required value="<?=h($donate['pk_duration'])?>"></label>
+      </div>
+      <p class="muted">Mỗi trận bắt đầu khi lượt donate PK đầu tiên được xác nhận và tự kết thúc khi hết thời gian. Quản lý tên, ảnh và trạng thái option tại <a href="admin.php?view=pk">Cấu hình option PK</a>.</p>
     </section>
     <section data-panel="music" role="tabpanel">
       <h3>Donate phát nhạc YouTube</h3>

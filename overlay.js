@@ -3,6 +3,8 @@ const params=new URLSearchParams(location.search),K=params.get('k')||'',preview=
 const controls=params.get('controls')==='1';
 const $=id=>document.getElementById(id);
 let busy=false,demo=null,selectedPreviewTier=[1,2,3].includes(Number(params.get('tier')))?Number(params.get('tier')):1;
+async function refreshPk(){if(!K||preview)return;try{const r=await fetch('pk-status.php?k='+encodeURIComponent(K),{cache:'no-store'});if(!r.ok)return;const data=await r.json(),battle=data.battle,box=$('pkOverlay');if(!battle){box.hidden=true;return}box.hidden=false;$('pkClock').textContent='Kết thúc '+new Date(battle.ends_at.replace(' ','T')+'Z').toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});const total=Number(battle.total)||0;const rows=(battle.options||[]).map(option=>{const row=document.createElement('div');row.className='pk-side';row.style.flex=Math.max(1,Number(option.total)||0);const img=document.createElement('img');img.src=option.image_path||'assets/van-tuan-le-logo.png';img.alt='';const name=document.createElement('strong');name.textContent=option.name;const amount=document.createElement('small');amount.textContent=Number(option.total).toLocaleString('vi-VN')+'đ · '+(total?Number(option.percent).toFixed(1):'0')+'%';const bar=document.createElement('div');bar.className='pk-bar';const fill=document.createElement('i');fill.style.width=(total?option.total/total*100:0)+'%';bar.append(fill);row.append(img,name,amount,bar);return row});$('pkSides').replaceChildren(...rows)}catch(error){}}
+if(K&&!preview){refreshPk();setInterval(refreshPk,2000)}
 function sleep(ms,signal){
   return new Promise((resolve,reject)=>{
     if(signal?.aborted)return reject(new DOMException('Lease lost','AbortError'));

@@ -191,7 +191,10 @@ CREATE TABLE IF NOT EXISTS donation_settings (
         music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1,
         music_require_approval TINYINT NOT NULL DEFAULT 1,
         music_idle_enabled TINYINT NOT NULL DEFAULT 0,
-        music_idle_message VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'
+        music_idle_message VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!',
+        pk_enabled TINYINT NOT NULL DEFAULT 0,
+        pk_min INT NOT NULL DEFAULT 50000,
+        pk_duration INT NOT NULL DEFAULT 300
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE IF NOT EXISTS music_requests (
@@ -210,3 +213,28 @@ CREATE TABLE IF NOT EXISTS music_state (
 
 INSERT IGNORE INTO donation_settings(id) VALUES(1);
 INSERT IGNORE INTO music_state(id) VALUES(1);
+
+CREATE TABLE IF NOT EXISTS pk_options (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  image_path VARCHAR(255) NOT NULL DEFAULT '',
+  active TINYINT NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX pk_options_active (active, sort_order, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pk_battles (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  started_at DATETIME NOT NULL,
+  ends_at DATETIME NOT NULL,
+  status ENUM('active','finished') NOT NULL DEFAULT 'active',
+  INDEX pk_battles_state (status, ends_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE donations
+  ADD COLUMN pk_option_id BIGINT UNSIGNED NULL,
+  ADD COLUMN pk_battle_id BIGINT UNSIGNED NULL,
+  ADD INDEX donations_pk_lookup (donation_kind, pk_battle_id, pk_option_id),
+  ADD CONSTRAINT donations_pk_option FOREIGN KEY (pk_option_id) REFERENCES pk_options(id) ON DELETE SET NULL,
+  ADD CONSTRAINT donations_pk_battle FOREIGN KEY (pk_battle_id) REFERENCES pk_battles(id) ON DELETE SET NULL;

@@ -3,12 +3,12 @@
   'use strict';
   const state = window.CungDonate = {ready:false,kind:'message',testAccount:false,settings:{message_min:10000,tier2_min:50000,tier3_min:200000,music_min:50000,music_enabled:true,music_seconds:180}};
   const wheelSelect = document.getElementById('rouletteWheel');
+  const pkSelect = document.getElementById('pkOption');
   const odds = document.getElementById('rouletteOdds');
   const oddsList = document.getElementById('rouletteOddsList');
   const percent = new Intl.NumberFormat('vi-VN', {style:'percent',maximumFractionDigits:2});
   const selectedWheel = () => (state.settings.wheels || []).find(wheel => String(wheel.id) === wheelSelect?.value);
-  state.minimum = () => Number(state.kind === 'roulette' ? selectedWheel()?.minimum ?? 50000001 :
-    state.settings[state.kind === 'music' ? 'music_min' : 'message_min']);
+  state.minimum = () => Number(state.kind === 'roulette' ? selectedWheel()?.minimum ?? 50000001 : state.kind === 'pk' ? state.settings.pk_min : state.settings[state.kind === 'music' ? 'music_min' : 'message_min']);
   state.videoID = link => {
     let url;
     try { url = new URL(link.trim()); } catch { throw new Error('Chỉ nhận link YouTube.'); }
@@ -43,6 +43,7 @@
     document.getElementById('donationFields').setAttribute('aria-labelledby','donation-tab-'+state.kind);
     const music = state.kind === 'music';
     const roulette = state.kind === 'roulette';
+    const pk = state.kind === 'pk';
     const options = roulette ? selectedWheel()?.options || [] : [];
     odds.hidden = !options.length;
     oddsList.replaceChildren(...options.map(option => {
@@ -58,11 +59,14 @@
     document.querySelector('.voice-select-box').hidden = music || roulette;
     const rouletteField = document.getElementById('rouletteField');
     if (rouletteField) rouletteField.hidden = !roulette;
+    const pkField = document.getElementById('pkField');
+    if (pkField) pkField.hidden = !pk;
     if (roulette) {
       document.getElementById('rouletteRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ mỗi lượt';
       const amount = document.getElementById('amt');
       if (Number(amount.value) < state.minimum()) amount.value = state.minimum();
     }
+    if (pk) document.getElementById('pkRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · PK diễn ra '+Math.round(Number(state.settings.pk_duration)/60)+' phút';
     document.getElementById('amt').min = state.minimum();
     document.getElementById('musicRule').textContent = 'Tối thiểu '+state.minimum().toLocaleString('vi-VN')+'đ · Tối đa '+state.settings.music_seconds+' giây/bài · Chỉ phát sau khi quản trị viên kiểm tra quyền sử dụng.'+(!state.settings.music_enabled&&!state.testAccount?' · Hiện tạm dừng nhận nhạc.':'');
     if (window.upd) window.upd();
@@ -122,6 +126,10 @@
     if (wheelSelect) wheelSelect.replaceChildren(...wheels.map(wheel => new Option(wheel.name, wheel.id)));
     const wheelTab = document.getElementById('donation-tab-roulette');
     if (wheelTab) wheelTab.hidden = wheels.length === 0;
+    const pkTab = document.getElementById('donation-tab-pk');
+    const pkOptions = state.settings.pk_options || [];
+    if (pkSelect) pkSelect.replaceChildren(...pkOptions.map(option => new Option(option.name, option.id)));
+    if (pkTab) pkTab.hidden = !state.settings.pk_enabled || pkOptions.length < 2;
     const quick = document.querySelectorAll('.q button');
     [state.settings.message_min,state.settings.tier2_min,state.settings.tier3_min].forEach((value,index) => {
       quick[index].dataset.v = value; quick[index].textContent = Number(value).toLocaleString('vi-VN')+'đ';
