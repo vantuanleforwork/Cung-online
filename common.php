@@ -280,7 +280,7 @@ function attach_payment(PDO $db, array $payment, array $donation) {
        ->execute([$payment['paid_amount'], $payment['tx_id'],
            clean($donation['message'], donation_message_limit((int)$payment['paid_amount'])), ((int)$payment['paid_amount'] < (int)($donation['required_amount'] ?? 0) ? 'held' : review_state()), $donation['id']]);
     enqueue_paid_music($db, $donation, (int)$payment['paid_amount']);
-    pk_assign_paid($db, $donation, (int)$payment['paid_amount']);
+    if (function_exists('pk_assign_paid')) pk_assign_paid($db, $donation, (int)$payment['paid_amount']);
     $db->prepare("UPDATE payment_transactions SET donation_id=?,decision='matched' WHERE tx_id=?")
        ->execute([$donation['id'], $payment['tx_id']]);
 }
