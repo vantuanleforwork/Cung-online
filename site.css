@@ -234,3 +234,6 @@ textarea { min-height: 136px; resize: vertical; line-height: 1.7; }
 .crypto-network-option .payment-option-copy small{font-size:11px}
 .checkout-link{display:block;text-align:center;text-decoration:none;margin:12px 0}
 @media (max-width:420px){.payment-method-options{grid-template-columns:1fr}.payment-option-card{min-height:58px}.crypto-network-heading{align-items:flex-start;flex-direction:column;gap:3px}.crypto-network-options{grid-template-columns:1fr}.crypto-network-option .payment-option-card{min-height:52px}}
+:root{--pk-lime:#b8e34d}
+.pk-progress{border:1px solid color-mix(in srgb,var(--pk-lime) 35%,transparent);background:#0d1714}
+.pk-public-row{margin:14px 0}.pk-public-row strong{display:block;margin-bottom:6px}.pk-public-bar{height:10px;border-radius:999px;background:#1d2b22;overflow:hidden}.pk-public-bar i{display:block;height:100%;border-radius:inherit;background:var(--pk-lime);transition:width .5s ease}

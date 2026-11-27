@@ -141,4 +141,6 @@
   setInterval(loadQueue,10000);
   document.addEventListener('visibilitychange',loadQueue);
   window.addEventListener('donation:paid',loadQueue);
+  async function loadPkProgress(){try{const response=await fetch('pk-progress.php',{cache:'no-store'});if(!response.ok)return;const battle=(await response.json()).battle,section=document.getElementById('pkProgressSection');if(!battle){section.hidden=true;return}section.hidden=false;const total=Number(battle.total)||0;document.getElementById('pkProgressStatus').textContent='Kết thúc lúc '+new Date(battle.ends_at.replace(' ','T')+'Z').toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});document.getElementById('pkProgressSides').replaceChildren(...(battle.options||[]).map(option=>{const row=document.createElement('div');row.className='pk-public-row';const label=document.createElement('strong');label.textContent=option.name+' · '+Number(option.total).toLocaleString('vi-VN')+'đ';const bar=document.createElement('div');bar.className='pk-public-bar';const fill=document.createElement('i');fill.style.width=(total?option.total/total*100:0)+'%';bar.append(label,fill);row.append(bar);return row}))}catch(error){}}
+  loadPkProgress();setInterval(loadPkProgress,5000);
 })();
