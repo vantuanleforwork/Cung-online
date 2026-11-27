@@ -43,13 +43,18 @@ try {
     if ($incomingCurrency !== $expectedCurrency) { $db->rollBack(); respond(400, ['success'=>false]); }
     $txId = 'NP_' . substr(preg_replace('/[^A-Za-z0-9_-]/', '', $paymentId), 0, 58);
     $content = 'NOWPayments ' . $orderId . ' ' . (string)($data['pay_currency'] ?? NOWPAYMENTS_PAY_CURRENCY) . ' ' . number_format((float)$cryptoPaid, 1, '.', '');
-    $insert = $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,account_number,gateway,direction,decision) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id");
-    $insert->execute([$txId, (int)round((float)$amount), $content, '', 'NOWPAYMENTS', 'IN', 'unmatched']);
+    $paidAmount = (int)round((float)$amount);
+    $underpaid = $paidAmount < (int)$donation['expected_amount'];
+    $decision = $underpaid ? 'underpaid' : 'unmatched';
+    $insert = $db->prepare("INSERT INTO payment_transactions(tx_id,paid_amount,content,donation_id,account_number,gateway,direction,decision) VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE tx_id=tx_id");
+    $insert->execute([$txId, $paidAmount, $content, $underpaid ? $donation['id'] : null, '', 'NOWPAYMENTS', 'IN', $decision]);
     if ($insert->rowCount() !== 0) {
-        $payment = ['tx_id'=>$txId,'paid_amount'=>(int)round((float)$amount)];
-        attach_payment($db, $payment, $donation);
-        $db->prepare('UPDATE donations SET provider_payment_id=? WHERE id=?')->execute([$paymentId, $donation['id']]);
-        record_kpi_payment($db, (int)round((float)$amount));
+        if (!$underpaid) {
+            $payment = ['tx_id'=>$txId,'paid_amount'=>$paidAmount];
+            attach_payment($db, $payment, $donation);
+            $db->prepare('UPDATE donations SET provider_payment_id=? WHERE id=?')->execute([$paymentId, $donation['id']]);
+            record_kpi_payment($db, $paidAmount);
+        }
     }
     $db->commit();
     respond(200, ['success'=>true]);

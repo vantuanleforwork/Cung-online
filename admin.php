@@ -244,7 +244,7 @@ if ($loggedIn) {
             $table = 'payment_transactions'; $where = "UPPER(content) LIKE ? AND COALESCE(gateway,'')<>'TEST_OBS' AND LEFT(tx_id,5)<>'TEST_'";
             $params[] = '%' . PREFIX . '%';
             if ($search !== '') { $where .= ' AND tx_id=?'; $params[] = $search; }
-            if (in_array($filter, ['unmatched', 'matched', 'anonymous', 'below_min', 'wrong_account', 'ignored_out', 'ignored_manual', 'legacy_review'], true)) {
+            if (in_array($filter, ['unmatched', 'underpaid', 'matched', 'anonymous', 'below_min', 'wrong_account', 'ignored_out', 'ignored_manual', 'legacy_review'], true)) {
                 $where .= ' AND decision=?'; $params[] = $filter;
             }
         } elseif ($view === 'users') {
@@ -292,7 +292,7 @@ if ($loggedIn) {
     }
 }
 $stateLabels = ['held' => 'Chờ duyệt', 'queued' => 'Chờ phát', 'skipped' => 'Đã bỏ qua'];
-$decisionLabels = ['unmatched' => 'Chờ đối soát', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Donate giấu tên',
+$decisionLabels = ['unmatched' => 'Chờ đối soát', 'underpaid' => 'USDT thanh toán thiếu', 'matched' => 'Đã ghép đơn', 'anonymous' => 'Donate giấu tên',
     'below_min' => 'Dưới 10.000đ', 'wrong_account' => 'Sai tài khoản nhận', 'ignored_out' => 'Tiền ra',
     'ignored_manual' => 'Không thuộc dự án', 'legacy_review' => 'Dữ liệu cũ thiếu thông tin'];
 ?>

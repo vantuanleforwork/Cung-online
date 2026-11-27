@@ -25,6 +25,10 @@ try {
             $s->execute([$row['id']]);
             $ahead = (int)$s->fetchColumn();
         }
+    } elseif ($row['status'] === 'pending') {
+        $s = $db->prepare("SELECT 1 FROM payment_transactions WHERE donation_id=? AND decision='underpaid' LIMIT 1");
+        $s->execute([$row['id']]);
+        if ($s->fetchColumn()) $state = 'underpaid';
     }
     $paused = (bool)$db->query('SELECT paused FROM app_settings WHERE id=1')->fetchColumn();
     $db->commit();

@@ -81,6 +81,8 @@ Hosting cần PHP cURL, kết nối HTTPS ra ElevenLabs, quyền database CREATE
 
 Luồng USDT dùng invoice NOWPayments song song với QR ngân hàng. Người dùng có thể chọn mạng **SOL (Solana)** hoặc **BSC (BEP20)**; SOL được chọn mặc định. Chạy `migrate-005.sql` một lần trên cơ sở dữ liệu production, sau đó thêm các hằng số `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET` và `NOWPAYMENTS_USDT_VND_RATE` vào `config.php` (không commit file này). Website nhận USDT với một chữ số thập phân, dùng USD làm giá invoice cố định, rồi quy đổi số USDT thực nhận sang VNĐ theo `NOWPAYMENTS_USDT_VND_RATE` để đồng bộ doanh thu và hàng đợi OBS. `NOWPAYMENTS_WEBHOOK_URL` phải trỏ tới `https://donate.vantuanle.com/nowpayments-ipn.php` và URL này cần được lưu trong Payments Settings → Instant payment notifications. Hệ thống nhận IPN HMAC-SHA512 và chỉ ghi nhận trạng thái `finished`.
 
+Nếu IPN `finished` báo số USDT thực nhận thấp hơn số tiền trên invoice, hệ thống lưu giao dịch với quyết định `underpaid`, giữ đơn ở trạng thái chờ và không cộng doanh thu hoặc đưa vào hàng đợi OBS. Người gửi thấy trạng thái thanh toán thiếu qua mã theo dõi. Quản trị viên xử lý khoản này trong mục Giao dịch và liên hệ người gửi để đối soát.
+
 ### Tài khoản Google và hồ sơ donate
 
 Database đang chạy cần sao lưu rồi chạy `migrate-004.sql` đúng một lần. Bật Google Identity/OAuth client kiểu Web application trong Google Cloud Console. Thêm callback URI chính xác `https://TEN-MIEN-CUA-BAN/google-callback.php` làm Authorized redirect URI, rồi điền Client ID, Client Secret và URI đầy đủ vào `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` trong `config.php`. Cần HTTPS cùng PHP cURL, OpenSSL và GD.

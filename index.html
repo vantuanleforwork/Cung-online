@@ -319,6 +319,7 @@ async function refreshStatus(generation){
     const money=Number(d.paid_amount||0).toLocaleString('vi-VN')+'đ';
     const labels={
       pending:'Đang chờ nhận tiền chuyển khoản…',
+      underpaid:'Đã nhận một phần tiền. Số tiền USDT chưa đủ với mã thanh toán này; vui lòng liên hệ để được đối soát.',
       review:'Đã nhận '+money+'. Lời nhắn đang chờ duyệt.',
       queued:'Đã nhận '+money+'. Đang chờ phát trên live; có '+d.ahead+' lượt phía trước.',
       playing:'Donate của bạn đang được phát trên livestream!',
