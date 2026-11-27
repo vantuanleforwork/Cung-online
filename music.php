@@ -2,42 +2,9 @@
 // Shared helpers loaded by common.php.
 
 function ensure_music_schema(PDO $db): void {
-    $columns = array_column($db->query('SHOW COLUMNS FROM donations')->fetchAll(PDO::FETCH_ASSOC), 'Field');
-    foreach (['donation_kind' => "VARCHAR(16) NOT NULL DEFAULT 'message'", 'youtube_id' => 'VARCHAR(11) NULL', 'music_min_amount' => 'INT NULL', 'required_amount' => 'INT NOT NULL DEFAULT 0'] as $name => $definition) {
-        if (!in_array($name, $columns, true)) $db->exec("ALTER TABLE donations ADD COLUMN $name $definition");
-    }
-    $db->exec("CREATE TABLE IF NOT EXISTS donation_settings (
-        id TINYINT PRIMARY KEY, message_min INT NOT NULL DEFAULT 10000,
-        tier2_min INT NOT NULL DEFAULT 50000, tier3_min INT NOT NULL DEFAULT 200000,
-        music_min INT NOT NULL DEFAULT 50000, music_seconds INT NOT NULL DEFAULT 180,
-        music_order VARCHAR(16) NOT NULL DEFAULT 'time', music_volume INT NOT NULL DEFAULT 50,
-        music_opacity INT NOT NULL DEFAULT 90, music_x INT NOT NULL DEFAULT 48,
-        music_y INT NOT NULL DEFAULT 740, music_width INT NOT NULL DEFAULT 360,
-        music_height INT NOT NULL DEFAULT 160, music_enabled TINYINT NOT NULL DEFAULT 1
-    ) ENGINE=InnoDB CHARACTER SET utf8mb4");
-    $settingsColumns = array_column($db->query('SHOW COLUMNS FROM donation_settings')->fetchAll(PDO::FETCH_ASSOC), 'Field');
-    foreach (['music_require_approval' => 'TINYINT NOT NULL DEFAULT 1', 'music_idle_enabled' => 'TINYINT NOT NULL DEFAULT 0', 'music_idle_message' => "VARCHAR(300) NOT NULL DEFAULT 'Bạn muốn nghe bài gì? Donate phát nhạc để order ngay!'"] as $name => $definition) {
-        if (!in_array($name, $settingsColumns, true)) $db->exec("ALTER TABLE donation_settings ADD COLUMN $name $definition");
-    }
-    $db->exec('INSERT IGNORE INTO donation_settings(id) VALUES(1)');
-    $db->exec("CREATE TABLE IF NOT EXISTS music_requests (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, donation_id INT NULL UNIQUE,
-        video_id VARCHAR(11) NOT NULL, state VARCHAR(16) NOT NULL DEFAULT 'waiting',
-        position_seconds DECIMAL(10,2) NOT NULL DEFAULT 0, title VARCHAR(200) NOT NULL DEFAULT '',
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX music_waiting(state,id), FOREIGN KEY(donation_id) REFERENCES donations(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB CHARACTER SET utf8mb4");
-    $musicColumns = array_column($db->query('SHOW COLUMNS FROM music_requests')->fetchAll(PDO::FETCH_ASSOC), null, 'Field');
-    if ($musicColumns['donation_id']['Null'] !== 'YES') $db->exec('ALTER TABLE music_requests MODIFY donation_id INT NULL');
-    if (!isset($musicColumns['title_retry_at'])) $db->exec('ALTER TABLE music_requests ADD COLUMN title_retry_at DATETIME NULL');
-    // Existing orders require review too: do not silently approve old waiting tracks.
-    if (!isset($musicColumns['approved'])) $db->exec('ALTER TABLE music_requests ADD COLUMN approved TINYINT NOT NULL DEFAULT 0');
-    $db->exec("CREATE TABLE IF NOT EXISTS music_state (
-        id TINYINT PRIMARY KEY, current_id BIGINT UNSIGNED NULL, paused TINYINT NOT NULL DEFAULT 0,
-        owner VARCHAR(64) NOT NULL DEFAULT '', lease_until DATETIME NULL
-    ) ENGINE=InnoDB CHARACTER SET utf8mb4");
-    $db->exec('INSERT IGNORE INTO music_state(id) VALUES(1)');
+    require_schema($db, ['donations'=>['donation_kind','youtube_id','music_min_amount','required_amount'], 'donation_settings'=>['id','message_min','tier2_min','tier3_min','music_min','music_seconds','music_order','music_volume','music_opacity','music_x','music_y','music_width','music_height','music_enabled','music_require_approval','music_idle_enabled','music_idle_message'], 'music_requests'=>['id','donation_id','video_id','state','position_seconds','title','title_retry_at','approved'], 'music_state'=>['id','current_id','paused','owner','lease_until']]);
 }
+
 
 function donation_settings(?PDO $db = null): array {
     try {

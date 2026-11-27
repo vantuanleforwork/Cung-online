@@ -7,37 +7,10 @@ function kpi_default_stages(): array {
 }
 
 function ensure_kpi_state(PDO $db): void {
-    try {
-        if ($db->query('SELECT id FROM donation_kpi_state WHERE id=1')->fetchColumn()) return;
-    } catch (PDOException $error) {
-        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
-    }
-    $db->exec("CREATE TABLE IF NOT EXISTS donation_kpi_state (
-        id TINYINT PRIMARY KEY, target_amount INT UNSIGNED NOT NULL DEFAULT 0,
-        collected BIGINT UNSIGNED NOT NULL DEFAULT 0, stage_count TINYINT NOT NULL DEFAULT 4,
-        stage_images TEXT NULL, base_image VARCHAR(100) NULL,
-        event_seq BIGINT UNSIGNED NOT NULL DEFAULT 0, event_at BIGINT UNSIGNED NULL
-    ) ENGINE=InnoDB");
-    $target = 0;
-    $collected = 0;
-    try {
-        $legacy = $db->query('SELECT goal_date,target_amount FROM donation_kpi ORDER BY goal_date DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
-        $target = (int)($legacy['target_amount'] ?? 0);
-        if ($target > 0) {
-            $start = new DateTimeImmutable($legacy['goal_date'], new DateTimeZone('Asia/Ho_Chi_Minh'));
-            $sum = $db->prepare("SELECT COALESCE(SUM(d.paid_amount),0)
-                FROM donations d LEFT JOIN payment_transactions p ON p.tx_id=d.tx_id
-                WHERE d.status='paid' AND d.is_test=0 AND d.paid_amount>0
-                AND UNIX_TIMESTAMP(COALESCE(p.created_at,d.created_at))>=?");
-            $sum->execute([$start->getTimestamp()]);
-            $collected = (int)$sum->fetchColumn();
-        }
-    } catch (PDOException $error) {
-        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
-    }
-    $db->prepare('INSERT IGNORE INTO donation_kpi_state(id,target_amount,collected) VALUES(1,?,?)')
-       ->execute([$target,$collected]);
+    require_schema($db, ['donation_kpi_state'=>['id','target_amount','collected','stage_count','stage_images','base_image','event_seq','event_at']]);
+    if (!$db->query('SELECT id FROM donation_kpi_state WHERE id=1')->fetchColumn()) throw new RuntimeException('Database migration required: missing KPI state row');
 }
+
 
 function kpi_stage_number(int $collected, int $target, int $count): int {
     return $target > 0 ? intdiv(min($collected, $target) * $count, $target) : 0;

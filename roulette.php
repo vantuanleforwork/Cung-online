@@ -1,14 +1,8 @@
 <?php
 function ensure_roulette_schema(PDO $db): void {
-    $db->exec("CREATE TABLE IF NOT EXISTS roulette_wheels (
-        id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL,
-        minimum INT NOT NULL, options_json TEXT NOT NULL, active TINYINT NOT NULL DEFAULT 1
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $db->exec("CREATE TABLE IF NOT EXISTS roulette_spins (
-        donation_id INT PRIMARY KEY, snapshot TEXT NOT NULL,
-        FOREIGN KEY (donation_id) REFERENCES donations(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    require_schema($db, ['roulette_wheels'=>['id','name','minimum','options_json','active'], 'roulette_spins'=>['donation_id','snapshot']]);
 }
+
 
 function roulette_save(PDO $db, array $input): void {
     $id = filter_var($input['id'] ?? 0, FILTER_VALIDATE_INT);

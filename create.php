@@ -156,16 +156,8 @@ try {
     $statusToken = $isTestAccount ? null : bin2hex(random_bytes(32));
     if (!$user) {
         $ipHash = donor_hash($ip);
-        try {
-            $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
-        } catch (PDOException $error) {
-            if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
-            $db->exec('CREATE TABLE IF NOT EXISTS anonymous_qr_limits (
-                ip_hash CHAR(64) PRIMARY KEY, first_id INT NULL, second_id INT NULL,
-                cooldown_until DATETIME NULL
-            ) ENGINE=InnoDB');
-            $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
-        }
+        require_schema($db, ['anonymous_qr_limits'=>['ip_hash','first_id','second_id','cooldown_until']]);
+        $db->prepare('INSERT IGNORE INTO anonymous_qr_limits(ip_hash) VALUES(?)')->execute([$ipHash]);
     }
     for ($t = 0; $t < 5; $t++) {
         $code = null;

@@ -1,5 +1,6 @@
 <?php
 function donor_skin_catalog(PDO $db): array {
+    require_schema($db, ['uploaded_donor_skins'=>['id','name'], 'removed_donor_skins'=>['skin_key'], 'donor_skin_order'=>['id','skin_keys'], 'donor_skins'=>['user_id','unlocked_json','active_skin']]);
     $catalog = [
         'itachi'=>['name'=>'Itachi','url'=>'assets/skins/itachi.gif'],
         'naruto'=>['name'=>'Naruto','url'=>'assets/skins/naruto.gif'],
@@ -42,9 +43,7 @@ function save_donor_skin_order(PDO $db, string $order): void {
         || array_diff($keys, $catalogKeys)) {
         throw new InvalidArgumentException('Danh sách skin đã thay đổi. Hãy tải lại trang và thử lại.');
     }
-    $db->exec("CREATE TABLE IF NOT EXISTS donor_skin_order (
-        id TINYINT PRIMARY KEY, skin_keys TEXT NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    require_schema($db, ['donor_skin_order'=>['id','skin_keys']]);
     $db->prepare('INSERT INTO donor_skin_order(id,skin_keys) VALUES(1,?) ON DUPLICATE KEY UPDATE skin_keys=VALUES(skin_keys)')
        ->execute([json_encode($keys, JSON_THROW_ON_ERROR)]);
 }
@@ -53,9 +52,7 @@ function remove_donor_skin(PDO $db, string $key): void {
     if (!isset(donor_skin_catalog($db)[$key])) {
         throw new InvalidArgumentException('Skin này không còn trong danh sách.');
     }
-    $db->exec("CREATE TABLE IF NOT EXISTS removed_donor_skins (
-        skin_key VARCHAR(32) PRIMARY KEY
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    require_schema($db, ['removed_donor_skins'=>['skin_key']]);
     $db->prepare('INSERT IGNORE INTO removed_donor_skins(skin_key) VALUES(?)')->execute([$key]);
 }
 
@@ -75,10 +72,7 @@ function upload_donor_skin(PDO $db, $name, array $file): void {
     if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
         throw new RuntimeException('Không tạo được thư mục skin.');
     }
-    $db->exec("CREATE TABLE IF NOT EXISTS uploaded_donor_skins (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(60) NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    require_schema($db, ['uploaded_donor_skins'=>['id','name']]);
     $path = null;
     $db->beginTransaction();
     try {
@@ -127,12 +121,7 @@ function donor_skin_profile(PDO $db, int $userId, int $level): array {
 function select_donor_skin(PDO $db, int $userId, string $skin): array {
     $catalog = donor_skin_catalog($db);
     if (!isset($catalog[$skin])) throw new InvalidArgumentException('Skin này chưa có.');
-    $db->exec("CREATE TABLE IF NOT EXISTS donor_skins (
-        user_id BIGINT UNSIGNED PRIMARY KEY,
-        unlocked_json TEXT NOT NULL,
-        active_skin VARCHAR(32) NULL,
-        FOREIGN KEY (user_id) REFERENCES donor_users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    require_schema($db, ['donor_skins'=>['user_id','unlocked_json','active_skin']]);
     $db->beginTransaction();
     try {
         $user = $db->prepare('SELECT id FROM donor_users WHERE id=? FOR UPDATE');

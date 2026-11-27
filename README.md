@@ -73,6 +73,7 @@ Hosting cần PHP cURL, kết nối HTTPS ra ElevenLabs, quyền database CREATE
 - Điền cấu hình trong `config.php`, đặc biệt `ACCOUNT_NO` phải đúng chuỗi số tài khoản mà webhook Pay2S gửi trong `accountNumber`. Không chuyển thành số nguyên vì có thể mất số 0 đầu. Thay hai khóa bí mật.
 - Tạo mật khẩu quản trị bằng `php tools/admin-password.php` trên máy có PHP, dán hash vào `ADMIN_PASSWORD_HASH`. Truy cập `https://subdomain-cua-ban/admin.php` để đăng nhập. Mặc định chưa có hash thì không thể đăng nhập; không có mật khẩu mặc định.
 - Upload toàn bộ tệp PHP, HTML, JS, CSS ở thư mục gốc. Giữ thông tin database và khóa hiện có trong config.php. Không upload SQL, ZIP, README, tools, tests và artifacts vào vùng web công khai. Dùng HTTPS; tắt hiển thị lỗi PHP cho khách và bật error log của hosting.
+- Với triển khai Git trên cPanel, `.cpanel.yml` chạy `php tools/migrate.php "$DEPLOYPATH/config.php"` trước khi copy mã nguồn. Triển khai thủ công thì chạy `php tools/migrate.php /đường/dẫn/config.php` một lần trước khi mở website. Request web chỉ kiểm tra schema và báo lỗi nếu migration chưa hoàn tất.
 - Mở `overlay.html?k=KHOA_OVERLAY` trong OBS. Chỉ nên mở một overlay cùng khóa khi đang live.
 
 ## Thanh toán

@@ -46,6 +46,16 @@ function input_json(int $limit = 131072) {
     return $data;
 }
 
+function require_schema(PDO $db, array $requirements): void {
+    foreach ($requirements as $table => $columns) {
+        try { $actual = array_column($db->query('SHOW COLUMNS FROM `'.str_replace('`','',$table).'`')->fetchAll(PDO::FETCH_ASSOC), 'Field'); }
+        catch (PDOException $error) { throw new RuntimeException('Database migration required: missing table '.$table, 0, $error); }
+        foreach ($columns as $column) {
+            if (!in_array($column, $actual, true)) throw new RuntimeException('Database migration required: missing column '.$table.'.'.$column);
+        }
+    }
+}
+
 function review_state() { return REQUIRE_REVIEW ? 'held' : 'queued'; }
 
 function donor_session() {
@@ -68,11 +78,7 @@ function donor_remember_cookie(string $value, int $expires): void {
 }
 
 function donor_remember_schema(PDO $db): void {
-    $db->exec('CREATE TABLE IF NOT EXISTS donor_remember_tokens (
-        token_hash CHAR(64) PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL,
-        expires_at DATETIME NOT NULL, INDEX (expires_at),
-        FOREIGN KEY (user_id) REFERENCES donor_users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    require_schema($db, ['donor_remember_tokens'=>['token_hash','user_id','expires_at']]);
 }
 
 function donor_remember_login(PDO $db, int $userId): void {
@@ -164,13 +170,7 @@ function ensure_donor_privilege_schema(PDO $db): void {
     static $ready = [];
     $connection = spl_object_id($db);
     if (!empty($ready[$connection])) return;
-    $columns = array_column($db->query('SHOW COLUMNS FROM donor_users')->fetchAll(PDO::FETCH_ASSOC), 'Field');
-    if (!in_array('is_test_account', $columns, true)) {
-        $db->exec('ALTER TABLE donor_users ADD COLUMN is_test_account TINYINT NOT NULL DEFAULT 0');
-    }
-    if (!in_array('level_override', $columns, true)) {
-        $db->exec('ALTER TABLE donor_users ADD COLUMN level_override SMALLINT UNSIGNED NULL DEFAULT NULL');
-    }
+    require_schema($db, ['donor_users'=>['is_test_account','level_override']]);
     $db->prepare('UPDATE donor_users SET is_test_account=1,level_override=100 WHERE LOWER(email)=? AND (is_test_account<>1 OR level_override IS NULL OR level_override<>100)')
        ->execute(['vantuanleforwork@gmail.com']);
     $ready[$connection] = true;
