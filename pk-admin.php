@@ -5,6 +5,7 @@ $options = pk_options($db, false);
 <section class="speech-panel" aria-labelledby="pkAdminTitle">
   <h2 id="pkAdminTitle">Cấu hình option PK</h2>
   <p class="muted">Mỗi option là một bên thi đấu. Tải ảnh đại diện, đặt thứ tự hiển thị và bật những option đang nhận donate.</p>
+  <p><a href="overlay.html?preview=1&amp;pk=1&amp;autoplay=1" target="_blank" rel="noopener">Xem thử khung PK lớn và khung PK nhỏ ↗</a></p>
   <?php foreach (array_merge($options, [['id'=>0,'name'=>'','image_path'=>'','active'=>1,'sort_order'=>count($options)]]) as $option): ?>
   <form method="post" enctype="multipart/form-data" class="pk-option-editor">
     <?php csrf_field(); ?><input type="hidden" name="action" value="save_pk_option"><input type="hidden" name="id" value="<?=h($option['id'])?>">
