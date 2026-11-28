@@ -1,6 +1,6 @@
 <?php
 function ensure_pk_schema(PDO $db): void {
-    require_schema($db, ['pk_options'=>['id','name','image_path','active','sort_order'], 'pk_battles'=>['id','started_at','ends_at','status'], 'donation_settings'=>['pk_enabled','pk_min','pk_duration'], 'donations'=>['pk_option_id','pk_battle_id']]);
+    require_schema($db, ['pk_options'=>['id','name','image_path','active','sort_order'], 'pk_battles'=>['id','started_at','ends_at','status'], 'donation_settings'=>['pk_enabled','pk_min','pk_duration','pk_x','pk_y','pk_width','pk_height'], 'donations'=>['pk_option_id','pk_battle_id']]);
 }
 
 function pk_options(PDO $db, bool $activeOnly = true): array {
@@ -23,7 +23,8 @@ function pk_current(PDO $db): ?array {
     $recent = $db->prepare("SELECT id,pk_option_id,paid_amount FROM donations WHERE pk_battle_id=? AND status='paid' ORDER BY id DESC LIMIT 1");
     $recent->execute([(int)$battle['id']]);
     $last = $recent->fetch(PDO::FETCH_ASSOC) ?: null;
-    return ['id'=>(int)$battle['id'],'started_at'=>$battle['started_at'],'ends_at'=>$battle['ends_at'],'total'=>$total,'options'=>$options,'last_donation'=>$last];
+    $settings = donation_settings($db);
+    return ['id'=>(int)$battle['id'],'started_at'=>$battle['started_at'],'ends_at'=>$battle['ends_at'],'total'=>$total,'options'=>$options,'last_donation'=>$last,'layout'=>['x'=>(int)$settings['pk_x'],'y'=>(int)$settings['pk_y'],'width'=>(int)$settings['pk_width'],'height'=>(int)$settings['pk_height']]];
 }
 
 function pk_assign_paid(PDO $db, array $donation, int $paid): void {

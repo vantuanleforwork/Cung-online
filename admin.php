@@ -178,6 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 else pk_save_option(db(), $_POST, $_FILES['image'] ?? []);
                 $_SESSION['flash'] = !empty($_POST['delete']) ? 'Đã xóa option PK.' : 'Đã lưu option PK.';
                 redirect_admin('pk');
+            } elseif ($action === 'save_pk_layout') {
+                $values=[]; foreach (['pk_x'=>[0,1680],'pk_y'=>[0,740],'pk_width'=>[320,1400],'pk_height'=>[180,800]] as $key=>$range) { $value=filter_var($_POST[$key]??null,FILTER_VALIDATE_INT); if ($value===false||$value<$range[0]||$value>$range[1]) throw new InvalidArgumentException('Thông số vị trí PK không hợp lệ.'); $values[$key]=$value; }
+                if ($values['pk_x']+$values['pk_width']>1920||$values['pk_y']+$values['pk_height']>1080) throw new InvalidArgumentException('Khung PK phải nằm trong khung OBS.');
+                db()->prepare('UPDATE donation_settings SET pk_x=?,pk_y=?,pk_width=?,pk_height=? WHERE id=1')->execute(array_values($values)); $_SESSION['flash']='Đã lưu vị trí và kích thước PK.'; redirect_admin('pk');
             } elseif (in_array($action, ['save_donation_settings','save_music_approval','music_pause','music_resume','music_next','music_remove','music_add','music_approve'], true)) {
                 music_admin_action(db(), $_POST);
                 $_SESSION['flash'] = 'Đã cập nhật cài đặt / hàng đợi nhạc.';

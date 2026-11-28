@@ -138,7 +138,7 @@ function music_admin_action(PDO $db, array $in): void {
         return;
     }
     if ($action === 'save_donation_settings') {
-        $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000], 'pk_min'=>[1000,50000000], 'pk_duration'=>[30,86400],
+        $limits = ['message_min'=>[1000,50000000], 'tier2_min'=>[1000,50000000], 'tier3_min'=>[1000,50000000], 'pk_min'=>[1000,50000000], 'pk_duration'=>[30,86400], 'pk_x'=>[0,1680], 'pk_y'=>[0,740], 'pk_width'=>[320,1400], 'pk_height'=>[180,800],
             'music_min'=>[1000,50000000], 'music_seconds'=>[10,3600], 'music_volume'=>[0,100], 'music_opacity'=>[0,100],
             'music_x'=>[0,1680], 'music_y'=>[0,940], 'music_width'=>[240,960], 'music_height'=>[140,700]];
         $values = [];
@@ -149,6 +149,7 @@ function music_admin_action(PDO $db, array $in): void {
         }
         if ($values['tier2_min'] <= $values['message_min'] || $values['tier3_min'] <= $values['tier2_min']) throw new InvalidArgumentException('Mốc rồng phải lớn hơn mức tối thiểu, mốc tiên nữ phải lớn hơn mốc rồng.');
         if ($values['music_x'] + $values['music_width'] > 1920 || $values['music_y'] + $values['music_height'] > 1080) throw new InvalidArgumentException('Trình phát nhạc phải nằm trong khung OBS.');
+        if ($values['pk_x'] + $values['pk_width'] > 1920 || $values['pk_y'] + $values['pk_height'] > 1080) throw new InvalidArgumentException('Khung PK phải nằm trong khung OBS.');
         if (!in_array($in['music_order'] ?? '', ['time','amount'], true)) throw new InvalidArgumentException('Thứ tự nhạc không hợp lệ.');
         $values['music_order'] = $in['music_order'];
         $values['music_enabled'] = isset($in['music_enabled']) ? 1 : 0;

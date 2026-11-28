@@ -195,6 +195,8 @@ CREATE TABLE IF NOT EXISTS donation_settings (
         pk_enabled TINYINT NOT NULL DEFAULT 0,
         pk_min INT NOT NULL DEFAULT 50000,
         pk_duration INT NOT NULL DEFAULT 300
+        ,pk_x INT NOT NULL DEFAULT 510, pk_y INT NOT NULL DEFAULT 70,
+        pk_width INT NOT NULL DEFAULT 900, pk_height INT NOT NULL DEFAULT 340
     ) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE IF NOT EXISTS music_requests (

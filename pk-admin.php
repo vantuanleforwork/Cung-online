@@ -1,11 +1,17 @@
 <?php
 if (empty($loggedIn)) { http_response_code(403); exit; }
+$donate = donation_settings($db);
 $options = pk_options($db, false);
 ?>
 <section class="speech-panel" aria-labelledby="pkAdminTitle">
   <h2 id="pkAdminTitle">Cấu hình option PK</h2>
   <p class="muted">Mỗi option là một bên thi đấu. Tải ảnh đại diện, đặt thứ tự hiển thị và bật những option đang nhận donate.</p>
   <p><a href="overlay.html?preview=1&amp;pk=1&amp;autoplay=1" target="_blank" rel="noopener">Xem thử khung PK lớn và khung PK nhỏ ↗</a></p>
+  <h3>Vị trí và kích thước trong OBS</h3>
+  <form method="post"><input type="hidden" name="action" value="save_pk_layout"><?php csrf_field(); ?><div class="speech-grid">
+    <?php foreach (['pk_x'=>['Cách trái X',0,1680],'pk_y'=>['Cách trên Y',0,740],'pk_width'=>['Chiều rộng',320,1400],'pk_height'=>['Chiều cao',180,800]] as $key=>[$label,$min,$max]): ?><label><?=h($label)?> (px)<input type="number" name="<?=h($key)?>" min="<?=$min?>" max="<?=$max?>" required value="<?=h($donate[$key] ?? 0)?>"></label><?php endforeach; ?>
+  </div><button type="submit">Lưu vị trí PK</button></form>
+  <div class="preview-iframe-wrapper"><iframe src="overlay.html?preview=1&amp;pk=1&amp;autoplay=1" title="Preview khung PK OBS"></iframe></div>
   <?php foreach (array_merge($options, [['id'=>0,'name'=>'','image_path'=>'','active'=>1,'sort_order'=>count($options)]]) as $option): ?>
   <form method="post" enctype="multipart/form-data" class="pk-option-editor">
     <?php csrf_field(); ?><input type="hidden" name="action" value="save_pk_option"><input type="hidden" name="id" value="<?=h($option['id'])?>">
