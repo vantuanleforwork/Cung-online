@@ -14,20 +14,20 @@ function pk_current(PDO $db): ?array {
     $db->exec("UPDATE pk_battles SET status='finished' WHERE status='active' AND ends_at<=NOW()");
     $battle = $db->query("SELECT * FROM pk_battles WHERE status='active' ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     if (!$battle) return null;
-    $rows = $db->prepare("SELECT o.id,o.name,o.image_path,COALESCE(SUM(d.paid_amount),0) total FROM pk_options o LEFT JOIN donations d ON d.pk_option_id=o.id AND d.pk_battle_id=? AND d.status='paid' AND d.is_test=0 GROUP BY o.id ORDER BY o.sort_order,o.id");
-    $rows->execute([(int)$battle['id']]);
+    $rows = $db->prepare("SELECT o.id,o.name,o.image_path,COALESCE(SUM(d.paid_amount),0) total FROM pk_options o LEFT JOIN donations d ON d.pk_option_id=o.id AND d.pk_battle_id=? AND d.status='paid' WHERE o.active=1 OR EXISTS (SELECT 1 FROM donations old_d WHERE old_d.pk_option_id=o.id AND old_d.pk_battle_id=?) GROUP BY o.id ORDER BY o.sort_order,o.id");
+    $rows->execute([(int)$battle['id'], (int)$battle['id']]);
     $options = $rows->fetchAll(PDO::FETCH_ASSOC);
     $total = array_sum(array_map(static fn($row) => (int)$row['total'], $options));
     foreach ($options as &$option) { $option['total'] = (int)$option['total']; $option['percent'] = $total > 0 ? round($option['total'] / $total * 100, 2) : 0; }
     unset($option);
-    $recent = $db->prepare("SELECT id,pk_option_id,paid_amount FROM donations WHERE pk_battle_id=? AND status='paid' AND is_test=0 ORDER BY id DESC LIMIT 1");
+    $recent = $db->prepare("SELECT id,pk_option_id,paid_amount FROM donations WHERE pk_battle_id=? AND status='paid' ORDER BY id DESC LIMIT 1");
     $recent->execute([(int)$battle['id']]);
     $last = $recent->fetch(PDO::FETCH_ASSOC) ?: null;
     return ['id'=>(int)$battle['id'],'started_at'=>$battle['started_at'],'ends_at'=>$battle['ends_at'],'total'=>$total,'options'=>$options,'last_donation'=>$last];
 }
 
 function pk_assign_paid(PDO $db, array $donation, int $paid): void {
-    if (($donation['donation_kind'] ?? '') !== 'pk' || empty($donation['pk_option_id']) || !empty($donation['is_test']) || $paid < (int)($donation['required_amount'] ?? 0)) return;
+    if (($donation['donation_kind'] ?? '') !== 'pk' || empty($donation['pk_option_id']) || $paid < (int)($donation['required_amount'] ?? 0)) return;
     ensure_pk_schema($db);
     $settings = donation_settings($db);
     $db->query("UPDATE pk_battles SET status='finished' WHERE status='active' AND ends_at<=NOW()");

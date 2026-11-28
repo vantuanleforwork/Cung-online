@@ -267,6 +267,9 @@ try {
                 if ($kind === 'music' && $youtubeId) {
                     $db->prepare('INSERT IGNORE INTO music_requests(donation_id,video_id) VALUES(?,?)')->execute([$donationId,$youtubeId]);
                 }
+                if ($kind === 'pk') {
+                    pk_assign_paid($db, ['id'=>$donationId,'donation_kind'=>'pk','pk_option_id'=>$pkOptionId,'required_amount'=>$minimum], $amount);
+                }
             }
             $db->commit();
             break;

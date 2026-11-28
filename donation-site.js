@@ -129,7 +129,7 @@
     const pkTab = document.getElementById('donation-tab-pk');
     const pkOptions = state.settings.pk_options || [];
     if (pkSelect) pkSelect.replaceChildren(...pkOptions.map(option => new Option(option.name, option.id)));
-    if (pkTab) pkTab.hidden = !state.settings.pk_enabled || pkOptions.length < 2;
+    if (pkTab) pkTab.hidden = (!state.settings.pk_enabled && !state.testAccount) || pkOptions.length < 2;
     const quick = document.querySelectorAll('.q button');
     [state.settings.message_min,state.settings.tier2_min,state.settings.tier3_min].forEach((value,index) => {
       quick[index].dataset.v = value; quick[index].textContent = Number(value).toLocaleString('vi-VN')+'đ';
